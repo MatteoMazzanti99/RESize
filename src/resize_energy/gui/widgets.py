@@ -102,21 +102,21 @@ class StepPage(QWidget):
         self._title = ""
         self._subtitle = ""
 
-    def setTitle(self, text: str) -> None:  # noqa: N802 (same names as QWizardPage)
+    def setTitle(self, text: str) -> None:
         self._title = text
 
-    def setSubTitle(self, text: str) -> None:  # noqa: N802
+    def setSubTitle(self, text: str) -> None:
         self._subtitle = text
 
     def title(self) -> str:
         return self._title
 
-    def subTitle(self) -> str:  # noqa: N802
+    def subTitle(self) -> str:
         return self._subtitle
 
-    def initializePage(self) -> None:  # noqa: N802
+    def initializePage(self) -> None:
         """Called when the page is about to be shown going forward."""
 
-    def validatePage(self) -> bool:  # noqa: N802
+    def validatePage(self) -> bool:
         """Return True to allow moving to the next step."""
         return True

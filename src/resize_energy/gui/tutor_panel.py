@@ -58,7 +58,7 @@ class _Worker(QThread):
             text = ask(self._settings, self._system, self._messages)
         except AIError as exc:
             self.failed.emit(str(exc))
-        except Exception as exc:  # noqa: BLE001 - never let a thread die silently
+        except Exception as exc:
             self.failed.emit(f"Unexpected error: {exc}")
         else:
             self.succeeded.emit(text)

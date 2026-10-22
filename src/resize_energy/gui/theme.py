@@ -132,9 +132,9 @@ def build_stylesheet() -> str:
     return qss
 
 
-def apply_theme(app) -> None:  # noqa: ANN001 - QApplication, imported lazily
+def apply_theme(app) -> None:
     """Use the Fusion style, a dark palette (for native dialogs) and the style sheet."""
-    from PySide6.QtGui import QColor, QPalette  # noqa: PLC0415
+    from PySide6.QtGui import QColor, QPalette
 
     app.setStyle("Fusion")
     palette = QPalette()

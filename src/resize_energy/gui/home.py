@@ -11,14 +11,14 @@ from resize_energy.gui.widgets import StepPage, make_card, make_label, make_pill
 
 BENEFITS: list[tuple[str, str, str]] = [
     ("?", "Learn the why",
-     "Every number comes with its formula, the assumptions behind it and your own values "
-     "plugged in, so you understand the choice and not only the result."),
+     ("Every number comes with its formula, the assumptions behind it and your own values "
+      "plugged in, so you understand the choice and not only the result.")),
     ("✓", "Check your design",
-     "Automatic checks flag string voltages, MPPT window, current limits and the DC/AC ratio "
-     "before they become a problem in your report or your plant."),
+     ("Automatic checks flag string voltages, MPPT window, current limits and the DC/AC ratio "
+      "before they become a problem in your report or your plant.")),
     ("↓", "Get the report",
-     "Export a PDF with inputs, results, checks and the method used, ready for a project "
-     "or a first-pass design review."),
+     ("Export a PDF with inputs, results, checks and the method used, ready for a project "
+      "or a first-pass design review.")),
 ]
 
 # (icon text, title, description, available now)

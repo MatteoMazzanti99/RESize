@@ -36,7 +36,7 @@ class LogoMark(QWidget):
         self._size = size
         self.setFixedSize(size, size)
 
-    def paintEvent(self, event) -> None:  # noqa: N802, ANN001 (Qt naming)
+    def paintEvent(self, event) -> None:
         painter = QPainter(self)
         draw_logo(painter, self._size)
         painter.end()

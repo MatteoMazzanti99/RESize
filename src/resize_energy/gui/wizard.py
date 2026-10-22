@@ -177,7 +177,7 @@ class SitePage(StepPage):
             f"(implied performance ratio {result.implied_performance_ratio:.2f})."
         )
 
-    def validatePage(self) -> bool:  # noqa: N802 (Qt naming)
+    def validatePage(self) -> bool:
         error = first_error(self._query_items() + [("Annual irradiation", self.irr)])
         if error:
             QMessageBox.warning(self, "Check the value", error)
@@ -207,12 +207,12 @@ class LoadPage(StepPage):
             "match between production and consumption: that needs a storage/self-consumption "
             "analysis."))
 
-    def initializePage(self) -> None:  # noqa: N802 (Qt naming)
+    def initializePage(self) -> None:
         implied = self.site.implied_pr()
         if implied and 0.5 <= implied <= 0.95:
             self.pr.set_value(round(implied, 2))
 
-    def validatePage(self) -> bool:  # noqa: N802 (Qt naming)
+    def validatePage(self) -> bool:
         error = first_error([("Annual demand", self.demand), ("Coverage", self.coverage),
                              ("Performance ratio", self.pr)])
         if error:
@@ -310,7 +310,7 @@ class ComponentsPage(StepPage):
         )
         return module, inverter, self.t_min.value(), self.t_max.value()
 
-    def validatePage(self) -> bool:  # noqa: N802 (Qt naming)
+    def validatePage(self) -> bool:
         error = first_error(self._labels)
         if error:
             QMessageBox.warning(self, "Check the value", error)
@@ -401,7 +401,7 @@ class ResultsPage(StepPage):
             worked = worked_example(key, self._inputs, self._design)
         self.detail.setHtml(explanation_html(key, worked, heading=False))
 
-    def initializePage(self) -> None:  # noqa: N802 (Qt naming)
+    def initializePage(self) -> None:
         try:
             module, inverter, t_min, t_max = self.comp.specs()
             inputs = PVInputs(

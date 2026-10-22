@@ -98,7 +98,7 @@ def parse_pvcalc(data: dict, peakpower_kw: float = 1.0) -> PVGISResult:
 def _error_detail(exc: urllib.error.HTTPError) -> str:
     try:
         body = exc.read().decode("utf-8", errors="replace").strip()
-    except Exception:  # noqa: BLE001 - best effort only
+    except Exception:
         body = ""
     return f" - server said: {body[:200]}" if body else ""
 
@@ -122,7 +122,7 @@ def fetch_pvcalc(
         for headers in HEADER_PROFILES:
             request = urllib.request.Request(url, headers=headers)
             try:
-                with urlopen(request, timeout=timeout) as response:  # noqa: S310
+                with urlopen(request, timeout=timeout) as response:
                     raw = response.read()
                     content_type = _content_type(response)
             except urllib.error.HTTPError as exc:

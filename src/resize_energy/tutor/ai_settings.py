@@ -73,7 +73,7 @@ def _keyring(module: ModuleType | None) -> Any:
     if module is not None:
         return module
     try:
-        import keyring  # noqa: PLC0415 - optional dependency
+        import keyring
     except ImportError:
         return None
     return keyring
@@ -89,7 +89,7 @@ def load_api_key(
     if kr is not None:
         try:
             stored = kr.get_password(KEYRING_SERVICE, provider)
-        except Exception:  # noqa: BLE001 - no usable keyring backend
+        except Exception:
             stored = None
         if stored:
             return str(stored)
@@ -105,7 +105,7 @@ def save_api_key(provider: str, key: str, keyring_module: ModuleType | None = No
         return False
     try:
         kr.set_password(KEYRING_SERVICE, provider, key)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
     return True
 
@@ -116,6 +116,6 @@ def delete_api_key(provider: str, keyring_module: ModuleType | None = None) -> b
         return False
     try:
         kr.delete_password(KEYRING_SERVICE, provider)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
     return True

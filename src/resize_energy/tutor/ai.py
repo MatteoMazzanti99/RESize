@@ -145,12 +145,12 @@ def _post_json(
         method="POST",
     )
     try:
-        with urlopen(request, timeout=timeout) as response:  # noqa: S310
+        with urlopen(request, timeout=timeout) as response:
             raw = response.read()
     except urllib.error.HTTPError as exc:
         try:
             detail = _server_message(exc.read())
-        except Exception:  # noqa: BLE001 - best effort only
+        except Exception:
             detail = ""
         suffix = f" Server message: {detail}" if detail else ""
         if exc.code in (401, 403):
