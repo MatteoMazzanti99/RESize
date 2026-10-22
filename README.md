@@ -6,7 +6,33 @@ RESize guides MSc students (and engineers doing a first-pass design) through the
 renewable energy plants. At every step it shows the formula, the assumptions and the
 reasoning, so you learn *why* a choice is made, not just the number that comes out.
 
-> **Status:** pre-alpha (v0.1 in development). Interfaces and results may change.
+> **Status:** early release (v0.1). Photovoltaic is available; wind, biomass and green hydrogen
+> are planned. Interfaces and results may change.
+
+![RESize home screen](docs/images/home.png)
+
+## Download
+
+Get the installer for your system from the
+[Releases page](https://github.com/MatteoMazzanti99/RESize/releases):
+
+| System | File | Notes |
+|---|---|---|
+| Windows | `RESize-windows.zip` | Unzip, run `RESize.exe`. Windows may warn about an unknown publisher (the app is not code-signed): *More info > Run anyway*. |
+| macOS | `RESize-macos.zip` | Unzip, right-click `RESize.app` > *Open* the first time (not notarized). |
+| Linux | `RESize-linux.tar.gz` | Extract, run `RESize/RESize`. Needs the usual Qt libraries (e.g. `libxkbcommon-x11-0`, `libxcb-cursor0`). |
+
+Prefer Python? See *Quick start* below.
+
+## How it looks
+
+| 1. Site and solar resource | 2. Electricity demand |
+|---|---|
+| ![Site step](docs/images/step1-site.png) | ![Demand step](docs/images/step2-demand.png) |
+| **3. Module and inverter** | **4. Results, checks and Why?** |
+| ![Components step](docs/images/step3-components.png) | ![Results step](docs/images/step4-results.png) |
+
+Validation against PVGIS and hand calculations: [docs/validation](docs/validation/README.md).
 
 ## Quick start
 
