@@ -32,9 +32,11 @@ from resize_energy.core.pv_design import (
 )
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.gui.numbers import format_number, parse_in_range
+from resize_energy.gui.tutor_panel import TutorDialog
 from resize_energy.gui.why import WhyButton
 from resize_energy.report.html_report import build_pv_report
-from resize_energy.tutor.checker import check_pv_design
+from resize_energy.tutor.checker import Finding, check_pv_design
+from resize_energy.tutor.context import build_project_context
 from resize_energy.tutor.explanations import EXPLANATIONS, TOPIC_ORDER
 from resize_energy.tutor.why_html import explanation_html
 from resize_energy.tutor.worked import worked_example
@@ -343,6 +345,8 @@ class ResultsPage(QWizardPage):
         self.html = ""
         self._inputs: PVInputs | None = None
         self._design: PVDesign | None = None
+        self._findings: list[Finding] = []
+        self._tutor: TutorDialog | None = None
 
         self.topics = QListWidget()
         for key in TOPIC_ORDER:
@@ -357,6 +361,9 @@ class ResultsPage(QWizardPage):
         why_layout.addWidget(QLabel("<b>Why?</b>"))
         why_layout.addWidget(self.topics, 1)
         why_layout.addWidget(self.detail, 2)
+        ask_step = QPushButton("Ask the tutor about this step...")
+        ask_step.clicked.connect(self._ask_about_step)
+        why_layout.addWidget(ask_step)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self.browser)
@@ -366,9 +373,35 @@ class ResultsPage(QWizardPage):
 
         export = QPushButton("Export PDF report...")
         export.clicked.connect(self._export_pdf)
+        ask = QPushButton("Ask the AI tutor...")
+        ask.setToolTip("Chat about your design (optional: needs an API key or a local model)")
+        ask.clicked.connect(self._open_tutor)
+        buttons = QHBoxLayout()
+        buttons.addWidget(ask)
+        buttons.addWidget(export)
         layout = QVBoxLayout(self)
         layout.addWidget(splitter)
-        layout.addWidget(export)
+        layout.addLayout(buttons)
+
+    def _open_tutor(self, question: str | None = None) -> None:
+        if self._inputs is None or self._design is None:
+            QMessageBox.information(self, "RESize", "There is no design to discuss yet.")
+            return
+        context = build_project_context(self._inputs, self._design, self._findings)
+        if self._tutor is not None:
+            self._tutor.close()
+        self._tutor = TutorDialog(context, self)
+        if isinstance(question, str) and question:
+            self._tutor.set_question(question)
+        self._tutor.show()
+
+    def _ask_about_step(self) -> None:
+        row = self.topics.currentRow()
+        if row < 0 or row >= len(TOPIC_ORDER):
+            QMessageBox.information(self, "RESize", "Select a step in the list first.")
+            return
+        title = EXPLANATIONS[TOPIC_ORDER[row]]["title"]
+        self._open_tutor(f"Explain this step for my project and check my numbers: {title}")
 
     def _show_topic(self, row: int) -> None:
         if row < 0 or row >= len(TOPIC_ORDER):
@@ -393,10 +426,12 @@ class ResultsPage(QWizardPage):
         except ValueError as exc:
             self.html = ""
             self._inputs = self._design = None
+            self._findings = []
             self.browser.setHtml(f"<p><b>Cannot compute the design:</b> {exc}</p>")
             return
         self._inputs, self._design = inputs, design
         findings = check_pv_design(inputs, design)
+        self._findings = findings
         note = (
             f"Site: lat {self.site.lat.value():.4f}, lon {self.site.lon.value():.4f}, "
             f"tilt {self.site.tilt.value():.0f} deg, azimuth {self.site.azimuth.value():.0f} deg."

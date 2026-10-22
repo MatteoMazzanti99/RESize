@@ -15,9 +15,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -e ".[gui,pv]" pyinstaller
+      - run: pip install -e ".[gui,pv,ai]" pyinstaller
       - name: Build app
-        run: pyinstaller --noconfirm --windowed --name RESize --paths src src/resize_energy/gui/app.py
+        run: pyinstaller --noconfirm --windowed --name RESize --paths src --collect-submodules keyring src/resize_energy/gui/app.py
       - name: Package
         shell: bash
         run: |

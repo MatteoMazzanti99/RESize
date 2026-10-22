@@ -22,12 +22,31 @@ Next to the main values a round **?** button explains the step, and on the resul
 **Why?** panel shows each formula with *your own numbers* substituted in. The same worked
 examples are included in the PDF report.
 
+## AI tutor (optional)
+
+On the results page, **Ask the AI tutor...** opens a chat that knows your inputs, results and
+design checks. It teaches rather than just answering: it explains the reasoning and may ask a
+question to check your understanding. Three ways to use it, none required:
+
+| Option | What you need |
+|---|---|
+| Anthropic (Claude) | your own API key from console.anthropic.com |
+| OpenAI-compatible service | your own key, the service address and a model name |
+| Ollama (local model) | [Ollama](https://ollama.com) running on your computer; no key, nothing leaves your PC |
+| Any chatbot | the **Copy project for any chatbot** button, then paste the summary where you like |
+
+Open **Settings...** in the tutor window to choose. The key is never written to a file: it can
+be remembered in your system keyring (`pip install "resize-energy[ai]"`), read from the
+`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` environment variable, or kept only for the session. Your
+project values are sent to the provider you choose; each question typically costs a few cents
+or less. AI answers can be wrong: the formulas in the **Why?** panel are the reference.
+
 ## Roadmap
 
 | Version | Content |
 |---|---|
 | v0.1 | Guided photovoltaic wizard (resource data, strings, inverter, losses, yield) + PDF report |
-| v0.2 | "Why?" panels (done), rule-based design checker (done), Italian interface, optional AI tutor |
+| v0.2 | "Why?" panels (done), rule-based design checker (done), optional AI tutor (done), Italian interface |
 | v0.3 | Wind module + technology comparison (LCOE, payback, avoided CO2) |
 | v0.4 | Green hydrogen: PEM electrolyser coupled to PV/wind |
 
