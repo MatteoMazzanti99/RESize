@@ -44,7 +44,6 @@ jobs:
       - name: GUI self-test
         env:
           QT_QPA_PLATFORM: offscreen
-          QT_DEBUG_PLUGINS: "1"
         run: |
           set +e
           python -X faulthandler -m resize_energy.gui.app --self-test > smoke.txt 2>&1

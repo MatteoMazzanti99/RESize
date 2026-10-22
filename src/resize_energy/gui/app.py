@@ -23,13 +23,20 @@ def main(argv: list[str] | None = None) -> int:
     apply_theme(app)
     app.setWindowIcon(logo_icon())
     window = MainWindow()
+    print("main window built", flush=True)
     if "--self-test" in args:
         window.show()
         app.processEvents()
-        print("RESize self-test OK")
-        return 0
-    window.show()
-    return app.exec()
+        print("RESize self-test OK", flush=True)
+        code = 0
+    else:
+        window.show()
+        code = app.exec()
+    # Destroy widgets before the QApplication: the reverse order can crash at interpreter exit.
+    window.deleteLater()
+    app.processEvents()
+    del window
+    return code
 
 
 if __name__ == "__main__":
