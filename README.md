@@ -8,6 +8,17 @@ reasoning, so you learn *why* a choice is made, not just the number that comes o
 
 > **Status:** pre-alpha (v0.1 in development). Interfaces and results may change.
 
+## Quick start
+
+```bash
+pip install -e ".[gui]"
+resize            # opens the PV sizing wizard
+resize-cli pv-power --demand-kwh 4800 --irradiation 1600 --pr 0.75
+```
+
+The wizard guides you through site and solar resource (PVGIS or manual input), demand,
+module/inverter datasheet values, then shows the design, automatic checks and a PDF report.
+
 ## Roadmap
 
 | Version | Content |

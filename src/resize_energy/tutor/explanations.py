@@ -33,6 +33,16 @@ EXPLANATIONS: dict[str, dict[str, str]] = {
         ),
         "assumptions": "T_cell,max typically 65-70 degC for ground/roof mounting.",
     },
+    "pv.mppt_window_cold": {
+        "title": "MPPT window at low temperature",
+        "formula": "N_max,mppt = floor(V_mppt,max / Vmp(T_min))",
+        "why": (
+            "Vmp is higher on cold days too. If the string's working voltage rises above the "
+            "top of the MPPT window the inverter cannot track the maximum power point and "
+            "limits the output, so the string length is capped by this as well."
+        ),
+        "assumptions": "Linear temperature coefficient for Vmp; T_min from site climate data.",
+    },
     "pv.dc_ac_ratio": {
         "title": "DC/AC ratio",
         "formula": "DC/AC = P_dc,kWp / P_ac,kW",

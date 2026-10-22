@@ -67,6 +67,17 @@ def min_modules_per_string(
     return math.ceil(inverter_mppt_vmin / vmp_hot)
 
 
+def max_modules_for_mppt_window(
+    inverter_mppt_vmax: float,
+    vmp_stc: float,
+    temp_coeff_vmp_pct_per_c: float,
+    t_min_c: float,
+) -> int:
+    """Maximum modules in series so that Vmp at the coldest temperature stays in the MPPT window."""
+    vmp_cold = module_voltage_at_temperature(vmp_stc, temp_coeff_vmp_pct_per_c, t_min_c)
+    return math.floor(inverter_mppt_vmax / vmp_cold)
+
+
 def dc_ac_ratio(dc_power_kwp: float, inverter_ac_kw: float) -> float:
     """DC/AC (loading) ratio. Typical design range: about 1.1-1.3."""
     if inverter_ac_kw <= 0:

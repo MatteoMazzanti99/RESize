@@ -1,0 +1,377 @@
+"""Step-by-step PV sizing wizard (PySide6)."""
+
+from __future__ import annotations
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPageSize, QPdfWriter, QTextDocument
+from PySide6.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTextBrowser,
+    QVBoxLayout,
+    QWidget,
+    QWizard,
+    QWizardPage,
+)
+
+from resize_energy.core.pv_design import InverterSpec, ModuleSpec, PVInputs, size_pv_system
+from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
+from resize_energy.gui.numbers import format_number, parse_in_range
+from resize_energy.report.html_report import build_pv_report
+from resize_energy.tutor.checker import check_pv_design
+
+
+class NumberField(QWidget):
+    """Free-text numeric input: type the value by hand, with a point or a comma."""
+
+    def __init__(self, value: float, lo: float, hi: float, decimals: int = 2, unit: str = ""):
+        super().__init__()
+        self.lo, self.hi, self.decimals = lo, hi, decimals
+        self.edit = QLineEdit(format_number(value, decimals))
+        self.edit.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.edit.setMaximumWidth(130)
+        self.edit.editingFinished.connect(self._mark)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.edit)
+        if unit:
+            layout.addWidget(QLabel(unit))
+        layout.addStretch(1)
+
+    def value(self) -> float:
+        """Current value; raises ValueError (readable message) if invalid or out of range."""
+        return parse_in_range(self.edit.text(), self.lo, self.hi)
+
+    def set_value(self, value: float) -> None:
+        self.edit.setText(format_number(value, self.decimals))
+        self._mark()
+
+    def _mark(self) -> None:
+        try:
+            self.value()
+        except ValueError as exc:
+            self.edit.setStyleSheet("border: 1px solid #b3261e;")
+            self.edit.setToolTip(str(exc))
+        else:
+            self.edit.setStyleSheet("")
+            self.edit.setToolTip("")
+
+
+def first_error(items: list[tuple[str, NumberField]]) -> str | None:
+    """First invalid field as 'Label: message', or None if all values are valid."""
+    for label, field in items:
+        try:
+            field.value()
+        except ValueError as exc:
+            field.edit.setFocus()
+            return f"{label}: {exc}"
+    return None
+
+
+def _hint(text: str) -> QLabel:
+    label = QLabel(text)
+    label.setWordWrap(True)
+    label.setStyleSheet("color: #555;")
+    return label
+
+
+class IntroPage(QWizardPage):
+    def __init__(self) -> None:
+        super().__init__()
+        self.setTitle("Welcome to RESize")
+        layout = QVBoxLayout(self)
+        text = QLabel(
+            "This wizard sizes a grid-connected photovoltaic plant step by step.\n\n"
+            "1. Site and solar resource\n2. Electricity demand\n3. Module and inverter\n"
+            "4. Results, design checks and PDF report\n\n"
+            "At every step you will see why each choice is made. Results are for "
+            "preliminary and educational use only.\n\n"
+            "Numbers can be typed with a point or a comma (45.07 or 45,07)."
+        )
+        text.setWordWrap(True)
+        layout.addWidget(text)
+
+
+class SitePage(QWizardPage):
+    def __init__(self) -> None:
+        super().__init__()
+        self.setTitle("1. Site and solar resource")
+        self.setSubTitle("The yearly in-plane irradiation H sets how much energy each kWp yields.")
+
+        self.lat = NumberField(45.07, -90, 90, 4, "deg N")
+        self.lon = NumberField(7.69, -180, 180, 4, "deg E")
+        self.tilt = NumberField(30, 0, 90, 0, "deg")
+        self.azimuth = NumberField(0, -180, 180, 0, "deg")
+        self.loss = NumberField(14, 0, 50, 1, "%")
+        self.irr = NumberField(1500, 100, 3500, 0, "kWh/m2 per year")
+        self._implied_pr: float | None = None
+
+        self.status = QLabel("")
+        self.status.setWordWrap(True)
+        fetch = QPushButton("Get irradiation from PVGIS")
+        fetch.clicked.connect(self._fetch)
+
+        form = QFormLayout()
+        form.addRow("Latitude (north positive)", self.lat)
+        form.addRow("Longitude (east positive)", self.lon)
+        form.addRow("Tilt of the modules", self.tilt)
+        form.addRow("Azimuth (0 = south, 90 = west, -90 = east)", self.azimuth)
+        form.addRow("System losses assumed by PVGIS", self.loss)
+
+        manual = QFormLayout()
+        manual.addRow("Annual in-plane irradiation H", self.irr)
+
+        layout = QVBoxLayout(self)
+        layout.addLayout(form)
+        layout.addWidget(fetch)
+        layout.addWidget(self.status)
+        layout.addWidget(_hint(
+            "If you are offline, or already have a value from another source, type the annual "
+            "in-plane irradiation by hand below."))
+        layout.addLayout(manual)
+
+    def implied_pr(self) -> float | None:
+        return self._implied_pr
+
+    def _query_items(self) -> list[tuple[str, NumberField]]:
+        return [("Latitude", self.lat), ("Longitude", self.lon), ("Tilt", self.tilt),
+                ("Azimuth", self.azimuth), ("System losses", self.loss)]
+
+    def _fetch(self) -> None:
+        error = first_error(self._query_items())
+        if error:
+            self.status.setText(error)
+            return
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            result = fetch_pvcalc(
+                self.lat.value(), self.lon.value(), self.tilt.value(),
+                self.azimuth.value(), self.loss.value(),
+            )
+        except (PVGISError, ValueError) as exc:
+            self.status.setText(f"Could not get PVGIS data: {exc}\nYou can type H by hand below.")
+            return
+        finally:
+            QApplication.restoreOverrideCursor()
+        self.irr.set_value(result.annual_irradiation_kwh_m2)
+        self._implied_pr = result.implied_performance_ratio
+        self.status.setText(
+            f"PVGIS: H = {result.annual_irradiation_kwh_m2:,.0f} kWh/m2 per year, "
+            f"yield {result.annual_yield_kwh_per_kwp:,.0f} kWh/kWp "
+            f"(implied performance ratio {result.implied_performance_ratio:.2f})."
+        )
+
+    def validatePage(self) -> bool:  # noqa: N802 (Qt naming)
+        error = first_error(self._query_items() + [("Annual irradiation", self.irr)])
+        if error:
+            QMessageBox.warning(self, "Check the value", error)
+            return False
+        return True
+
+
+class LoadPage(QWizardPage):
+    def __init__(self, site: SitePage) -> None:
+        super().__init__()
+        self.site = site
+        self.setTitle("2. Electricity demand")
+        self.setSubTitle("How much energy must the plant supply, and how well does it perform?")
+        self.demand = NumberField(4500, 1, 1e9, 0, "kWh per year")
+        self.coverage = NumberField(100, 1, 100, 0, "%")
+        self.pr = NumberField(0.80, 0.5, 0.95, 2)
+
+        form = QFormLayout()
+        form.addRow("Annual electricity demand", self.demand)
+        form.addRow("Share of the demand to cover with PV", self.coverage)
+        form.addRow("Performance ratio (PR)", self.pr)
+        layout = QVBoxLayout(self)
+        layout.addLayout(form)
+        layout.addWidget(_hint(
+            "PR groups all losses (temperature, soiling, wiring, inverter, mismatch). "
+            "Typical values are 0.75-0.85. A 100% target does not account for the hour-by-hour "
+            "match between production and consumption: that needs a storage/self-consumption "
+            "analysis."))
+
+    def initializePage(self) -> None:  # noqa: N802 (Qt naming)
+        implied = self.site.implied_pr()
+        if implied and 0.5 <= implied <= 0.95:
+            self.pr.set_value(round(implied, 2))
+
+    def validatePage(self) -> bool:  # noqa: N802 (Qt naming)
+        error = first_error([("Annual demand", self.demand), ("Coverage", self.coverage),
+                             ("Performance ratio", self.pr)])
+        if error:
+            QMessageBox.warning(self, "Check the value", error)
+            return False
+        return True
+
+
+class ComponentsPage(QWizardPage):
+    def __init__(self) -> None:
+        super().__init__()
+        self.setTitle("3. Module and inverter")
+        self.setSubTitle("Enter the datasheet values (defaults are generic placeholders).")
+        m, i = ModuleSpec(), InverterSpec()
+
+        def nf(value: float, lo: float, hi: float, dec: int, unit: str) -> NumberField:
+            return NumberField(value, lo, hi, dec, unit)
+
+        self.t_min = nf(-10, -60, 25, 0, "degC")
+        self.t_max = nf(70, 25, 120, 0, "degC")
+        self.mod = {
+            "p": nf(m.p_stc_w, 50, 1000, 0, "Wp"),
+            "voc": nf(m.voc_v, 5, 100, 2, "V"),
+            "vmp": nf(m.vmp_v, 5, 100, 2, "V"),
+            "isc": nf(m.isc_a, 1, 30, 2, "A"),
+            "bvoc": nf(m.temp_coeff_voc_pct_per_c, -1, 0, 2, "%/degC"),
+            "bvmp": nf(m.temp_coeff_vmp_pct_per_c, -1, 0, 2, "%/degC"),
+            "area": nf(m.area_m2, 0.5, 5, 2, "m2"),
+        }
+        self.inv = {
+            "p": nf(i.p_ac_kw, 0.5, 5000, 1, "kW"),
+            "vmax": nf(i.vdc_max_v, 100, 1500, 0, "V"),
+            "vmin": nf(i.mppt_vmin_v, 20, 1000, 0, "V"),
+            "vmpptmax": nf(i.mppt_vmax_v, 100, 1500, 0, "V"),
+            "imax": nf(i.imax_per_mppt_a, 5, 100, 1, "A"),
+            "n": nf(i.n_mppt, 1, 12, 0, ""),
+        }
+        mod_labels = {
+            "p": "Rated power", "voc": "Open-circuit voltage Voc", "vmp": "Voltage at max power Vmp",
+            "isc": "Short-circuit current Isc", "bvoc": "Temp. coefficient of Voc",
+            "bvmp": "Temp. coefficient of Vmp", "area": "Module area",
+        }
+        inv_labels = {
+            "p": "Rated AC power", "vmax": "Maximum DC voltage", "vmin": "MPPT minimum voltage",
+            "vmpptmax": "MPPT maximum voltage", "imax": "Maximum current per MPPT",
+            "n": "Number of MPPT inputs",
+        }
+        self._labels: list[tuple[str, NumberField]] = [
+            ("Minimum ambient temperature", self.t_min),
+            ("Maximum cell temperature", self.t_max),
+        ]
+
+        site = QGroupBox("Climate extremes")
+        sf = QFormLayout(site)
+        sf.addRow("Minimum ambient temperature", self.t_min)
+        sf.addRow("Maximum cell temperature", self.t_max)
+
+        mod_box = QGroupBox("PV module (STC)")
+        mf = QFormLayout(mod_box)
+        for key, label in mod_labels.items():
+            mf.addRow(label, self.mod[key])
+            self._labels.append((f"Module: {label}", self.mod[key]))
+
+        inv_box = QGroupBox("Inverter")
+        inf = QFormLayout(inv_box)
+        for key, label in inv_labels.items():
+            inf.addRow(label, self.inv[key])
+            self._labels.append((f"Inverter: {label}", self.inv[key]))
+
+        row = QHBoxLayout()
+        row.addWidget(mod_box)
+        row.addWidget(inv_box)
+        layout = QVBoxLayout(self)
+        layout.addWidget(site)
+        layout.addLayout(row)
+        layout.addWidget(_hint(
+            "Vmp temperature coefficients are often not listed on the datasheet: use about "
+            "-0.30 to -0.40 %/degC if the Vmp one is missing."))
+
+    def specs(self) -> tuple[ModuleSpec, InverterSpec, float, float]:
+        mod = {k: f.value() for k, f in self.mod.items()}
+        inv = {k: f.value() for k, f in self.inv.items()}
+        module = ModuleSpec(
+            name="User module", p_stc_w=mod["p"], voc_v=mod["voc"], vmp_v=mod["vmp"],
+            isc_a=mod["isc"], imp_a=0.94 * mod["isc"],
+            temp_coeff_voc_pct_per_c=mod["bvoc"], temp_coeff_vmp_pct_per_c=mod["bvmp"],
+            area_m2=mod["area"],
+        )
+        inverter = InverterSpec(
+            name="User inverter", p_ac_kw=inv["p"], vdc_max_v=inv["vmax"],
+            mppt_vmin_v=inv["vmin"], mppt_vmax_v=inv["vmpptmax"],
+            imax_per_mppt_a=inv["imax"], n_mppt=max(1, round(inv["n"])),
+        )
+        return module, inverter, self.t_min.value(), self.t_max.value()
+
+    def validatePage(self) -> bool:  # noqa: N802 (Qt naming)
+        error = first_error(self._labels)
+        if error:
+            QMessageBox.warning(self, "Check the value", error)
+            return False
+        return True
+
+
+class ResultsPage(QWizardPage):
+    def __init__(self, site: SitePage, load: LoadPage, comp: ComponentsPage) -> None:
+        super().__init__()
+        self.site, self.load, self.comp = site, load, comp
+        self.setTitle("4. Results and design checks")
+        self.browser = QTextBrowser()
+        self.html = ""
+        export = QPushButton("Export PDF report...")
+        export.clicked.connect(self._export_pdf)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.browser)
+        layout.addWidget(export)
+
+    def initializePage(self) -> None:  # noqa: N802 (Qt naming)
+        try:
+            module, inverter, t_min, t_max = self.comp.specs()
+            inputs = PVInputs(
+                annual_demand_kwh=self.load.demand.value(),
+                annual_irradiation_kwh_m2=self.site.irr.value(),
+                coverage=self.load.coverage.value() / 100.0,
+                performance_ratio=self.load.pr.value(),
+                t_min_c=t_min, t_cell_max_c=t_max, module=module, inverter=inverter,
+            )
+            design = size_pv_system(inputs)
+        except ValueError as exc:
+            self.html = ""
+            self.browser.setHtml(f"<p><b>Cannot compute the design:</b> {exc}</p>")
+            return
+        findings = check_pv_design(inputs, design)
+        note = (
+            f"Site: lat {self.site.lat.value():.4f}, lon {self.site.lon.value():.4f}, "
+            f"tilt {self.site.tilt.value():.0f} deg, azimuth {self.site.azimuth.value():.0f} deg."
+        )
+        self.html = build_pv_report(inputs, design, findings, site_note=note)
+        self.browser.setHtml(self.html)
+
+    def _export_pdf(self) -> None:
+        if not self.html:
+            QMessageBox.information(self, "RESize", "There is no report to export yet.")
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save report", "RESize_PV_report.pdf", "PDF files (*.pdf)"
+        )
+        if not path:
+            return
+        doc = QTextDocument()
+        doc.setHtml(self.html)
+        writer = QPdfWriter(path)
+        writer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
+        doc.print_(writer)
+        QMessageBox.information(self, "RESize", f"Report saved to:\n{path}")
+
+
+class PVWizard(QWizard):
+    def __init__(self) -> None:
+        super().__init__()
+        self.setWindowTitle("RESize - PV sizing")
+        self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
+        self.setOption(QWizard.WizardOption.NoBackButtonOnStartPage, True)
+        site = SitePage()
+        load = LoadPage(site)
+        comp = ComponentsPage()
+        self.addPage(IntroPage())
+        self.addPage(site)
+        self.addPage(load)
+        self.addPage(comp)
+        self.addPage(ResultsPage(site, load, comp))
+        self.resize(860, 720)
