@@ -11,8 +11,32 @@ from resize_energy.tutor.explanations import EXPLANATIONS, TOPIC_ORDER
 from resize_energy.tutor.why_html import explanation_html
 from resize_energy.tutor.worked import worked_example
 
-_COLORS = {"error": "#b3261e", "warning": "#b26a00", "info": "#1a5fb4", "ok": "#2e7d32"}
 _LABELS = {"error": "ERROR", "warning": "WARNING", "info": "NOTE", "ok": "OK"}
+
+# Two looks for the same report: "light" for the PDF (white paper), "dark" for the window.
+_THEMES = {
+    "light": {
+        "colors": {"error": "#b3261e", "warning": "#b26a00", "info": "#1a5fb4", "ok": "#2e7d32"},
+        "css": (
+            "body { font-family: Arial, sans-serif; font-size: 10pt; }\n"
+            "h1 { font-size: 18pt; } h2 { font-size: 13pt; margin-top: 16px; }\n"
+            "h3 { font-size: 10.5pt; margin-bottom: 2px; }\n"
+            "table { border-collapse: collapse; } td { padding: 2px 10px 2px 0; }\n"
+            "code { background: #eee; }"
+        ),
+    },
+    "dark": {
+        "colors": {"error": "#FF7A7A", "warning": "#F5B941", "info": "#6CB4FF", "ok": "#4ADE80"},
+        "css": (
+            "body { color: #E8EEF8; font-size: 10pt; }\n"
+            "h1 { font-size: 17pt; color: #E8EEF8; }\n"
+            "h2 { font-size: 13pt; margin-top: 16px; color: #2DE08A; }\n"
+            "h3 { font-size: 10.5pt; margin-bottom: 2px; color: #2DE08A; }\n"
+            "table { border-collapse: collapse; } td { padding: 2px 10px 2px 0; }\n"
+            "code { background-color: #1A2540; color: #9CF3C6; }"
+        ),
+    },
+}
 
 
 def _row(label: str, value: str) -> str:
@@ -25,8 +49,14 @@ def build_pv_report(
     findings: list[Finding],
     title: str = "Preliminary PV sizing report",
     site_note: str = "",
+    theme: str = "light",
 ) -> str:
-    """HTML string with inputs, results, checks and the formulas used."""
+    """HTML string with inputs, results, checks and the formulas used.
+
+    ``theme`` is "light" (for the PDF) or "dark" (for showing it inside the dark window).
+    """
+    look = _THEMES.get(theme, _THEMES["light"])
+    colors = look["colors"]
     m, inv = inp.module, inp.inverter
 
     inputs_rows = "".join([
@@ -63,7 +93,7 @@ def build_pv_report(
     ])
 
     checks = "".join(
-        f'<li><span style="color:{_COLORS[f.severity]}"><b>[{_LABELS[f.severity]}]</b></span> '
+        f'<li><span style="color:{colors[f.severity]}"><b>[{_LABELS[f.severity]}]</b></span> '
         f"{escape(f.message)}</li>"
         for f in findings
     )
@@ -77,11 +107,7 @@ def build_pv_report(
     note = f"<p>{escape(site_note)}</p>" if site_note else ""
     return f"""<html><head><meta charset="utf-8"><title>{escape(title)}</title>
 <style>
-body {{ font-family: Arial, sans-serif; font-size: 10pt; }}
-h1 {{ font-size: 18pt; }} h2 {{ font-size: 13pt; margin-top: 16px; }}
-h3 {{ font-size: 10.5pt; margin-bottom: 2px; }}
-table {{ border-collapse: collapse; }} td {{ padding: 2px 10px 2px 0; }}
-code {{ background: #eee; }}
+{look["css"]}
 </style></head><body>
 <h1>{escape(title)}</h1>{note}
 <h2>1. Inputs</h2><table>{inputs_rows}</table>

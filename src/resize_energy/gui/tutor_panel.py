@@ -93,7 +93,7 @@ class AISettingsDialog(QDialog):
             "environment variable. Model names change over time: edit the field if needed."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #555;")
+        info.setObjectName("hint")
 
         form = QFormLayout()
         form.addRow("Provider", self.provider)
@@ -152,7 +152,7 @@ class TutorDialog(QDialog):
 
         note = QLabel(PRIVACY_NOTE)
         note.setWordWrap(True)
-        note.setStyleSheet("color: #555;")
+        note.setObjectName("hint")
         self.chat = QTextBrowser()
         self.input = QLineEdit()
         self.input.setPlaceholderText("Ask about your project, e.g. 'Why is the string limited to 22 modules?'")

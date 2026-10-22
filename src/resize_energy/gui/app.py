@@ -12,12 +12,16 @@ def main() -> int:
         print("The GUI needs PySide6. Install it with: pip install 'resize-energy[gui]'")
         return 1
 
-    from resize_energy.gui.wizard import PVWizard
+    from resize_energy.gui.brand import logo_icon
+    from resize_energy.gui.theme import apply_theme
+    from resize_energy.gui.wizard import MainWindow
 
     app = QApplication(sys.argv)
     app.setApplicationName("RESize")
-    wizard = PVWizard()
-    wizard.show()
+    apply_theme(app)
+    app.setWindowIcon(logo_icon())
+    window = MainWindow()
+    window.show()
     return app.exec()
 
 

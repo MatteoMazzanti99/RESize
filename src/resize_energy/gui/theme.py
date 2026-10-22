@@ -1,0 +1,159 @@
+"""Dark 'energy dashboard' theme: colours, style sheet and contrast helpers.
+
+Everything except :func:`apply_theme` is plain Python (no Qt), so it is unit-tested.
+"""
+
+from __future__ import annotations
+
+COLORS: dict[str, str] = {
+    "bg": "#0B1220",          # window background (midnight blue)
+    "sidebar": "#0E1729",     # left navigation
+    "surface": "#121B2E",     # panels, text areas
+    "surface2": "#1A2540",    # raised elements, hover
+    "border": "#3D507D",
+    "text": "#E8EEF8",
+    "muted": "#93A4C3",
+    "accent": "#2DE08A",      # electric green
+    "accent_hover": "#5BEBA6",
+    "accent_text": "#04210F", # text on top of the accent colour
+    "accent_tint": "#0F2A2B", # card background for the active technology
+    "warning": "#F5B941",
+    "error": "#FF7A7A",
+    "info": "#6CB4FF",
+}
+
+FONT_FAMILY = '"Segoe UI", "Inter", "SF Pro Text", "Helvetica Neue", Arial, sans-serif'
+
+# Style for HTML shown inside QTextBrowser widgets (the PDF keeps its own light style).
+SCREEN_DOC_CSS = (
+    f"body {{ color: {COLORS['text']}; }} "
+    f"h3 {{ color: {COLORS['accent']}; }} "
+    f"code {{ background-color: {COLORS['surface2']}; color: #9CF3C6; }} "
+    f"a {{ color: {COLORS['info']}; }}"
+)
+
+
+def _linear(channel: int) -> float:
+    c = channel / 255.0
+    return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def luminance(hex_color: str) -> float:
+    """WCAG relative luminance of '#RRGGBB'."""
+    h = hex_color.lstrip("#")
+    r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    return 0.2126 * _linear(r) + 0.7152 * _linear(g) + 0.0722 * _linear(b)
+
+
+def contrast_ratio(foreground: str, background: str) -> float:
+    """WCAG contrast ratio between two '#RRGGBB' colours (1 to 21)."""
+    a, b = luminance(foreground), luminance(background)
+    hi, lo = max(a, b), min(a, b)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+_QSS = """
+* { font-family: __FONT__; }
+QWidget { background-color: {bg}; color: {text}; font-size: 10pt; }
+QMainWindow, QDialog { background-color: {bg}; }
+QLabel { background: transparent; }
+QToolTip { background-color: {surface2}; color: {text}; border: 1px solid {border}; padding: 4px; }
+
+QScrollArea { background: transparent; border: none; }
+QScrollArea > QWidget > QWidget { background: transparent; }
+
+QWidget#sidebar { background-color: {sidebar}; border-right: 1px solid {border}; }
+QWidget#sidebar QLabel { background: transparent; }
+QLabel#brandName { font-size: 17pt; font-weight: 700; }
+QLabel#brandTagline { color: {muted}; font-size: 9pt; }
+QLabel#sidebarNote { color: {muted}; font-size: 8.5pt; }
+
+QLabel#pageTitle { font-size: 20pt; font-weight: 700; }
+QLabel#pageSubtitle { color: {muted}; font-size: 10.5pt; }
+QLabel#overline { color: {accent}; font-size: 9pt; font-weight: 700; }
+QLabel#headline { font-size: 26pt; font-weight: 700; }
+QLabel#lead { color: {muted}; font-size: 11.5pt; }
+QLabel#hint { color: {muted}; }
+QLabel#sectionTitle { font-size: 12pt; font-weight: 700; }
+
+QFrame#card { background-color: {surface}; border: 1px solid {border}; border-radius: 12px; }
+QFrame#cardActive { background-color: {accent_tint}; border: 1px solid {accent}; border-radius: 12px; }
+QFrame#cardDim { background-color: {surface}; border: 1px dashed {border}; border-radius: 12px; }
+QFrame#cardDim QLabel#cardTitle { color: {text}; }
+QLabel#cardTitle { font-size: 12pt; font-weight: 700; }
+QLabel#cardText { color: {muted}; }
+QLabel#cardIcon { background-color: {surface2}; color: {accent}; border-radius: 10px; font-size: 13pt; font-weight: 700; }
+QLabel#pillOn { background-color: {accent}; color: {accent_text}; border-radius: 9px; padding: 2px 10px; font-size: 8.5pt; font-weight: 700; }
+QLabel#pillOff { background-color: {surface2}; color: {muted}; border-radius: 9px; padding: 2px 10px; font-size: 8.5pt; }
+
+QPushButton { background-color: {surface2}; color: {text}; border: 1px solid {border}; border-radius: 8px; padding: 7px 16px; }
+QPushButton:hover { border-color: {accent}; }
+QPushButton:pressed { background-color: {surface}; }
+QPushButton:disabled { color: {muted}; border-color: {surface2}; }
+QPushButton[variant="primary"] { background-color: {accent}; color: {accent_text}; border: 1px solid {accent}; font-weight: 700; padding: 8px 22px; }
+QPushButton[variant="primary"]:hover { background-color: {accent_hover}; border-color: {accent_hover}; }
+QPushButton[variant="primary"]:disabled { background-color: {surface2}; color: {muted}; border-color: {surface2}; }
+QPushButton[variant="ghost"] { background-color: transparent; border: 1px solid {border}; }
+QPushButton#whyButton { border-radius: 12px; padding: 0px; min-width: 24px; max-width: 24px; min-height: 24px; max-height: 24px; color: {accent}; font-weight: 700; }
+
+QLineEdit, QComboBox { background-color: {surface}; color: {text}; border: 1px solid {border}; border-radius: 6px; padding: 5px 8px; selection-background-color: {accent}; selection-color: {accent_text}; }
+QLineEdit:focus, QComboBox:focus { border: 1px solid {accent}; }
+QComboBox::drop-down { border: none; width: 22px; }
+QComboBox QAbstractItemView { background-color: {surface}; color: {text}; border: 1px solid {border}; selection-background-color: {surface2}; selection-color: {text}; }
+QCheckBox { background: transparent; spacing: 8px; }
+
+QGroupBox { background: transparent; border: 1px solid {border}; border-radius: 10px; margin-top: 14px; padding: 14px 10px 8px 10px; }
+QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 14px; padding: 0 6px; color: {muted}; font-weight: 700; }
+
+QTextBrowser { background-color: {surface}; color: {text}; border: 1px solid {border}; border-radius: 10px; padding: 8px; selection-background-color: {accent}; selection-color: {accent_text}; }
+QListWidget { background-color: {surface}; border: 1px solid {border}; border-radius: 10px; padding: 4px; outline: none; }
+QListWidget::item { padding: 6px 8px; border-radius: 6px; }
+QListWidget::item:hover { background-color: {surface2}; }
+QListWidget::item:selected { background-color: {surface2}; color: {accent}; }
+
+QSplitter::handle { background-color: {bg}; width: 8px; }
+QScrollBar:vertical { background: transparent; width: 10px; margin: 2px; }
+QScrollBar::handle:vertical { background: {border}; border-radius: 4px; min-height: 28px; }
+QScrollBar::handle:vertical:hover { background: {muted}; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
+QScrollBar:horizontal { background: transparent; height: 10px; margin: 2px; }
+QScrollBar::handle:horizontal { background: {border}; border-radius: 4px; min-width: 28px; }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
+
+QMessageBox { background-color: {bg}; }
+"""
+
+
+def build_stylesheet() -> str:
+    """The application style sheet with every colour placeholder filled in."""
+    qss = _QSS.replace("__FONT__", FONT_FAMILY)
+    for name, value in COLORS.items():
+        qss = qss.replace("{" + name + "}", value)
+    return qss
+
+
+def apply_theme(app) -> None:  # noqa: ANN001 - QApplication, imported lazily
+    """Use the Fusion style, a dark palette (for native dialogs) and the style sheet."""
+    from PySide6.QtGui import QColor, QPalette  # noqa: PLC0415
+
+    app.setStyle("Fusion")
+    palette = QPalette()
+    roles = {
+        QPalette.ColorRole.Window: COLORS["bg"],
+        QPalette.ColorRole.WindowText: COLORS["text"],
+        QPalette.ColorRole.Base: COLORS["surface"],
+        QPalette.ColorRole.AlternateBase: COLORS["surface2"],
+        QPalette.ColorRole.Text: COLORS["text"],
+        QPalette.ColorRole.Button: COLORS["surface2"],
+        QPalette.ColorRole.ButtonText: COLORS["text"],
+        QPalette.ColorRole.Highlight: COLORS["accent"],
+        QPalette.ColorRole.HighlightedText: COLORS["accent_text"],
+        QPalette.ColorRole.ToolTipBase: COLORS["surface2"],
+        QPalette.ColorRole.ToolTipText: COLORS["text"],
+        QPalette.ColorRole.PlaceholderText: COLORS["muted"],
+        QPalette.ColorRole.Link: COLORS["info"],
+    }
+    for role, color in roles.items():
+        palette.setColor(role, QColor(color))
+    app.setPalette(palette)
+    app.setStyleSheet(build_stylesheet())

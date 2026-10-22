@@ -7,6 +7,7 @@ from collections.abc import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QPushButton, QTextBrowser, QVBoxLayout
 
+from resize_energy.gui.theme import SCREEN_DOC_CSS
 from resize_energy.tutor.why_html import explanation_html
 
 
@@ -18,6 +19,7 @@ class WhyDialog(QDialog):
         self.setWindowTitle("Why?")
         self.resize(580, 480)
         browser = QTextBrowser()
+        browser.document().setDefaultStyleSheet(SCREEN_DOC_CSS)
         browser.setHtml(explanation_html(key, worked))
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)
@@ -33,6 +35,7 @@ class WhyButton(QPushButton):
         super().__init__("?")
         self.key = key
         self._provider = worked_provider
+        self.setObjectName("whyButton")
         self.setFixedSize(24, 24)
         self.setToolTip("Why? Explain this step")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
