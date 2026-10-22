@@ -41,6 +41,14 @@ jobs:
           python-version: "3.12"
       - run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0 libdbus-1-3
       - run: pip install -e ".[gui,ai]"
-      - run: python -m resize_energy.gui.app --self-test
+      - name: GUI self-test
         env:
           QT_QPA_PLATFORM: offscreen
+          QT_DEBUG_PLUGINS: "1"
+        run: |
+          set +e
+          python -X faulthandler -m resize_energy.gui.app --self-test > smoke.txt 2>&1
+          code=$?
+          body=$(python -c "import urllib.parse;t=open('smoke.txt').read()[-1800:];print(urllib.parse.quote(t,safe=' /:.,()-+=*#'))")
+          echo "::notice title=GUI self-test output (exit $code)::${body}"
+          exit $code

@@ -15,10 +15,16 @@ jobs:
           python-version: "3.12"
       - run: pip install -e .
       - name: Compare with PVGIS
-        run: |
-          python validation/validate_pv.py --out pv-report.md | tee -a "$GITHUB_STEP_SUMMARY" | while IFS= read -r l; do echo "::notice title=validation::$l"; done
-          exit ${PIPESTATUS[0]}
         shell: bash
+        run: |
+          set +e
+          python validation/validate_pv.py --out pv-report.md > out.txt 2>&1
+          code=$?
+          cat out.txt >> "$GITHUB_STEP_SUMMARY"
+          # one annotation with the whole report (annotations are capped at 10 per step)
+          body=$(python -c "import urllib.parse;print(urllib.parse.quote(open('out.txt').read(),safe=' |/:.,()-+=*#'))")
+          echo "::notice title=PV validation report::${body}"
+          exit $code
       - uses: actions/upload-artifact@v4
         if: always()
         with:
