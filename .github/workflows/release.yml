@@ -3,26 +3,72 @@ name: Release installers
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - {os: ubuntu-latest, name: linux}
+          - {os: windows-latest, name: windows}
+          - {os: macos-latest, name: macos}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -e ".[gui,pv,ai]" pyinstaller
+      - name: Linux system libraries for Qt
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0 libdbus-1-3 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-shape0
+      - run: pip install -e ".[gui,ai]" pyinstaller
       - name: Build app
-        run: pyinstaller --noconfirm --windowed --name RESize --paths src --collect-submodules keyring src/resize_energy/gui/app.py
+        run: pyinstaller --noconfirm --windowed --name RESize --paths src --collect-submodules keyring packaging/launcher.py
+      - name: Self-test the built app (Linux, headless)
+        if: matrix.name == 'linux'
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: dist/RESize/RESize --self-test
+      - name: Self-test the built app (Windows)
+        if: matrix.name == 'windows'
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: dist/RESize/RESize.exe --self-test
       - name: Package
         shell: bash
         run: |
-          cd dist
-          7z a ../RESize-${{ matrix.os }}.zip RESize* || zip -r ../RESize-${{ matrix.os }}.zip RESize*
+          mkdir -p out
+          if [ "${{ matrix.name }}" = "macos" ]; then
+            ditto -c -k --sequesterRsrc --keepParent dist/RESize.app out/RESize-macos.zip
+          elif [ "${{ matrix.name }}" = "windows" ]; then
+            7z a out/RESize-windows.zip ./dist/RESize
+          else
+            tar -czf out/RESize-linux.tar.gz -C dist RESize
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RESize-${{ matrix.name }}
+          path: out/*
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
-          files: RESize-${{ matrix.os }}.zip
+          files: out/*
+          generate_release_notes: true

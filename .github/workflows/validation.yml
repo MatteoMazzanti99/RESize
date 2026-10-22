@@ -1,0 +1,26 @@
+name: PV validation
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ["validation/**", "src/resize_energy/core/**", ".github/workflows/validation.yml"]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - name: Compare with PVGIS
+        run: |
+          python validation/validate_pv.py --out pv-report.md | tee -a "$GITHUB_STEP_SUMMARY" | while IFS= read -r l; do echo "::notice title=validation::$l"; done
+          exit ${PIPESTATUS[0]}
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pv-validation-report
+          path: pv-report.md

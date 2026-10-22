@@ -34,7 +34,7 @@ from resize_energy.core.pv_design import (
 )
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.gui.home import HomePage
-from resize_energy.gui.numbers import format_number, parse_in_range
+from resize_energy.gui.numparse import format_number, parse_in_range
 from resize_energy.gui.theme import COLORS, SCREEN_DOC_CSS
 from resize_energy.gui.tutor_panel import TutorDialog
 from resize_energy.gui.why import WhyButton

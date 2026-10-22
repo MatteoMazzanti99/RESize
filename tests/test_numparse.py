@@ -1,6 +1,6 @@
 import pytest
 
-from resize_energy.gui.numbers import format_number, parse_in_range, parse_number
+from resize_energy.gui.numparse import format_number, parse_in_range, parse_number
 
 
 @pytest.mark.parametrize("text, expected", [
