@@ -82,6 +82,7 @@ def check_pv_design(inp: PVInputs, design: PVDesign) -> list[Finding]:
             "error", "mppt_current",
             f"{strings_per_mppt} string(s) per MPPT give {current:.1f} A short-circuit current, "
             f"above the input limit {inv.imax_per_mppt_a:.1f} A.",
+            "pv.string_layout",
         ))
 
     # 5. DC/AC ratio

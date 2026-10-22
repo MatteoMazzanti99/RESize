@@ -18,13 +18,16 @@ resize-cli pv-power --demand-kwh 4800 --irradiation 1600 --pr 0.75
 
 The wizard guides you through site and solar resource (PVGIS or manual input), demand,
 module/inverter datasheet values, then shows the design, automatic checks and a PDF report.
+Next to the main values a round **?** button explains the step, and on the results page a
+**Why?** panel shows each formula with *your own numbers* substituted in. The same worked
+examples are included in the PDF report.
 
 ## Roadmap
 
 | Version | Content |
 |---|---|
 | v0.1 | Guided photovoltaic wizard (resource data, strings, inverter, losses, yield) + PDF report |
-| v0.2 | "Why?" panels, rule-based design checker, optional AI tutor |
+| v0.2 | "Why?" panels (done), rule-based design checker (done), Italian interface, optional AI tutor |
 | v0.3 | Wind module + technology comparison (LCOE, payback, avoided CO2) |
 | v0.4 | Green hydrogen: PEM electrolyser coupled to PV/wind |
 

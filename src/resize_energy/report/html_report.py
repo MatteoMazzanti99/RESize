@@ -7,7 +7,9 @@ from html import escape
 from resize_energy import __version__
 from resize_energy.core.pv_design import PVDesign, PVInputs
 from resize_energy.tutor.checker import Finding
-from resize_energy.tutor.explanations import EXPLANATIONS
+from resize_energy.tutor.explanations import EXPLANATIONS, TOPIC_ORDER
+from resize_energy.tutor.why_html import explanation_html
+from resize_energy.tutor.worked import worked_example
 
 _COLORS = {"error": "#b3261e", "warning": "#b26a00", "info": "#1a5fb4", "ok": "#2e7d32"}
 _LABELS = {"error": "ERROR", "warning": "WARNING", "info": "NOTE", "ok": "OK"}
@@ -66,19 +68,10 @@ def build_pv_report(
         for f in findings
     )
 
-    used_keys: list[str] = []
-    for f in findings:
-        if f.explanation_key and f.explanation_key not in used_keys:
-            used_keys.append(f.explanation_key)
-    for key in EXPLANATIONS:
-        if key.startswith("pv.") and key not in used_keys:
-            used_keys.append(key)
     why = "".join(
-        f"<h3>{escape(EXPLANATIONS[k]['title'])}</h3>"
-        f"<p><code>{escape(EXPLANATIONS[k]['formula'])}</code></p>"
-        f"<p>{escape(EXPLANATIONS[k]['why'])}</p>"
-        f"<p><i>Assumptions: {escape(EXPLANATIONS[k]['assumptions'])}</i></p>"
-        for k in used_keys if k in EXPLANATIONS
+        explanation_html(key, worked_example(key, inp, design))
+        for key in TOPIC_ORDER
+        if key in EXPLANATIONS
     )
 
     note = f"<p>{escape(site_note)}</p>" if site_note else ""

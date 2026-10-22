@@ -12,8 +12,10 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
     QMessageBox,
     QPushButton,
+    QSplitter,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -21,17 +23,35 @@ from PySide6.QtWidgets import (
     QWizardPage,
 )
 
-from resize_energy.core.pv_design import InverterSpec, ModuleSpec, PVInputs, size_pv_system
+from resize_energy.core.pv_design import (
+    InverterSpec,
+    ModuleSpec,
+    PVDesign,
+    PVInputs,
+    size_pv_system,
+)
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.gui.numbers import format_number, parse_in_range
+from resize_energy.gui.why import WhyButton
 from resize_energy.report.html_report import build_pv_report
 from resize_energy.tutor.checker import check_pv_design
+from resize_energy.tutor.explanations import EXPLANATIONS, TOPIC_ORDER
+from resize_energy.tutor.why_html import explanation_html
+from resize_energy.tutor.worked import worked_example
 
 
 class NumberField(QWidget):
     """Free-text numeric input: type the value by hand, with a point or a comma."""
 
-    def __init__(self, value: float, lo: float, hi: float, decimals: int = 2, unit: str = ""):
+    def __init__(
+        self,
+        value: float,
+        lo: float,
+        hi: float,
+        decimals: int = 2,
+        unit: str = "",
+        why_key: str | None = None,
+    ):
         super().__init__()
         self.lo, self.hi, self.decimals = lo, hi, decimals
         self.edit = QLineEdit(format_number(value, decimals))
@@ -43,6 +63,8 @@ class NumberField(QWidget):
         layout.addWidget(self.edit)
         if unit:
             layout.addWidget(QLabel(unit))
+        if why_key:
+            layout.addWidget(WhyButton(why_key))
         layout.addStretch(1)
 
     def value(self) -> float:
@@ -91,8 +113,10 @@ class IntroPage(QWizardPage):
             "This wizard sizes a grid-connected photovoltaic plant step by step.\n\n"
             "1. Site and solar resource\n2. Electricity demand\n3. Module and inverter\n"
             "4. Results, design checks and PDF report\n\n"
-            "At every step you will see why each choice is made. Results are for "
-            "preliminary and educational use only.\n\n"
+            "At every step you will see why each choice is made: click the round ? button next "
+            "to a value for an explanation, and use the Why? panel on the results page to see "
+            "the formulas with your own numbers. Results are for preliminary and educational "
+            "use only.\n\n"
             "Numbers can be typed with a point or a comma (45.07 or 45,07)."
         )
         text.setWordWrap(True)
@@ -110,7 +134,7 @@ class SitePage(QWizardPage):
         self.tilt = NumberField(30, 0, 90, 0, "deg")
         self.azimuth = NumberField(0, -180, 180, 0, "deg")
         self.loss = NumberField(14, 0, 50, 1, "%")
-        self.irr = NumberField(1500, 100, 3500, 0, "kWh/m2 per year")
+        self.irr = NumberField(1500, 100, 3500, 0, "kWh/m2 per year", "pv.irradiation")
         self._implied_pr: float | None = None
 
         self.status = QLabel("")
@@ -183,8 +207,8 @@ class LoadPage(QWizardPage):
         self.setTitle("2. Electricity demand")
         self.setSubTitle("How much energy must the plant supply, and how well does it perform?")
         self.demand = NumberField(4500, 1, 1e9, 0, "kWh per year")
-        self.coverage = NumberField(100, 1, 100, 0, "%")
-        self.pr = NumberField(0.80, 0.5, 0.95, 2)
+        self.coverage = NumberField(100, 1, 100, 0, "%", "pv.required_peak_power")
+        self.pr = NumberField(0.80, 0.5, 0.95, 2, "", "pv.performance_ratio")
 
         form = QFormLayout()
         form.addRow("Annual electricity demand", self.demand)
@@ -219,26 +243,28 @@ class ComponentsPage(QWizardPage):
         self.setSubTitle("Enter the datasheet values (defaults are generic placeholders).")
         m, i = ModuleSpec(), InverterSpec()
 
-        def nf(value: float, lo: float, hi: float, dec: int, unit: str) -> NumberField:
-            return NumberField(value, lo, hi, dec, unit)
+        def nf(
+            value: float, lo: float, hi: float, dec: int, unit: str, why: str | None = None
+        ) -> NumberField:
+            return NumberField(value, lo, hi, dec, unit, why)
 
-        self.t_min = nf(-10, -60, 25, 0, "degC")
-        self.t_max = nf(70, 25, 120, 0, "degC")
+        self.t_min = nf(-10, -60, 25, 0, "degC", "pv.max_modules_per_string")
+        self.t_max = nf(70, 25, 120, 0, "degC", "pv.min_modules_per_string")
         self.mod = {
             "p": nf(m.p_stc_w, 50, 1000, 0, "Wp"),
-            "voc": nf(m.voc_v, 5, 100, 2, "V"),
-            "vmp": nf(m.vmp_v, 5, 100, 2, "V"),
-            "isc": nf(m.isc_a, 1, 30, 2, "A"),
-            "bvoc": nf(m.temp_coeff_voc_pct_per_c, -1, 0, 2, "%/degC"),
-            "bvmp": nf(m.temp_coeff_vmp_pct_per_c, -1, 0, 2, "%/degC"),
+            "voc": nf(m.voc_v, 5, 100, 2, "V", "pv.max_modules_per_string"),
+            "vmp": nf(m.vmp_v, 5, 100, 2, "V", "pv.min_modules_per_string"),
+            "isc": nf(m.isc_a, 1, 30, 2, "A", "pv.string_layout"),
+            "bvoc": nf(m.temp_coeff_voc_pct_per_c, -1, 0, 2, "%/degC", "pv.temperature_extremes"),
+            "bvmp": nf(m.temp_coeff_vmp_pct_per_c, -1, 0, 2, "%/degC", "pv.temperature_extremes"),
             "area": nf(m.area_m2, 0.5, 5, 2, "m2"),
         }
         self.inv = {
-            "p": nf(i.p_ac_kw, 0.5, 5000, 1, "kW"),
-            "vmax": nf(i.vdc_max_v, 100, 1500, 0, "V"),
-            "vmin": nf(i.mppt_vmin_v, 20, 1000, 0, "V"),
-            "vmpptmax": nf(i.mppt_vmax_v, 100, 1500, 0, "V"),
-            "imax": nf(i.imax_per_mppt_a, 5, 100, 1, "A"),
+            "p": nf(i.p_ac_kw, 0.5, 5000, 1, "kW", "pv.dc_ac_ratio"),
+            "vmax": nf(i.vdc_max_v, 100, 1500, 0, "V", "pv.max_modules_per_string"),
+            "vmin": nf(i.mppt_vmin_v, 20, 1000, 0, "V", "pv.min_modules_per_string"),
+            "vmpptmax": nf(i.mppt_vmax_v, 100, 1500, 0, "V", "pv.mppt_window_cold"),
+            "imax": nf(i.imax_per_mppt_a, 5, 100, 1, "A", "pv.string_layout"),
             "n": nf(i.n_mppt, 1, 12, 0, ""),
         }
         mod_labels = {
@@ -312,13 +338,46 @@ class ResultsPage(QWizardPage):
         super().__init__()
         self.site, self.load, self.comp = site, load, comp
         self.setTitle("4. Results and design checks")
+        self.setSubTitle("Pick a step on the right to see why it is done and the numbers used.")
         self.browser = QTextBrowser()
         self.html = ""
+        self._inputs: PVInputs | None = None
+        self._design: PVDesign | None = None
+
+        self.topics = QListWidget()
+        for key in TOPIC_ORDER:
+            self.topics.addItem(EXPLANATIONS[key]["title"])
+        self.topics.currentRowChanged.connect(self._show_topic)
+        self.detail = QTextBrowser()
+        self.detail.setHtml("<p><i>Why?</i> Select a step above to see its formula, the "
+                            "reasoning, and your own numbers substituted in.</p>")
+        why_panel = QWidget()
+        why_layout = QVBoxLayout(why_panel)
+        why_layout.setContentsMargins(0, 0, 0, 0)
+        why_layout.addWidget(QLabel("<b>Why?</b>"))
+        why_layout.addWidget(self.topics, 1)
+        why_layout.addWidget(self.detail, 2)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.addWidget(self.browser)
+        splitter.addWidget(why_panel)
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 2)
+
         export = QPushButton("Export PDF report...")
         export.clicked.connect(self._export_pdf)
         layout = QVBoxLayout(self)
-        layout.addWidget(self.browser)
+        layout.addWidget(splitter)
         layout.addWidget(export)
+
+    def _show_topic(self, row: int) -> None:
+        if row < 0 or row >= len(TOPIC_ORDER):
+            return
+        key = TOPIC_ORDER[row]
+        worked = None
+        if self._inputs is not None and self._design is not None:
+            worked = worked_example(key, self._inputs, self._design)
+        self.detail.setHtml(explanation_html(key, worked, heading=False))
 
     def initializePage(self) -> None:  # noqa: N802 (Qt naming)
         try:
@@ -333,8 +392,10 @@ class ResultsPage(QWizardPage):
             design = size_pv_system(inputs)
         except ValueError as exc:
             self.html = ""
+            self._inputs = self._design = None
             self.browser.setHtml(f"<p><b>Cannot compute the design:</b> {exc}</p>")
             return
+        self._inputs, self._design = inputs, design
         findings = check_pv_design(inputs, design)
         note = (
             f"Site: lat {self.site.lat.value():.4f}, lon {self.site.lon.value():.4f}, "
@@ -342,6 +403,9 @@ class ResultsPage(QWizardPage):
         )
         self.html = build_pv_report(inputs, design, findings, site_note=note)
         self.browser.setHtml(self.html)
+        row = self.topics.currentRow()
+        if row >= 0:
+            self._show_topic(row)  # refresh the open topic with the new numbers
 
     def _export_pdf(self) -> None:
         if not self.html:
@@ -374,4 +438,4 @@ class PVWizard(QWizard):
         self.addPage(load)
         self.addPage(comp)
         self.addPage(ResultsPage(site, load, comp))
-        self.resize(860, 720)
+        self.resize(1100, 760)

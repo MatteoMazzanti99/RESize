@@ -1,8 +1,39 @@
-"""'Why?' texts shown next to each calculation. Offline, no AI required."""
+"""'Why?' texts shown next to each calculation. Offline, no AI required.
+
+Each entry has: title, formula, why, assumptions and (optional) reference.
+References are standards or datasets to look up; check the current edition before citing.
+"""
 
 from __future__ import annotations
 
 EXPLANATIONS: dict[str, dict[str, str]] = {
+    "pv.irradiation": {
+        "title": "Solar resource: in-plane irradiation H",
+        "formula": "H = annual solar energy on the tilted module plane [kWh/m2 per year]",
+        "why": (
+            "Everything starts from how much sunlight reaches the modules. Tilt and azimuth "
+            "change it: for Italy, modules facing south at about 30 degrees collect close to "
+            "the maximum over the year. Because modules are rated at 1 kW/m2, H is numerically "
+            "the number of 'equivalent full-power hours' per year, so it converts kWp into kWh."
+        ),
+        "assumptions": (
+            "A typical-year average is used; real years vary by a few percent. Shading by "
+            "buildings, trees or terrain is not included unless it is in the PVGIS horizon."
+        ),
+        "reference": "PVGIS (European Commission, Joint Research Centre), PVcalc tool.",
+    },
+    "pv.performance_ratio": {
+        "title": "Performance ratio PR",
+        "formula": "PR = E_ac / (P_dc,kWp * H)    ->    specific yield = H * PR  [kWh/kWp]",
+        "why": (
+            "PR is the share of the ideal energy that actually reaches the AC side. It groups "
+            "all losses: cell temperature, reflection, soiling, mismatch, cables, inverter. "
+            "Well-designed plants are typically between 0.75 and 0.85; hot sites and "
+            "poor ventilation push it down."
+        ),
+        "assumptions": "A single constant value for the whole year; no degradation over the years.",
+        "reference": "IEC 61724-1 (PV system performance monitoring), definition of PR.",
+    },
     "pv.required_peak_power": {
         "title": "Required PV peak power",
         "formula": "P_kWp = coverage * E_demand / (H * PR)",
@@ -14,6 +45,18 @@ EXPLANATIONS: dict[str, dict[str, str]] = {
         ),
         "assumptions": "PR is assumed constant over the year; self-consumption and storage are ignored.",
     },
+    "pv.temperature_extremes": {
+        "title": "Temperature extremes",
+        "formula": "V(T) = V_stc * (1 + beta * (T - 25)),   beta in %/degC (negative for silicon)",
+        "why": (
+            "Module voltage depends on cell temperature: higher when cold, lower when hot. "
+            "The string must be safe at the coldest morning (T_min) and still work at the "
+            "hottest cell temperature (T_cell,max, usually 65-70 degC on a sunny summer day, "
+            "much higher than the ambient air)."
+        ),
+        "assumptions": "T_min is the lowest expected ambient temperature at the site (e.g. -10 degC).",
+        "reference": "IEC 62548 (PV array design requirements), voltage correction at minimum temperature.",
+    },
     "pv.max_modules_per_string": {
         "title": "Maximum modules per string",
         "formula": "N_max = floor(Vdc,max / Voc(T_min)),  Voc(T) = Voc,stc * (1 + beta * (T - 25))",
@@ -23,6 +66,7 @@ EXPLANATIONS: dict[str, dict[str, str]] = {
             "or the device can be damaged."
         ),
         "assumptions": "Linear temperature coefficient; T_min taken from site climate data.",
+        "reference": "IEC 62548 (PV array design requirements).",
     },
     "pv.min_modules_per_string": {
         "title": "Minimum modules per string",
@@ -43,6 +87,22 @@ EXPLANATIONS: dict[str, dict[str, str]] = {
         ),
         "assumptions": "Linear temperature coefficient for Vmp; T_min from site climate data.",
     },
+    "pv.string_layout": {
+        "title": "String layout (series and parallel)",
+        "formula": (
+            "strings per MPPT = floor(I_max,MPPT / Isc);   N_modules = N_series * N_parallel"
+        ),
+        "why": (
+            "Modules in series add their voltages (limited by the window above); strings in "
+            "parallel add their currents (limited by each MPPT input of the inverter, checked "
+            "against the short-circuit current Isc). The program picks the combination whose "
+            "module count is closest to the target, preferring longer strings (fewer cables)."
+        ),
+        "assumptions": (
+            "All strings equal and equally oriented; a real plant may split orientations "
+            "across different MPPT inputs."
+        ),
+    },
     "pv.dc_ac_ratio": {
         "title": "DC/AC ratio",
         "formula": "DC/AC = P_dc,kWp / P_ac,kW",
@@ -53,4 +113,31 @@ EXPLANATIONS: dict[str, dict[str, str]] = {
         ),
         "assumptions": "Optimal value depends on tilt, climate and tariff structure.",
     },
+    "pv.annual_energy": {
+        "title": "Expected annual energy",
+        "formula": "E = P_dc,kWp * H * PR",
+        "why": (
+            "With the installed (not the target) power, this is the energy the plant is expected "
+            "to deliver in a typical year, and the share of the demand it covers. The installed "
+            "power differs from the target because modules come in whole units."
+        ),
+        "assumptions": (
+            "Yearly totals only: how much of this energy is used on site, versus exported, "
+            "depends on the hourly load profile and is not evaluated here."
+        ),
+    },
 }
+
+# Order in which the topics follow the design steps (used by the GUI panel and the report).
+TOPIC_ORDER: tuple[str, ...] = (
+    "pv.irradiation",
+    "pv.performance_ratio",
+    "pv.required_peak_power",
+    "pv.temperature_extremes",
+    "pv.max_modules_per_string",
+    "pv.mppt_window_cold",
+    "pv.min_modules_per_string",
+    "pv.string_layout",
+    "pv.dc_ac_ratio",
+    "pv.annual_energy",
+)
