@@ -1,31 +1,43 @@
-"""RESize logo: a green tile with a sun above three rising bars (sizing), drawn in code."""
+"""RESize logo: the letter R inside a three-colour ring (all renewables), drawn in code."""
 
 from __future__ import annotations
 
 from PySide6.QtCore import QRectF, Qt
-from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QPainter, QPen, QPixmap, QTextOption
 from PySide6.QtWidgets import QWidget
 
 from resize_energy.gui.theme import COLORS
 
 
 def draw_logo(painter: QPainter, size: float) -> None:
-    """Paint the logo inside a square of ``size`` pixels at the origin."""
+    """Paint the logo in a square of ``size`` pixels at the origin.
+
+    A letter R inside a ring of three arcs: sun (yellow), wind (blue) and the green of
+    the brand, one per family of renewable sources.
+    """
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
     painter.setPen(QPen(Qt.PenStyle.NoPen))
-    painter.setBrush(QBrush(QColor(COLORS["accent"])))
-    painter.drawRoundedRect(QRectF(0, 0, size, size), size * 0.24, size * 0.24)
+    painter.setBrush(QBrush(QColor(COLORS["sidebar"])))
+    painter.drawEllipse(QRectF(0, 0, size, size))
 
-    ink = QBrush(QColor(COLORS["accent_text"]))
-    painter.setBrush(ink)
-    bar_w = size * 0.14
-    base = size * 0.78
-    for i, height in enumerate((0.18, 0.30, 0.42)):
-        x = size * (0.20 + 0.23 * i)
-        h = size * height
-        painter.drawRoundedRect(QRectF(x, base - h, bar_w, h), bar_w * 0.3, bar_w * 0.3)
-    radius = size * 0.09
-    painter.drawEllipse(QRectF(size * 0.70 - radius, size * 0.25 - radius, 2 * radius, 2 * radius))
+    width = size * 0.07
+    radius = size * 0.41
+    ring = QRectF(size / 2 - radius, size / 2 - radius, 2 * radius, 2 * radius)
+    painter.setBrush(QBrush(Qt.BrushStyle.NoBrush))
+    # Qt angles: counter-clockwise from 3 o'clock, in 1/16 degree
+    for start_deg, color in ((-24, COLORS["warning"]), (-144, COLORS["info"]),
+                             (-264, COLORS["accent"])):
+        pen = QPen(QColor(color), width)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        painter.drawArc(ring, int(start_deg * 16), int(108 * 16))
+
+    font = QFont()
+    font.setBold(True)
+    font.setPixelSize(max(6, int(size * 0.50)))
+    painter.setFont(font)
+    painter.setPen(QPen(QColor(COLORS["text"])))
+    painter.drawText(QRectF(0, size * 0.015, size, size), "R", QTextOption(Qt.AlignmentFlag.AlignCenter))
 
 
 class LogoMark(QWidget):
