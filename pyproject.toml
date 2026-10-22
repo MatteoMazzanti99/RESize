@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "resize-energy"
+version = "0.1.0.dev0"
+description = "RESize: a step-by-step tutor for sizing renewable energy systems (students and preliminary design)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Matteo Mazzanti" }]
+keywords = ["renewable energy", "photovoltaic", "sizing", "education", "hydrogen"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+]
+
+[project.optional-dependencies]
+gui = ["PySide6>=6.6"]
+pv = ["pvlib>=0.10"]
+ai = ["keyring>=24", "anthropic>=0.40"]
+dev = ["pytest>=8", "ruff>=0.5"]
+
+[project.scripts]
+resize-cli = "resize_energy.cli:main"
+
+[project.gui-scripts]
+resize = "resize_energy.gui.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

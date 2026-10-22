@@ -1,0 +1,28 @@
+name: Release installers
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[gui,pv]" pyinstaller
+      - name: Build app
+        run: pyinstaller --noconfirm --windowed --name RESize --paths src src/resize_energy/gui/app.py
+      - name: Package
+        shell: bash
+        run: |
+          cd dist
+          7z a ../RESize-${{ matrix.os }}.zip RESize* || zip -r ../RESize-${{ matrix.os }}.zip RESize*
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: RESize-${{ matrix.os }}.zip
