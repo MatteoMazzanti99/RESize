@@ -28,6 +28,13 @@ PVCALC_URLS = (
 USER_AGENT = "Mozilla/5.0 (compatible; RESize/0.1; +https://github.com/MatteoMazzanti99/RESize)"
 
 
+# Header sets tried in order for each endpoint when the reply is not valid JSON.
+HEADER_PROFILES: tuple[dict[str, str], ...] = (
+    {"User-Agent": USER_AGENT, "Accept": "application/json"},
+    {"User-Agent": "python-requests/2.32", "Accept": "*/*"},
+)
+
+
 class PVGISError(RuntimeError):
     """Raised when PVGIS cannot be reached or returns unexpected data."""
 
@@ -112,23 +119,48 @@ def fetch_pvcalc(
     last_error: PVGISError | None = None
     for base in PVCALC_URLS:
         url = build_url(lat, lon, tilt_deg, azimuth_deg, loss_pct, base=base)
-        request = urllib.request.Request(
-            url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"}
-        )
-        try:
-            with urlopen(request, timeout=timeout) as response:  # noqa: S310
-                payload = json.load(response)
-        except urllib.error.HTTPError as exc:
-            if exc.code in (429, 529):
-                raise PVGISError(
-                    f"PVGIS is busy (error {exc.code}): wait a few seconds and try again"
-                ) from exc
-            last_error = PVGISError(f"PVGIS error {exc.code}{_error_detail(exc)} (URL: {url})")
-            if exc.code in (403, 404):
-                continue
-            raise last_error from exc
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-            raise PVGISError(f"Could not get data from PVGIS: {exc}") from exc
-        return parse_pvcalc(payload)
+        for headers in HEADER_PROFILES:
+            request = urllib.request.Request(url, headers=headers)
+            try:
+                with urlopen(request, timeout=timeout) as response:  # noqa: S310
+                    raw = response.read()
+                    content_type = _content_type(response)
+            except urllib.error.HTTPError as exc:
+                if exc.code in (429, 529):
+                    raise PVGISError(
+                        f"PVGIS is busy (error {exc.code}): wait a few seconds and try again"
+                    ) from exc
+                last_error = PVGISError(f"PVGIS error {exc.code}{_error_detail(exc)} (URL: {url})")
+                if exc.code in (403, 404):
+                    break  # try the next endpoint
+                raise last_error from exc
+            except (urllib.error.URLError, TimeoutError) as exc:
+                raise PVGISError(f"Could not get data from PVGIS: {exc}") from exc
+            try:
+                payload = json.loads(raw.decode("utf-8-sig", errors="replace"))
+            except json.JSONDecodeError:
+                last_error = PVGISError(_not_json_message(raw, content_type, url))
+                continue  # try the other header profile, then the next endpoint
+            return parse_pvcalc(payload)
     assert last_error is not None
     raise last_error
+
+
+def _content_type(response: Any) -> str:
+    headers = getattr(response, "headers", None)
+    if headers is None:
+        return "unknown"
+    return str(headers.get("Content-Type", "unknown"))
+
+
+def _not_json_message(raw: bytes, content_type: str, url: str) -> str:
+    """Readable description of a reply that is not JSON, with the start of its body."""
+    text = " ".join(raw.decode("utf-8", errors="replace").split())
+    if not text:
+        shown = "an empty reply"
+    else:
+        shown = f"this text: {text[:250]!r}"
+    return (
+        f"PVGIS did not return JSON (content type: {content_type}); it sent {shown} "
+        f"(URL: {url})"
+    )

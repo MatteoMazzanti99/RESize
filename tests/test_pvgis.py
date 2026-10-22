@@ -90,3 +90,46 @@ def test_parse_reports_server_message():
     with pytest.raises(PVGISError) as info:
         parse_pvcalc({"message": "lat: out of range", "status": 400})
     assert "out of range" in str(info.value)
+
+
+def test_fetch_retries_other_headers_when_reply_is_empty():
+    calls = []
+
+    def fake_urlopen(request, timeout=None):
+        calls.append(request.get_header("Accept"))
+        if len(calls) == 1:
+            return io.BytesIO(b"")
+        return io.BytesIO(json.dumps(SAMPLE).encode())
+
+    r = fetch_pvcalc(45.07, 7.69, 30, 0, urlopen=fake_urlopen)
+    assert len(calls) == 2
+    assert calls[0] == "application/json" and calls[1] == "*/*"
+    assert r.annual_irradiation_kwh_m2 == pytest.approx(1500.0)
+
+
+def test_fetch_non_json_reply_shows_the_start_of_the_body():
+    def fake_urlopen(request, timeout=None):
+        return io.BytesIO(b"<html><body>Access denied by firewall</body></html>")
+
+    with pytest.raises(PVGISError) as info:
+        fetch_pvcalc(45.07, 7.69, 30, 0, urlopen=fake_urlopen)
+    message = str(info.value)
+    assert "did not return JSON" in message
+    assert "Access denied by firewall" in message
+
+
+def test_fetch_non_json_empty_reply_is_described():
+    def fake_urlopen(request, timeout=None):
+        return io.BytesIO(b"")
+
+    with pytest.raises(PVGISError) as info:
+        fetch_pvcalc(45.07, 7.69, 30, 0, urlopen=fake_urlopen)
+    assert "empty reply" in str(info.value)
+
+
+def test_fetch_accepts_json_with_byte_order_mark():
+    def fake_urlopen(request, timeout=None):
+        return io.BytesIO(b"\xef\xbb\xbf" + json.dumps(SAMPLE).encode())
+
+    r = fetch_pvcalc(45.07, 7.69, 30, 0, urlopen=fake_urlopen)
+    assert r.implied_performance_ratio == pytest.approx(0.8)
