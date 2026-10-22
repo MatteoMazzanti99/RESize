@@ -7,6 +7,7 @@ from collections.abc import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
+from resize_energy.gui.icons import IconTile
 from resize_energy.gui.widgets import StepPage, make_card, make_label, make_pill
 
 BENEFITS: list[tuple[str, str, str]] = [
@@ -23,10 +24,10 @@ BENEFITS: list[tuple[str, str, str]] = [
 
 # (icon text, title, description, available now)
 TECHNOLOGIES: list[tuple[str, str, str, bool]] = [
-    ("PV", "Photovoltaic", "Array, strings, inverter and yearly yield from PVGIS data.", True),
-    ("W", "Wind", "Turbine choice and energy yield from the wind resource.", False),
-    ("B", "Biomass", "Plant sizing and fuel supply for heat and power.", False),
-    ("H₂", "Green hydrogen", "PEM electrolyser coupled to photovoltaic or wind.", False),
+    ("pv", "Photovoltaic", "Array, strings, inverter and yearly yield from PVGIS data.", True),
+    ("wind", "Wind", "Turbine choice and energy yield from the wind resource.", False),
+    ("biomass", "Biomass", "Plant sizing and fuel supply for heat and power.", False),
+    ("hydrogen", "Green hydrogen", "PEM electrolyser coupled to photovoltaic or wind.", False),
 ]
 
 
@@ -83,7 +84,7 @@ class HomePage(StepPage):
         for i, (icon, title, text, available) in enumerate(TECHNOLOGIES):
             frame, layout = make_card("cardActive" if available else "cardDim")
             top = QHBoxLayout()
-            top.addWidget(self._icon(icon))
+            top.addWidget(IconTile(icon))
             top.addStretch(1)
             top.addWidget(make_pill("Available" if available else "Planned", available))
             layout.addLayout(top)

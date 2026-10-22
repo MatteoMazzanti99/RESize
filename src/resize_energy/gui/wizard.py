@@ -481,6 +481,7 @@ class MainWindow(QMainWindow):
             scroll.setWidgetResizable(True)
             scroll.setFrameShape(QFrame.Shape.NoFrame)
             scroll.setWidget(page)
+            scroll.setViewportMargins(0, 0, 22, 0)  # air between content and scroll bar
             self.stack.addWidget(scroll)
 
         self.back_button = QPushButton("←  Back")
