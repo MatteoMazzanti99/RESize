@@ -88,6 +88,18 @@ gas. A button downloads one real year of hourly wind and radiation from NASA POW
 invented year with the same yearly totals is used and the report says so. Costs and emission
 factors are round placeholders to replace with quotes.
 
+## Battery storage module
+
+Click the **Battery storage** card. It stores the surplus of a PV and/or wind plant for the
+hours when the plant produces less than you consume. Five steps: plant and load (home, office,
+industry or flat profile), site and hourly profiles (real NASA POWER year or an invented one),
+the battery (capacity you choose, smallest battery for a target self-sufficiency, or best
+net present value), prices, results. You get self-sufficiency and self-consumption with and
+without the battery, cycles, life (cycles or calendar), payback, NPV, LCOS, CO2, a summer
+and a winter week hour by hour, and the curves of self-sufficiency and NPV against the size
+that show why a bigger battery is not always better. Every step has a "Why?" with the
+formula and your own numbers.
+
 ## Technology comparison
 
 On the home screen, click a technology card to start its project, or **drag two or more cards

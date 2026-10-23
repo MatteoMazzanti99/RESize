@@ -1,6 +1,6 @@
 """Main window: left navigation, page header, the current step and the Back / Next buttons.
 
-It hosts one flow of steps per technology (photovoltaic, wind, biomass, hydrogen, comparison); the home page starts one.
+It hosts one flow of steps per technology (photovoltaic, wind, biomass, hydrogen, battery, comparison); the home page starts one.
 """
 
 from __future__ import annotations
@@ -18,6 +18,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from resize_energy.gui.battery_wizard import (
+    BATTERY_STEP_NAMES,
+    BatteryCostPage,
+    BatteryGoalPage,
+    BatteryPage,
+    BatteryResultsPage,
+    BatterySitePage,
+)
 from resize_energy.gui.biomass_wizard import (
     BIOMASS_STEP_NAMES,
     BiomassDemandPage,
@@ -59,7 +67,7 @@ from resize_energy.gui.wizard import (
 )
 
 TECH_LABELS = {"pv": "PHOTOVOLTAIC", "wind": "WIND", "biomass": "BIOMASS",
-               "hydrogen": "GREEN HYDROGEN", "compare": "COMPARISON"}
+               "hydrogen": "GREEN HYDROGEN", "battery": "BATTERY STORAGE", "compare": "COMPARISON"}
 
 
 class MainWindow(QMainWindow):
@@ -89,6 +97,12 @@ class MainWindow(QMainWindow):
         self.h2_costs = HydrogenCostPage()
         self.h2_results = HydrogenResultsPage(self.h2_goal, self.h2_site, self.h2_plant,
                                               self.h2_costs)
+        self.bat_goal = BatteryGoalPage()
+        self.bat_site = BatterySitePage(self.bat_goal)
+        self.bat_battery = BatteryPage()
+        self.bat_costs = BatteryCostPage()
+        self.bat_results = BatteryResultsPage(self.bat_goal, self.bat_site, self.bat_battery,
+                                              self.bat_costs)
         self.cmp_selection = CompareSelection()
         self.cmp_site = CompareSitePage(self.cmp_selection)
         self.cmp_plant = ComparePlantPage(self.cmp_site, self.cmp_selection)
@@ -104,6 +118,8 @@ class MainWindow(QMainWindow):
                                              self.bio_results]),
             "hydrogen": (HYDROGEN_STEP_NAMES, [self.h2_goal, self.h2_site, self.h2_plant,
                                                self.h2_costs, self.h2_results]),
+            "battery": (BATTERY_STEP_NAMES, [self.bat_goal, self.bat_site, self.bat_battery,
+                                             self.bat_costs, self.bat_results]),
             "compare": (COMPARE_STEP_NAMES, [self.cmp_site, self.cmp_plant, self.cmp_costs,
                                              self.cmp_results]),
         }
@@ -166,7 +182,7 @@ class MainWindow(QMainWindow):
 
     # --- navigation ---------------------------------------------------------------
     def _start(self, tech: str = "pv") -> None:
-        """Open the first step of the ``tech`` flow ("pv", "wind", "biomass", "hydrogen" or "compare")."""
+        """Open the first step of the ``tech`` flow ("pv", "wind", "biomass", "hydrogen", "battery" or "compare")."""
         if tech not in self.flows:
             tech = "pv"
         self.tech = tech

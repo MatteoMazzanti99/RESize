@@ -30,7 +30,10 @@ TECHNOLOGIES: list[tuple[str, str, str, bool]] = [
     ("wind", "Wind", "Wind resource at hub height, turbine yield, number of turbines and layout.", True),
     ("biomass", "Biomass", "Boiler, ORC cogeneration or biogas: plant size, fuel supply, digester.", True),
     ("hydrogen", "Green hydrogen", "PEM electrolyser fed by PV, wind and/or grid: hours, cost and carbon of hydrogen.", True),
+    ("battery", "Battery storage", "Store the surplus of your PV or wind plant: self-sufficiency, cycles, payback and the best size.", True),
 ]
+# technologies that make energy and can be dragged into the Compare zone
+COMPARABLE: tuple[str, ...] = ("pv", "wind", "biomass", "hydrogen")
 
 
 class HomePage(StepPage):
@@ -60,7 +63,7 @@ class HomePage(StepPage):
             "the formula, the assumptions and your own numbers.", "lead"))
         text.addSpacing(16)
 
-        self.zone = CompareZone(tuple(t[0] for t in TECHNOLOGIES), on_compare)
+        self.zone = CompareZone(COMPARABLE, on_compare)
         text.addWidget(self.zone)
 
         top = QHBoxLayout()
@@ -70,7 +73,7 @@ class HomePage(StepPage):
         root.addLayout(top)
         root.addSpacing(26)
 
-        root.addWidget(make_label("What you can size  ·  click to start, drag to compare",
+        root.addWidget(make_label("What you can size  ·  click to start, drag the generating ones to compare",
                                   "sectionTitle", wrap=False))
         root.addSpacing(10)
         grid = QGridLayout()
@@ -79,8 +82,9 @@ class HomePage(StepPage):
         for i, (key, title, text, available) in enumerate(TECHNOLOGIES):
             frame, layout = make_card(
                 "cardActive" if available else "cardDim",
-                TechCard(key, on_start, draggable=available))
-            frame.setToolTip("Click to start a project, or drag into Compare")
+                TechCard(key, on_start, draggable=available and key in COMPARABLE))
+            frame.setToolTip("Click to start a project, or drag into Compare"
+                         if key in COMPARABLE else "Click to start a project")
             top = QHBoxLayout()
             top.addWidget(IconTile(key))
             top.addStretch(1)

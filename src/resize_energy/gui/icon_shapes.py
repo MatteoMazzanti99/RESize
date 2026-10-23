@@ -92,9 +92,20 @@ def _hydrogen() -> list[Shape]:
     ]
 
 
+def _battery() -> list[Shape]:
+    return [
+        ([(3.0, 7.0), (19.0, 7.0), (19.0, 17.0), (3.0, 17.0)], True, False),   # body
+        ([(19.0, 10.0), (21.5, 10.0), (21.5, 14.0), (19.0, 14.0)], True, False),  # terminal
+        ([(6.0, 10.0), (6.0, 14.0)], False, False),     # charge bars
+        ([(9.5, 10.0), (9.5, 14.0)], False, False),
+        ([(13.0, 10.0), (13.0, 14.0)], False, False),
+    ]
+
+
 ICONS: dict[str, list[Shape]] = {
     "pv": _photovoltaic(),
     "wind": _wind(),
     "biomass": _biomass(),
     "hydrogen": _hydrogen(),
+    "battery": _battery(),
 }

@@ -162,3 +162,8 @@ EXPLANATIONS.update(BIOMASS_EXPLANATIONS)
 from resize_energy.tutor.explanations_hydrogen import HYDROGEN_EXPLANATIONS  # noqa: E402
 
 EXPLANATIONS.update(HYDROGEN_EXPLANATIONS)
+
+# And for the battery storage module.
+from resize_energy.tutor.explanations_battery import BATTERY_EXPLANATIONS  # noqa: E402
+
+EXPLANATIONS.update(BATTERY_EXPLANATIONS)

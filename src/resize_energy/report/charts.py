@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from resize_energy.core import economics as eco
 from resize_energy.core import wind
+from resize_energy.core.battery_design import BatteryDesign, BatteryInputs
 from resize_energy.core.biomass_design import BiomassDesign, BiomassInputs
 from resize_energy.core.comparison import ComparisonInputs, ComparisonResult
 from resize_energy.core.hydrogen_design import HydrogenDesign, HydrogenInputs
@@ -300,3 +301,57 @@ __all__ = [
     "ChartSpec", "Series", "biomass_charts", "comparison_charts", "hydrogen_charts",
     "nice_ticks", "pv_charts", "unit_for", "wind_charts",
 ]
+
+# --- battery storage -----------------------------------------------------------------------
+def battery_charts(inp: BatteryInputs, d: BatteryDesign) -> dict[str, ChartSpec]:
+    out: dict[str, ChartSpec] = {}
+    xs = tuple(p.capacity_kwh for p in d.sweep)
+    out["bat_sweep"] = ChartSpec(
+        "lines", "Self-sufficiency grows with the battery, then flattens", (),
+        (Series("self-sufficiency [%]", tuple(p.self_sufficiency * 100 for p in d.sweep),
+                GREEN, x=xs),
+         Series("self-consumption [%]", tuple(p.self_consumption * 100 for p in d.sweep),
+                BLUE, x=xs)),
+        x_label="Battery capacity [kWh]", y_label="Share [%]",
+        vlines=((d.capacity_kwh, "your battery"),), height=290,
+        caption="The first kWh give a lot, the last ones almost nothing: they are filled only "
+                "on the sunniest days.")
+    out["bat_npv"] = ChartSpec(
+        "lines", "Money gained or lost by the battery over its life", (),
+        (Series("net present value [euro]", tuple(p.npv for p in d.sweep), AMBER, x=xs),),
+        x_label="Battery capacity [kWh]", y_label="Net present value [euro]",
+        hlines=((0.0, "break-even"),), vlines=((d.capacity_kwh, "your battery"),), height=290,
+        caption="Above zero the battery repays itself; below, it costs more than it saves.")
+    labels = ("Without battery", "With battery")
+    out["bat_grid"] = ChartSpec(
+        "stack", "Where the electricity you consume comes from", labels,
+        (Series("Directly from the plant", (d.load_kwh - d.import_without_kwh
+                                            - 0.0, d.direct_kwh), GREEN),
+         Series("From the battery", (0.0, d.battery_kwh), TEAL),
+         Series("From the grid", (d.import_without_kwh, d.import_kwh), RED)),
+        y_label="Energy [kWh]",
+        caption=f"The grid share falls from {1 - d.self_sufficiency_without:.0%} to "
+                f"{1 - d.self_sufficiency:.0%} of the consumption.")
+    series = [Series("Directly from the plant", d.monthly_direct, GREEN)]
+    if d.battery_kwh > 0:
+        series.append(Series("From the battery", d.monthly_battery, TEAL))
+    series.append(Series("From the grid", d.monthly_import, RED))
+    out["bat_monthly"] = ChartSpec(
+        "stack", "The electricity you consume, month by month", MONTHS, tuple(series),
+        x_label="Month", y_label="Energy [kWh]",
+        caption="In winter the plant produces little and the battery has nothing to store: "
+                "the grid does most of the work.")
+    for name, label, week in (("bat_summer", "A summer week", d.summer_week),
+                              ("bat_winter", "A winter week", d.winter_week)):
+        load, gen, soc, _ = week
+        hours = tuple(float(h) for h in range(len(load)))
+        out[name] = ChartSpec(
+            "lines", f"{label}: consumption, production and energy in the battery", (),
+            (Series("consumption [kW]", load, GREY, x=hours),
+             Series("production [kW]", gen, GREEN, x=hours),
+             Series("battery charge [kWh]", soc, TEAL, x=hours, fill=True)),
+            x_label="Hours (the week starts on Monday at midnight)", y_label="kW or kWh",
+            decimals=1, height=290,
+            caption="The battery fills when the production is above the consumption and "
+                    "empties in the evening.")
+    return out

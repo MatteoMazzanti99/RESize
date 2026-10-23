@@ -12,7 +12,7 @@ def _walk_through(window, app) -> int:
     if len(load_library()) < 10:
         print("self-test: the turbine library is missing from the build", flush=True)
         return 1
-    markers = {"pv": "Design checks", "wind": "Design checks", "biomass": "Design checks", "hydrogen": "Design checks", "compare": "Which is better"}
+    markers = {"pv": "Design checks", "wind": "Design checks", "biomass": "Design checks", "hydrogen": "Design checks", "battery": "Design checks", "compare": "Which is better"}
     for tech, marker in markers.items():
         window._start(tech)
         for _ in range(len(window.pages) - 2):
@@ -57,7 +57,7 @@ def _screenshots(window, app, folder: str) -> None:
         app.processEvents()
     window.grab().save(str(out / "home_compare.png"))
     zone.clear()
-    for tech in ("pv", "wind", "biomass", "hydrogen", "compare"):
+    for tech in ("pv", "wind", "biomass", "hydrogen", "battery", "compare"):
         window._start(tech)
         app.processEvents()
         window.grab().save(str(out / f"{tech}_1.png"))

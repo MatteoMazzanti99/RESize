@@ -74,6 +74,7 @@ def _month_of_hour() -> list[int]:
 
 
 _MONTH_OF = _month_of_hour()
+MONTH_OF_HOUR = _MONTH_OF   # month index (0..11) of each hour of the year
 
 
 def simulate_dispatch(
