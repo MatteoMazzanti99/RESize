@@ -33,6 +33,7 @@ from resize_energy.core.turbine_library import load_library
 from resize_energy.core.wind_design import TurbineSpec, WindInputs
 from resize_energy.gui.widgets import StepPage
 from resize_energy.gui.wizard import BaseResultsPage, NumberField, _hint, first_error
+from resize_energy.report.charts import ChartSpec, comparison_charts
 from resize_energy.report.html_report import build_comparison_report
 from resize_energy.tutor.checker import Finding
 from resize_energy.tutor.checker_compare import check_comparison
@@ -86,7 +87,7 @@ class CompareSitePage(StepPage):
         super().__init__()
         self.selection = selection or CompareSelection()
         self.setTitle("1. Site and demand")
-        self.setSubTitle("One site and one demand: every technology is sized for the same job.")
+        self.setSubTitle("Where is it, and how much energy do you need? Every technology is sized for this same demand.")
         self._implied_pr: float | None = None
 
         self.lat = NumberField(45.07, -90, 90, 4, "deg N")
@@ -213,8 +214,8 @@ class ComparePlantPage(StepPage):
         self.site = site
         self.selection = selection or CompareSelection()
         self.setTitle("2. Plant assumptions")
-        self.setSubTitle("Performance of the PV plant, the turbine, the biogas feed and the "
-                         "hydrogen source.")
+        self.setSubTitle("Only the technologies you chose are asked here: the PV performance, the turbine, "
+                         "the biogas feed and the electricity source of the hydrogen.")
         self.library = load_library()
 
         self.pr = NumberField(0.80, 0.5, 0.95, 2, "", "pv.performance_ratio")
@@ -322,7 +323,7 @@ class CompareCostPage(StepPage):
         self.selection = selection or CompareSelection()
         c = CostAssumptions()
         self.setTitle("3. Costs and prices")
-        self.setSubTitle("Round placeholder values: replace them with local quotes and tariffs.")
+        self.setSubTitle("Costs and prices. The defaults are round placeholders that give an order of magnitude: replace them with local quotes and tariffs.")
 
         def nf(value, lo, hi, dec, unit, why="econ.lcoe") -> NumberField:
             return NumberField(value, lo, hi, dec, unit, why)
@@ -460,7 +461,7 @@ class CompareResultsPage(BaseResultsPage):
         self.selection = selection or CompareSelection()
         super().__init__()
         self.setTitle("4. Comparison")
-        self.setSubTitle("Side by side. Pick a step on the right for the why.")
+        self.setSubTitle("Side by side. Pick a step on the right to see why.")
 
     def _compute(self) -> tuple[object, object, list[Finding], str, str]:
         s, p = self.site, self.plant
@@ -505,3 +506,6 @@ class CompareResultsPage(BaseResultsPage):
 
     def _context(self) -> str:
         return build_compare_context(self._inputs, self._design, self._findings)
+
+    def _charts(self) -> dict[str, ChartSpec]:
+        return comparison_charts(self._inputs, self._design)

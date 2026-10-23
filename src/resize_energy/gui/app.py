@@ -22,6 +22,9 @@ def _walk_through(window, app) -> int:
         if window.index != len(window.pages) - 1 or marker not in results.html:
             print(f"self-test: the {tech} flow did not reach its results", flush=True)
             return 1
+        if not results.chart_images or any(i.isNull() for i in results.chart_images.values()):
+            print(f"self-test: the {tech} charts were not drawn", flush=True)
+            return 1
         window._restart()
     # the comparison of all four technologies, as started from the Compare zone
     window._start_compare(["pv", "wind", "biomass", "hydrogen"])
@@ -30,6 +33,9 @@ def _walk_through(window, app) -> int:
         app.processEvents()
     if window.index != len(window.pages) - 1 or "Biomass" not in window.pages[-1].html:
         print("self-test: the four-technology comparison did not reach its results", flush=True)
+        return 1
+    if len(window.pages[-1].chart_images) < 4:
+        print("self-test: the comparison charts were not drawn", flush=True)
         return 1
     window._restart()
     return 0

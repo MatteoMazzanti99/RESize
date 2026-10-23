@@ -22,6 +22,7 @@ from resize_energy.core.biomass_design import (
 from resize_energy.core.fuel_library import SOLID_FUELS, SUBSTRATES, SolidFuel
 from resize_energy.gui.widgets import StepPage
 from resize_energy.gui.wizard import BaseResultsPage, NumberField, _hint, first_error
+from resize_energy.report.charts import ChartSpec, biomass_charts
 from resize_energy.report.html_report import build_biomass_report
 from resize_energy.tutor.checker import Finding
 from resize_energy.tutor.checker_biomass import check_biomass_design
@@ -55,7 +56,7 @@ class BiomassDemandPage(StepPage):
     def __init__(self) -> None:
         super().__init__()
         self.setTitle("1. Pathway and demand")
-        self.setSubTitle("What the plant must supply decides the technology and the size.")
+        self.setSubTitle("What must the plant supply? Choose the pathway first, then enter the heat or electricity you need.")
         self.picker = QComboBox()
         for key in PATHWAY_KEYS:
             self.picker.addItem(PATHWAYS[key])
@@ -140,7 +141,7 @@ class BiomassFuelPage(StepPage):
         super().__init__()
         self.demand = demand
         self.setTitle("2. Fuel or substrate")
-        self.setSubTitle("Moisture and composition decide how much material you need.")
+        self.setSubTitle("What do you burn or ferment? Pick one from the list and the typical values fill in; moisture decides how much material you need.")
         f = SOLID_FUELS[0]
 
         self.fuel_picker = QComboBox()
@@ -227,7 +228,7 @@ class BiomassPlantPage(StepPage):
         self.demand = demand
         self._last = ""
         self.setTitle("3. Plant and emissions")
-        self.setSubTitle("Efficiencies, storage and the emission factors used for the CO2 balance.")
+        self.setSubTitle("Plant efficiency, storage and emission factors. The defaults are typical: change them only if you have datasheet values.")
         self.eta_th = NumberField(85, 20, 99, 0, "%", "biomass.plant_power")
         self.eta_el = NumberField(0, 0, 60, 0, "%", "biomass.plant_power")
         self.storage = NumberField(10, 0, 120, 0, "days", "biomass.storage")
@@ -358,3 +359,6 @@ class BiomassResultsPage(BaseResultsPage):
 
     def _context(self) -> str:
         return build_biomass_context(self._inputs, self._design, self._findings)
+
+    def _charts(self) -> dict[str, ChartSpec]:
+        return biomass_charts(self._inputs, self._design)

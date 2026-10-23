@@ -10,6 +10,14 @@ from resize_energy.core.comparison import ComparisonInputs, ComparisonResult
 from resize_energy.core.hydrogen_design import MODES, HydrogenDesign, HydrogenInputs
 from resize_energy.core.pv_design import PVDesign, PVInputs
 from resize_energy.core.wind_design import WindDesign, WindInputs
+from resize_energy.report.charts import (
+    ChartSpec,
+    biomass_charts,
+    comparison_charts,
+    hydrogen_charts,
+    pv_charts,
+    wind_charts,
+)
 from resize_energy.tutor.checker import Finding
 from resize_energy.tutor.explanations import EXPLANATIONS, TOPIC_ORDER
 from resize_energy.tutor.explanations_biomass import topics_for
@@ -53,6 +61,68 @@ _THEMES = {
 
 def _row(label: str, value: str) -> str:
     return f"<tr><td>{escape(label)}</td><td><b>{escape(value)}</b></td></tr>"
+
+
+_SEVERITY_ORDER = {"error": 0, "warning": 1, "info": 2, "ok": 3}
+
+
+def _checks_html(findings: list[Finding], colors: dict[str, str]) -> str:
+    """Summary line plus the checks, the ones that need attention first."""
+    errors = sum(f.severity == "error" for f in findings)
+    warnings = sum(f.severity == "warning" for f in findings)
+    if errors or warnings:
+        parts = ([f"{errors} error(s)"] if errors else []) + (
+            [f"{warnings} warning(s)"] if warnings else [])
+        color = colors["error" if errors else "warning"]
+        head = (f'<p><span style="color:{color}"><b>{" and ".join(parts)} to look at.</b></span>'
+                " Read them first: they say what to change.</p>")
+    else:
+        head = (f'<p><span style="color:{colors["ok"]}"><b>No errors and no warnings.</b></span>'
+                " The notes below are for your information.</p>")
+    ordered = sorted(findings, key=lambda f: _SEVERITY_ORDER.get(f.severity, 9))
+    items = "".join(
+        f'<li><span style="color:{colors[f.severity]}"><b>[{_LABELS[f.severity]}]</b></span> '
+        f"{escape(f.message)}</li>" for f in ordered)
+    return f"{head}<ul>{items}</ul>"
+
+
+def _kpi_html(items: list[tuple[str, str]]) -> str:
+    """A row of big numbers with a plain-language label under each."""
+    width = 100 // max(1, len(items))
+    cells = "".join(
+        f'<td align="center" bgcolor="#E6F5EE" width="{width}%">'
+        f'<span style="font-size:16pt; color:#085F43"><b>{escape(v)}</b></span><br>'
+        f'<span style="color:#556377">{escape(label)}</span></td>' for v, label in items)
+    return f'<table width="100%" cellspacing="6" cellpadding="9"><tr>{cells}</tr></table>'
+
+
+def _charts_html(charts: dict[str, ChartSpec]) -> str:
+    return "".join(
+        f'<p align="center"><img src="chart:{name}" width="{c.width}" height="{c.height}">'
+        + (f'<br><span style="color:#556377">{escape(c.caption)}</span>' if c.caption else "")
+        + "</p>" for name, c in charts.items())
+
+
+def _glance(kpis: list[tuple[str, str]], verdict: str) -> str:
+    return f"{_kpi_html(kpis)}<p>{verdict}</p>"
+
+
+def _status_phrase(findings: list[Finding]) -> str:
+    errors = sum(f.severity == "error" for f in findings)
+    warnings = sum(f.severity == "warning" for f in findings)
+    if errors:
+        return f"<b>{errors} check(s) failed: see 'Design checks'.</b>"
+    if warnings:
+        return f"{warnings} warning(s) to read in 'Design checks'."
+    return "All design checks passed."
+
+
+def _energy(kwh: float) -> str:
+    if abs(kwh) >= 5e6:
+        return f"{kwh / 1e6:,.1f} GWh"
+    if abs(kwh) >= 5e3:
+        return f"{kwh / 1e3:,.1f} MWh"
+    return f"{kwh:,.0f} kWh"
 
 
 def build_pv_report(
@@ -104,11 +174,6 @@ def build_pv_report(
         _row("Demand covered", f"{design.achieved_coverage:.0%}"),
     ])
 
-    checks = "".join(
-        f'<li><span style="color:{colors[f.severity]}"><b>[{_LABELS[f.severity]}]</b></span> '
-        f"{escape(f.message)}</li>"
-        for f in findings
-    )
 
     why = "".join(
         explanation_html(key, worked_example(key, inp, design))
@@ -116,16 +181,36 @@ def build_pv_report(
         if key in EXPLANATIONS
     )
 
+    status = _status_phrase(findings)
+    if design.feasible:
+        verdict = (f"Install <b>{design.n_modules} modules</b> ({design.dc_power_kwp:.1f} kWp, "
+                   f"{design.array_area_m2:,.0f} m2 of roof or land), wired as {design.n_series} "
+                   f"in series x {design.n_parallel} strings, to cover "
+                   f"<b>{design.achieved_coverage:.0%}</b> of your demand. {status}")
+    else:
+        verdict = ("<b>This module and inverter combination does not work</b>: the string "
+                   f"voltages do not fit the inverter. {status}")
+    glance = _glance([
+        (f"{design.dc_power_kwp:.1f} kWp", "PV power to install"),
+        (f"{design.n_modules} modules", f"{design.n_series} in series x {design.n_parallel} "
+         "strings"),
+        (_energy(design.annual_energy_kwh), "expected energy per year"),
+        (f"{design.achieved_coverage:.0%}", "of your demand covered"),
+    ], verdict)
+    charts_html = _charts_html(pv_charts(inp, design))
+    checks_html = _checks_html(findings, colors)
     note = f"<p>{escape(site_note)}</p>" if site_note else ""
     return f"""<html><head><meta charset="utf-8"><title>{escape(title)}</title>
 <style>
 {look["css"]}
 </style></head><body>
 <h1>{escape(title)}</h1>{note}
-<h2>1. Inputs</h2><table>{inputs_rows}</table>
-<h2>2. Results</h2><table>{results_rows}</table>
-<h2>3. Design checks</h2><ul>{checks}</ul>
-<h2>4. Method and formulas</h2>{why}
+<h2>In short</h2>{glance}
+<h2>The numbers in pictures</h2>{charts_html}
+<h2>Design checks</h2>{checks_html}
+<h2>Results in detail</h2><table>{results_rows}</table>
+<h2>Your inputs</h2><table>{inputs_rows}</table>
+<h2>Method and formulas</h2>{why}
 <hr><p><i>Generated by RESize {escape(__version__)}. Preliminary and educational sizing only:
 not a substitute for detailed engineering design (see DISCLAIMER).</i></p>
 </body></html>"""
@@ -181,26 +266,36 @@ def build_wind_report(
         _row("Demand covered", f"{design.achieved_coverage:.0%}"),
         _row("Land for the array", f"{design.array_area_km2:.2f} km2"),
     ])
-    checks = "".join(
-        f'<li><span style="color:{colors[f.severity]}"><b>[{_LABELS[f.severity]}]</b></span> '
-        f"{escape(f.message)}</li>"
-        for f in findings
-    )
     why = "".join(
         explanation_html(key, wind_worked_example(key, inp, design))
         for key in WIND_TOPIC_ORDER
         if key in EXPLANATIONS
     )
+    status = _status_phrase(findings)
+    verdict = (f"<b>{design.n_turbines} turbine(s)</b> of {t.rated_power_kw:,.0f} kW "
+               f"({design.installed_power_kw:,.0f} kW in total) produce about "
+               f"{_energy(design.annual_energy_kwh)} a year, <b>{design.achieved_coverage:.0%}</b> "
+               f"of your demand. {status}")
+    glance = _glance([
+        (f"{design.n_turbines} x {t.rated_power_kw:,.0f} kW", "turbines needed"),
+        (_energy(design.annual_energy_kwh), "expected energy per year"),
+        (f"{design.capacity_factor_net:.0%}", "capacity factor (time at full power)"),
+        (f"{design.achieved_coverage:.0%}", "of your demand covered"),
+    ], verdict)
+    charts_html = _charts_html(wind_charts(inp, design))
+    checks_html = _checks_html(findings, colors)
     note = f"<p>{escape(site_note)}</p>" if site_note else ""
     return f"""<html><head><meta charset="utf-8"><title>{escape(title)}</title>
 <style>
 {look["css"]}
 </style></head><body>
 <h1>{escape(title)}</h1>{note}
-<h2>1. Inputs</h2><table>{inputs_rows}</table>
-<h2>2. Results</h2><table>{results_rows}</table>
-<h2>3. Design checks</h2><ul>{checks}</ul>
-<h2>4. Method and formulas</h2>{why}
+<h2>In short</h2>{glance}
+<h2>The numbers in pictures</h2>{charts_html}
+<h2>Design checks</h2>{checks_html}
+<h2>Results in detail</h2><table>{results_rows}</table>
+<h2>Your inputs</h2><table>{inputs_rows}</table>
+<h2>Method and formulas</h2>{why}
 <hr><p><i>Generated by RESize {escape(__version__)}. Preliminary and educational sizing only:
 not a substitute for a wind measurement campaign and detailed design (see DISCLAIMER).</i></p>
 </body></html>"""
@@ -271,17 +366,6 @@ def build_comparison_report(
         line("CO2 avoided over the lifetime", [f"{t.co2_avoided_lifetime_t:,.0f} t"
                                                for t in techs]),
     ])
-    bars = "".join([
-        _bar_rows("Cost of energy, euro/kWh (lower is better)", [
-            (f"{_TECH_SHORT[t.key]} {t.lcoe_eur_per_kwh:.3f}", t.lcoe_eur_per_kwh,
-             _TECH_COLORS[t.key]) for t in techs]),
-        _bar_rows("Simple payback, years (lower is better)", [
-            (f"{_TECH_SHORT[t.key]} {_years(t.payback_years)}", t.payback_years,
-             _TECH_COLORS[t.key]) for t in techs]),
-        _bar_rows("CO2 avoided per year, tonnes (higher is better)", [
-            (f"{_TECH_SHORT[t.key]} {t.co2_avoided_t_per_year:,.0f}",
-             max(0.0, t.co2_avoided_t_per_year), _TECH_COLORS[t.key]) for t in techs]),
-    ])
     rows = [
         _row("Annual energy demand / coverage",
              f"{inp.annual_demand_kwh:,.0f} kWh / {inp.coverage:.0%}"),
@@ -327,29 +411,30 @@ def build_comparison_report(
         f"<li>Fastest simple payback: <b>{escape(r.fastest_payback)}</b></li>"
         f"<li>Highest net present value: <b>{escape(r.highest_npv)}</b></li>"
         f"<li>Most CO2 avoided per year: <b>{escape(r.most_co2)}</b></li></ul>")
-    checks = "".join(
-        f'<li><span style="color:{colors[f.severity]}"><b>[{_LABELS[f.severity]}]</b></span> '
-        f"{escape(f.message)}</li>"
-        for f in findings
-    )
     why = "".join(
         explanation_html(key, compare_worked_example(key, inp, r))
         for key in COMPARE_TOPIC_ORDER
         if key in EXPLANATIONS
     )
+    glance = _kpi_html([
+        (r.lowest_lcoe, "cheapest energy"), (r.fastest_payback, "fastest payback"),
+        (r.highest_npv, "highest net present value"), (r.most_co2, "most CO2 avoided"),
+    ])
+    charts_html = _charts_html(comparison_charts(inp, r))
+    checks_html = _checks_html(findings, colors)
     note = f"<p>{escape(site_note)}</p>" if site_note else ""
     return f"""<html><head><meta charset="utf-8"><title>{escape(title)}</title>
 <style>
 {look["css"]}
 </style></head><body>
 <h1>{escape(title)}</h1>{note}
-<h2>1. Comparison</h2>
+<h2>Which is better, and for what?</h2>{glance}{verdict}
+<h2>The numbers in pictures</h2>{charts_html}
+<h2>Checks</h2>{checks_html}
+<h2>All figures side by side</h2>
 <table cellpadding="3"><tr><td></td>{head}</tr>{table}</table>
-<h2>2. Which is better, and for what?</h2>{verdict}
-<table>{bars}</table>
-<h2>3. Inputs and assumptions</h2><table>{inputs_rows}</table>
-<h2>4. Checks</h2><ul>{checks}</ul>
-<h2>5. Method and formulas</h2>{why}
+<h2>Your inputs and assumptions</h2><table>{inputs_rows}</table>
+<h2>Method and formulas</h2>{why}
 <hr><p><i>Generated by RESize {escape(__version__)}. Preliminary and educational comparison:
 prices are placeholders to be replaced with local quotes, and the hour-by-hour match is not
 modelled (see DISCLAIMER).</i></p>
@@ -428,26 +513,48 @@ def build_biomass_report(
             _row("Ash", f"{d.ash_t_per_year:.1f} t per year"),
             _row("CO2 avoided", f"{d.co2_avoided_t_per_year:,.0f} t per year"),
         ]
-    checks = "".join(
-        f'<li><span style="color:{colors[x.severity]}"><b>[{_LABELS[x.severity]}]</b></span> '
-        f"{escape(x.message)}</li>"
-        for x in findings
-    )
     why = "".join(
         explanation_html(key, biomass_worked_example(key, inp, d))
         for key in topics_for(d.pathway)
         if key in EXPLANATIONS
     )
+    status = _status_phrase(findings)
+    if biogas:
+        verdict = (f"A CHP engine of <b>{d.electric_power_kw:,.0f} kW</b> fed by a digester of "
+                   f"{d.digester_volume_m3:,.0f} m3 gives {_energy(d.electricity_net_kwh)} of "
+                   f"electricity a year, <b>{d.electricity_coverage:.0%}</b> of your demand. "
+                   f"{status}")
+        glance = _glance([
+            (f"{d.electric_power_kw:,.0f} kW", "electric power of the engine"),
+            (_energy(d.electricity_net_kwh), "electricity per year"),
+            (f"{d.digester_volume_m3:,.0f} m3", "digester volume"),
+            (f"{d.electricity_coverage:.0%}", "of your demand covered"),
+        ], verdict)
+    else:
+        verdict = (f"A plant of <b>{d.thermal_power_kw:,.0f} kW</b> (heat) burning "
+                   f"{d.mass_t_per_year:,.0f} t of fuel a year covers "
+                   f"<b>{d.heat_coverage:.0%}</b> of your heat demand; the rest is left to a "
+                   f"back-up boiler. {status}")
+        glance = _glance([
+            (f"{d.thermal_power_kw:,.0f} kW", "heat power of the plant"),
+            (_energy(d.heat_useful_kwh), "heat per year"),
+            (f"{d.mass_t_per_year:,.0f} t", "fuel per year"),
+            (f"{d.heat_coverage:.0%}", "of your heat covered"),
+        ], verdict)
+    charts_html = _charts_html(biomass_charts(inp, d))
+    checks_html = _checks_html(findings, colors)
     note = f"<p>{escape(site_note)}</p>" if site_note else ""
     return f"""<html><head><meta charset="utf-8"><title>{escape(title)}</title>
 <style>
 {look["css"]}
 </style></head><body>
 <h1>{escape(title)}</h1>{note}
-<h2>1. Inputs</h2><table>{"".join(inputs)}</table>
-<h2>2. Results</h2><table>{"".join(results)}</table>
-<h2>3. Design checks</h2><ul>{checks}</ul>
-<h2>4. Method and formulas</h2>{why}
+<h2>In short</h2>{glance}
+<h2>The numbers in pictures</h2>{charts_html}
+<h2>Design checks</h2>{checks_html}
+<h2>Results in detail</h2><table>{"".join(results)}</table>
+<h2>Your inputs</h2><table>{"".join(inputs)}</table>
+<h2>Method and formulas</h2>{why}
 <hr><p><i>Generated by RESize {escape(__version__)}. Preliminary and educational sizing only:
 fuel quality, supply contracts, emissions permits and detailed design are not covered
 (see DISCLAIMER).</i></p>
@@ -510,27 +617,39 @@ def build_hydrogen_report(
         f'<td width="{max(1, round(100 * v / top))}%" bgcolor="#0A7452">&nbsp;</td><td></td>'
         f"</tr></table></td></tr>"
         for n, v in parts if v > 0)
-    checks = "".join(
-        f'<li><span style="color:{colors[x.severity]}"><b>[{_LABELS[x.severity]}]</b></span> '
-        f"{escape(x.message)}</li>"
-        for x in findings
-    )
     why = "".join(
         explanation_html(key, hydrogen_worked_example(key, inp, d))
         for key in HYDROGEN_TOPIC_ORDER
         if key in EXPLANATIONS
     )
+    status = _status_phrase(findings)
+    green = d.co2_kg_per_kg <= 3.4
+    verdict = (f"<b>{d.hydrogen_kg:,.0f} kg</b> of hydrogen a year with a "
+               f"{d.electrolyser_kw:,.0f} kW electrolyser, at about <b>{d.lcoh:.2f} euro/kg</b>. "
+               f"Its carbon footprint is {d.co2_kg_per_kg:.1f} kg CO2 per kg: "
+               + ("below the EU limit for renewable hydrogen. " if green else
+                  "above the EU limit (3.4), so it does not count as renewable. ") + status)
+    glance = _glance([
+        (f"{d.hydrogen_kg:,.0f} kg", "hydrogen per year"),
+        (f"{d.lcoh:.2f} euro/kg", "cost of the hydrogen (LCOH)"),
+        (f"{d.full_load_hours:,.0f} h", "electrolyser at full power per year"),
+        (f"{d.co2_kg_per_kg:.1f} kg", "CO2 per kg of hydrogen"),
+    ], verdict)
+    charts_html = _charts_html(hydrogen_charts(inp, d))
+    checks_html = _checks_html(findings, colors)
     note = f"<p>{escape(site_note)}</p>" if site_note else ""
     return f"""<html><head><meta charset="utf-8"><title>{escape(title)}</title>
 <style>
 {look["css"]}
 </style></head><body>
 <h1>{escape(title)}</h1>{note}
-<h2>1. Inputs</h2><table>{inputs}</table>
-<h2>2. Results</h2><table>{results}</table>
-<h2>3. Where the cost comes from</h2><table cellpadding="2">{bars}</table>
-<h2>4. Design checks</h2><ul>{checks}</ul>
-<h2>5. Method and formulas</h2>{why}
+<h2>In short</h2>{glance}
+<h2>The numbers in pictures</h2>{charts_html}
+<h2>Design checks</h2>{checks_html}
+<h2>Results in detail</h2><table>{results}</table>
+<h2>Your inputs</h2><table>{inputs}</table>
+<h2>Where the cost comes from, in euro per year</h2><table cellpadding="2">{bars}</table>
+<h2>Method and formulas</h2>{why}
 <hr><p><i>Generated by RESize {escape(__version__)}. Preliminary and educational sizing only:
 no dynamic model of the electrolyser, no safety, permitting or grid-connection study
 (see DISCLAIMER).</i></p>

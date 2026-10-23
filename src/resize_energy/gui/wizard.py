@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPageSize, QPdfWriter, QTextDocument
+from PySide6.QtGui import QImage, QPageSize, QPdfWriter, QTextDocument
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -28,17 +28,43 @@ from resize_energy.core.pv_design import (
     size_pv_system,
 )
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
+from resize_energy.gui.chart_render import render_chart
 from resize_energy.gui.numparse import format_number, parse_in_range
 from resize_energy.gui.theme import COLORS, SCREEN_DOC_CSS
 from resize_energy.gui.tutor_panel import TutorDialog
 from resize_energy.gui.why import WhyButton
 from resize_energy.gui.widgets import StepPage, make_label
+from resize_energy.report.charts import ChartSpec, pv_charts
 from resize_energy.report.html_report import build_pv_report
 from resize_energy.tutor.checker import Finding, check_pv_design
 from resize_energy.tutor.context import build_project_context
 from resize_energy.tutor.explanations import EXPLANATIONS, TOPIC_ORDER
 from resize_energy.tutor.why_html import explanation_html
 from resize_energy.tutor.worked import worked_example
+
+
+class ReportBrowser(QTextBrowser):
+    """Shows the report; ``<img src="chart:NAME">`` is answered with the drawn chart."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.images: dict[str, QImage] = {}
+
+    def loadResource(self, rtype, url):
+        image = self.images.get(url.toString())
+        return image if image is not None else super().loadResource(rtype, url)
+
+
+class ReportDocument(QTextDocument):
+    """Same for the document that is printed to PDF."""
+
+    def __init__(self, images: dict[str, QImage]) -> None:
+        super().__init__()
+        self.images = images
+
+    def loadResource(self, rtype, url):
+        image = self.images.get(url.toString())
+        return image if image is not None else super().loadResource(rtype, url)
 
 
 class NumberField(QWidget):
@@ -106,7 +132,7 @@ class SitePage(StepPage):
     def __init__(self) -> None:
         super().__init__()
         self.setTitle("1. Site and solar resource")
-        self.setSubTitle("The yearly in-plane irradiation H sets how much energy each kWp yields.")
+        self.setSubTitle("Where is it? Press the button to get the solar energy of this place from PVGIS, or type your own value: it sets how much each kWp produces.")
 
         self.lat = NumberField(45.07, -90, 90, 4, "deg N")
         self.lon = NumberField(7.69, -180, 180, 4, "deg E")
@@ -191,7 +217,7 @@ class LoadPage(StepPage):
         super().__init__()
         self.site = site
         self.setTitle("2. Electricity demand")
-        self.setSubTitle("How much energy must the plant supply, and how well does it perform?")
+        self.setSubTitle("How much electricity do you use, and what share should the PV cover? The performance ratio says how much of the ideal energy you really get.")
         self.demand = NumberField(4500, 1, 1e9, 0, "kWh per year")
         self.coverage = NumberField(100, 1, 100, 0, "%", "pv.required_peak_power")
         self.pr = NumberField(0.80, 0.5, 0.95, 2, "", "pv.performance_ratio")
@@ -226,7 +252,7 @@ class ComponentsPage(StepPage):
     def __init__(self) -> None:
         super().__init__()
         self.setTitle("3. Module and inverter")
-        self.setSubTitle("Enter the datasheet values (defaults are generic placeholders).")
+        self.setSubTitle("Choose the module and the inverter. The defaults are generic: use your datasheet values for a real design.")
         m, i = ModuleSpec(), InverterSpec()
 
         def nf(
@@ -332,8 +358,9 @@ class BaseResultsPage(StepPage):
         super().__init__()
         self.setMinimumHeight(560)
         self.setTitle("4. Results and design checks")
-        self.setSubTitle("Pick a step on the right to see why it is done and the numbers used.")
-        self.browser = QTextBrowser()
+        self.setSubTitle("Your results first, then charts and checks. Use the list on the right to see why each number is what it is.")
+        self.browser = ReportBrowser()
+        self.chart_images: dict[str, QImage] = {}
         self.html = ""  # light version, used for the PDF
         self.html_screen = ""  # dark version, shown in the window
         self._inputs: object | None = None
@@ -353,7 +380,7 @@ class BaseResultsPage(StepPage):
         why_panel = QWidget()
         why_layout = QVBoxLayout(why_panel)
         why_layout.setContentsMargins(14, 0, 0, 0)  # air between report and Why? panel
-        why_layout.addWidget(make_label("Why?", "sectionTitle", wrap=False))
+        why_layout.addWidget(make_label("Why? Understand each step", "sectionTitle", wrap=False))
         why_layout.addWidget(self.topics, 1)
         why_layout.addWidget(self.detail, 2)
         ask_step = QPushButton("Ask the tutor about this step...")
@@ -366,7 +393,7 @@ class BaseResultsPage(StepPage):
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 2)
 
-        export = QPushButton("Export PDF report...")
+        export = QPushButton("Save the report as PDF (with charts)...")
         export.setProperty("variant", "primary")
         export.clicked.connect(self._export_pdf)
         ask = QPushButton("Ask the AI tutor...")
@@ -377,6 +404,9 @@ class BaseResultsPage(StepPage):
         buttons.addWidget(ask)
         buttons.addWidget(export)
         layout = QVBoxLayout(self)
+        layout.addWidget(make_label(
+            "Left: your results, the charts and the design checks (start from 'In short'). "
+            "Right: pick a step to see its formula with your own numbers.", "hint"))
         layout.addWidget(splitter)
         layout.addLayout(buttons)
 
@@ -393,6 +423,15 @@ class BaseResultsPage(StepPage):
 
     def _context(self) -> str:
         raise NotImplementedError
+
+    def _charts(self) -> dict[str, ChartSpec]:
+        """The charts named in the report (``chart:NAME``)."""
+        return {}
+
+    def _draw_charts(self) -> None:
+        self.chart_images = {f"chart:{name}": render_chart(spec)
+                             for name, spec in self._charts().items()}
+        self.browser.images = self.chart_images
 
     # --- shared behaviour ----------------------------------------------------------------
     def _open_tutor(self, question: str | None = None) -> None:
@@ -434,6 +473,7 @@ class BaseResultsPage(StepPage):
             return
         self._inputs, self._design, self._findings = inputs, design, findings
         self.html, self.html_screen = light, dark
+        self._draw_charts()
         self.browser.setHtml(self.html_screen)
         row = self.topics.currentRow()
         if row >= 0:
@@ -448,7 +488,7 @@ class BaseResultsPage(StepPage):
         )
         if not path:
             return
-        doc = QTextDocument()
+        doc = ReportDocument(self.chart_images)
         doc.setHtml(self.html)
         writer = QPdfWriter(path)
         writer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
@@ -490,6 +530,9 @@ class ResultsPage(BaseResultsPage):
 
     def _context(self) -> str:
         return build_project_context(self._inputs, self._design, self._findings)
+
+    def _charts(self) -> dict[str, ChartSpec]:
+        return pv_charts(self._inputs, self._design)
 
 
 STEP_NAMES = ["Site and solar resource", "Electricity demand", "Module and inverter",

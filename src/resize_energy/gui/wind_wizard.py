@@ -22,6 +22,7 @@ from resize_energy.core.turbine_library import SOURCE, load_library
 from resize_energy.core.wind_design import TurbineSpec, WindInputs, size_wind_plant
 from resize_energy.gui.widgets import StepPage
 from resize_energy.gui.wizard import BaseResultsPage, NumberField, _hint, first_error
+from resize_energy.report.charts import ChartSpec, wind_charts
 from resize_energy.report.html_report import build_wind_report
 from resize_energy.tutor.checker import Finding
 from resize_energy.tutor.checker_wind import check_wind_design
@@ -45,7 +46,7 @@ class WindSitePage(StepPage):
     def __init__(self) -> None:
         super().__init__()
         self.setTitle("1. Site and wind resource")
-        self.setSubTitle("The mean wind speed, and how it is distributed, decide the energy.")
+        self.setSubTitle("Where is it? Press the button to get the wind speed of this place, or type your own measurement: wind speed is the biggest driver of the energy.")
 
         self.lat = NumberField(45.07, -90, 90, 4, "deg N")
         self.lon = NumberField(7.69, -180, 180, 4, "deg E")
@@ -131,7 +132,7 @@ class WindLoadPage(StepPage):
     def __init__(self) -> None:
         super().__init__()
         self.setTitle("2. Demand and losses")
-        self.setSubTitle("How much energy must the plant supply, and how much is lost on the way?")
+        self.setSubTitle("How much energy do you need, and what share should wind cover? Losses (wake, availability) reduce what the turbines deliver.")
         self.demand = NumberField(10_000_000, 1, 1e12, 0, "kWh per year")
         self.coverage = NumberField(100, 1, 100, 0, "%", "wind.number_of_turbines")
         self.availability = NumberField(97, 50, 100, 1, "%", "wind.losses")
@@ -161,7 +162,7 @@ class WindTurbinePage(StepPage):
     def __init__(self) -> None:
         super().__init__()
         self.setTitle("3. Turbine and layout")
-        self.setSubTitle("Pick a turbine from the library or type the datasheet values.")
+        self.setSubTitle("Pick a turbine from the list (its real power curve is used) or type the datasheet values.")
         t = TurbineSpec()
         self.library = load_library()
         self._selected = None  # LibraryTurbine in use, or None for the generic curve
@@ -308,3 +309,6 @@ class WindResultsPage(BaseResultsPage):
 
     def _context(self) -> str:
         return build_wind_context(self._inputs, self._design, self._findings)
+
+    def _charts(self) -> dict[str, ChartSpec]:
+        return wind_charts(self._inputs, self._design)

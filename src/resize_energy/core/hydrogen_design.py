@@ -107,6 +107,8 @@ class HydrogenDesign:
     co2_kg_per_kg: float
     co2_saved_t_per_year: float
     profile_source: str
+    monthly_res_kwh: tuple[float, ...] = ()
+    monthly_grid_kwh: tuple[float, ...] = ()
 
 
 def _check(inp: HydrogenInputs, prof: HydrogenProfiles) -> None:
@@ -200,5 +202,6 @@ def size_hydrogen_plant(inp: HydrogenInputs, prof: HydrogenProfiles) -> Hydrogen
         cost_electrolyser=cost_el, cost_stack=cost_stack, cost_storage=cost_storage,
         cost_res=cost_res, cost_grid=cost_grid, cost_water=cost_water, lcoh=total / kg,
         co2_kg_per_kg=co2, co2_saved_t_per_year=(inp.grey_h2_kg_co2_per_kg - co2) * kg / 1000.0,
-        profile_source=prof.source,
+        profile_source=prof.source, monthly_res_kwh=r.monthly_res_kwh,
+        monthly_grid_kwh=r.monthly_grid_kwh,
     )

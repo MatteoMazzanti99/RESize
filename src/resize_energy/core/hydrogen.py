@@ -58,6 +58,22 @@ class DispatchResult:
     hours_on: int
     pv_used_kwh: float
     wind_used_kwh: float
+    monthly_res_kwh: tuple[float, ...] = ()    # renewable energy used, per month
+    monthly_grid_kwh: tuple[float, ...] = ()   # grid energy used, per month
+
+
+_MONTH_START_H = tuple(d * 24 for d in (0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334))
+
+
+def _month_of_hour() -> list[int]:
+    out: list[int] = []
+    for m in range(12):
+        end = _MONTH_START_H[m + 1] if m < 11 else HOURS
+        out += [m] * (end - _MONTH_START_H[m])
+    return out
+
+
+_MONTH_OF = _month_of_hour()
 
 
 def simulate_dispatch(
@@ -95,6 +111,8 @@ def simulate_dispatch(
     res_used = grid = 0.0
     pv_used = wind_used = 0.0
     hours_on = 0
+    m_res = [0.0] * 12
+    m_grid = [0.0] * 12
     for t in range(HOURS):
         g = scale * gap[t]
         total = used[t] + g
@@ -103,6 +121,8 @@ def simulate_dispatch(
         hours_on += 1
         res_used += used[t]
         grid += g
+        m_res[_MONTH_OF[t]] += used[t]
+        m_grid[_MONTH_OF[t]] += g
         if res[t] > 0:
             share = used[t] / res[t]
             pv_used += pv_w[t] * share
@@ -112,4 +132,5 @@ def simulate_dispatch(
         res_available_kwh=sum(res), res_used_kwh=res_used, grid_kwh=grid,
         electricity_kwh=electricity, hydrogen_kg=electricity / kwh_per_kg, hours_on=hours_on,
         pv_used_kwh=pv_used, wind_used_kwh=wind_used,
+        monthly_res_kwh=tuple(m_res), monthly_grid_kwh=tuple(m_grid),
     )

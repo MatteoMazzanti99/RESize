@@ -33,6 +33,7 @@ from resize_energy.core.wind_design import TurbineSpec
 from resize_energy.gui.biomass_wizard import _show_row
 from resize_energy.gui.widgets import StepPage
 from resize_energy.gui.wizard import BaseResultsPage, NumberField, _hint, first_error
+from resize_energy.report.charts import ChartSpec, hydrogen_charts
 from resize_energy.report.html_report import build_hydrogen_report
 from resize_energy.tutor.checker import Finding
 from resize_energy.tutor.checker_hydrogen import check_hydrogen_design
@@ -57,7 +58,7 @@ class HydrogenGoalPage(StepPage):
     def __init__(self) -> None:
         super().__init__()
         self.setTitle("1. Goal and sources")
-        self.setSubTitle("Where do you start from, and which electricity feeds the electrolyser?")
+        self.setSubTitle("What do you already know, and which electricity feeds the electrolyser? Tick every source you want to use.")
         self.mode_picker = QComboBox()
         for key in MODE_KEYS:
             self.mode_picker.addItem(MODES[key])
@@ -155,7 +156,7 @@ class HydrogenSitePage(StepPage):
         self._weather: prof.HourlyWeather | None = None
         self.library = load_library()
         self.setTitle("2. Site and profiles")
-        self.setSubTitle("Hour-by-hour sun and wind decide how many hours the electrolyser runs.")
+        self.setSubTitle("Where is it? Press the button for real hourly sun and wind data, or keep the defaults to explore: hour by hour, sun and wind decide how long the electrolyser runs.")
 
         self.lat = NumberField(45.07, -90, 90, 4, "deg N")
         self.lon = NumberField(7.69, -180, 180, 4, "deg E")
@@ -299,7 +300,7 @@ class HydrogenPlantPage(StepPage):
         super().__init__()
         self.goal = goal
         self.setTitle("3. Electrolyser and storage")
-        self.setSubTitle("PEM electrolyser performance, compression, storage and water.")
+        self.setSubTitle("Electrolyser, compression, storage and water. The defaults are typical: change them if you have a datasheet.")
         d = HydrogenInputs()
         self.kwh = NumberField(d.kwh_per_kg_stack, 40, 80, 1, "kWh/kg", "hydrogen.efficiency")
         self.min_load = NumberField(d.min_load * 100, 0, 50, 0, "% of nominal", "hydrogen.dispatch")
@@ -354,7 +355,7 @@ class HydrogenCostPage(StepPage):
         super().__init__()
         d = HydrogenInputs()
         self.setTitle("4. Costs and emissions")
-        self.setSubTitle("Round placeholder values: replace them with quotes and local prices.")
+        self.setSubTitle("Costs and emission factors. The defaults are round placeholders that give an order of magnitude: replace them with quotes and local prices.")
 
         def f(value, lo, hi, dec, unit, why="hydrogen.lcoh") -> NumberField:
             return NumberField(value, lo, hi, dec, unit, why)
@@ -475,3 +476,6 @@ class HydrogenResultsPage(BaseResultsPage):
 
     def _context(self) -> str:
         return build_hydrogen_context(self._inputs, self._design, self._findings)
+
+    def _charts(self) -> dict[str, ChartSpec]:
+        return hydrogen_charts(self._inputs, self._design)

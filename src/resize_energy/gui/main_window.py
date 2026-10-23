@@ -58,6 +58,9 @@ from resize_energy.gui.wizard import (
     SitePage,
 )
 
+TECH_LABELS = {"pv": "PHOTOVOLTAIC", "wind": "WIND", "biomass": "BIOMASS",
+               "hydrogen": "GREEN HYDROGEN", "compare": "COMPARISON"}
+
 
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
@@ -109,6 +112,7 @@ class MainWindow(QMainWindow):
         self.index = 0
 
         self.sidebar = Sidebar(STEP_NAMES)
+        self.header_step = make_label("", "overline", wrap=False)
         self.header_title = make_label("", "pageTitle", wrap=False)
         self.header_subtitle = make_label("", "pageSubtitle")
 
@@ -143,6 +147,7 @@ class MainWindow(QMainWindow):
         column = QVBoxLayout(right)
         column.setContentsMargins(36, 28, 36, 20)
         column.setSpacing(0)
+        column.addWidget(self.header_step)
         column.addWidget(self.header_title)
         column.addWidget(self.header_subtitle)
         column.addSpacing(16)
@@ -213,8 +218,11 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentWidget(self._scroll_of[id(page)])
         self._fade_in(self._scroll_of[id(page)])
         self.sidebar.set_current(index - 1)
+        self.header_step.setVisible(page.show_header)
         self.header_title.setVisible(page.show_header)
         self.header_subtitle.setVisible(page.show_header)
+        total = len(self.pages) - 1
+        self.header_step.setText(f"{TECH_LABELS.get(self.tech, '')}  ·  STEP {index} OF {total}")
         self.header_title.setText(page.title())
         self.header_subtitle.setText(page.subTitle())
         last = index == len(self.pages) - 1
@@ -222,3 +230,5 @@ class MainWindow(QMainWindow):
         self.back_button.setVisible(not home)
         self.next_button.setVisible(not home and not last)
         self.restart_button.setVisible(last)
+        self.next_button.setText("See the results  →" if index == len(self.pages) - 2
+                                 else "Next  →")
