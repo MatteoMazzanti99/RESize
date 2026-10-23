@@ -74,6 +74,7 @@ class ComparisonInputs:
     biomass: BiomassInputs = field(default_factory=lambda: BiomassInputs(pathway="biogas"))
     h2_use_pv: bool = True
     h2_use_wind: bool = False
+    hourly_weather: prof.HourlyWeather | None = None   # real hourly year for the hydrogen plant
 
     @property
     def annual_demand_kwh(self) -> float:
@@ -217,16 +218,20 @@ def _size_hydrogen(inp: ComparisonInputs, target_kwh: float) -> tuple[HydrogenDe
         pv_ef=c.pv_lifecycle_g_per_kwh / 1000.0, wind_ef=c.wind_lifecycle_g_per_kwh / 1000.0,
         grid_ef=c.grid_kg_co2_per_kwh, grey_h2_kg_co2_per_kg=c.h2_reference_kg_co2_per_kg)
     pv_unit = wind_unit = None
+    weather = inp.hourly_weather
+    v50 = wind.shear_power_law(w.mean_speed_ref_ms, w.ref_height_m, 50.0, w.shear_alpha)
     if inp.h2_use_pv:
-        pv_unit = prof.synthetic_pv_profile(
-            inp.latitude_deg, inp.annual_irradiation_kwh_m2 * inp.performance_ratio)
+        specific = inp.annual_irradiation_kwh_m2 * inp.performance_ratio
+        pv_unit = (prof.pv_profile_from_ghi(weather.ghi_w_m2, specific) if weather else
+                   prof.synthetic_pv_profile(inp.latitude_deg, specific))
     if inp.h2_use_wind:
-        v50 = wind.shear_power_law(w.mean_speed_ref_ms, w.ref_height_m, 50.0, w.shear_alpha)
         rho = wind.air_density(w.elevation_m, w.temperature_c)
+        series = weather.wind50_ms if weather else prof.synthetic_wind_series(v50, w.weibull_k)
         wind_unit = prof.turbine_unit_profile(
-            prof.synthetic_wind_series(v50, w.weibull_k), v50, w.turbine.hub_height_m,
-            w.shear_alpha, w.turbine, rho, w.availability * (1.0 - w.other_losses))
-    design = size_hydrogen_plant(hin, HydrogenProfiles(pv_unit, wind_unit, "synthetic"))
+            series, v50, w.turbine.hub_height_m, w.shear_alpha, w.turbine, rho,
+            w.availability * (1.0 - w.other_losses))
+    design = size_hydrogen_plant(
+        hin, HydrogenProfiles(pv_unit, wind_unit, "NASA POWER" if weather else "synthetic"))
     return design, hin
 
 

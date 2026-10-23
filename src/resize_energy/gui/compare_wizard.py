@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from resize_energy.core import profiles as prof
 from resize_energy.core.biomass_design import BiomassInputs
 from resize_energy.core.comparison import (
     TECH_NAMES,
@@ -93,6 +94,7 @@ class CompareSitePage(StepPage):
         self.setTitle("1. Site and demand")
         self.setSubTitle("Where is it, and how much energy do you need? Every technology is sized for this same demand.")
         self._implied_pr: float | None = None
+        self._weather: prof.HourlyWeather | None = None
 
         self.lat = NumberField(45.07, -90, 90, 4, "deg N")
         self.lon = NumberField(7.69, -180, 180, 4, "deg E")
@@ -161,6 +163,10 @@ class CompareSitePage(StepPage):
     def implied_pr(self) -> float | None:
         return self._implied_pr
 
+    def weather(self) -> prof.HourlyWeather | None:
+        """Real hourly year, when it was downloaded (used by the hydrogen plant)."""
+        return self._weather
+
     def _items(self) -> list[tuple[str, NumberField]]:
         items = [("Latitude", self.lat), ("Longitude", self.lon), ("Tilt", self.tilt),
                  ("Azimuth", self.azimuth), ("Annual demand", self.demand),
@@ -202,6 +208,15 @@ class CompareSitePage(StepPage):
                 lines.append(text + ".")
             except (NasaPowerError, ValueError) as exc:
                 lines.append(f"NASA POWER not available ({exc}): type the wind values by hand.")
+            self._weather = None
+            if "hydrogen" in self.selection.techs:
+                try:
+                    self._weather = prof.fetch_hourly(self.lat.value(), self.lon.value())
+                    lines.append(f"NASA POWER hourly {self._weather.year}: the hydrogen plant "
+                                 "will be simulated on this real year.")
+                except (NasaPowerError, ValueError) as exc:
+                    lines.append(f"Hourly data not available ({exc}): the hydrogen plant uses "
+                                 "an invented year.")
         finally:
             QApplication.restoreOverrideCursor()
         self.status.setText("\n".join(lines))
@@ -501,6 +516,7 @@ class CompareResultsPage(BaseResultsPage):
             biomass=p.biomass(),
             h2_use_pv=p.h2_pv.isChecked(),
             h2_use_wind=p.h2_wind.isChecked(),
+            hourly_weather=s.weather(),
         )
         result = compare_technologies(inputs)
         findings = check_comparison(inputs, result)

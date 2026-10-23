@@ -205,3 +205,21 @@ def test_versus_rounds():
     assert sum(rounds_won(rounds).values()) == sum(rd.winner is not None for rd in rounds)
     html = build_comparison_report(*(many(("pv", "wind"))[0], many(("pv", "wind"))[1], []))
     assert "Round 1: Cost of one kWh" in html
+
+
+def test_hydrogen_uses_the_real_hourly_year_when_given():
+    from dataclasses import replace
+
+    from resize_energy.core import profiles as prof
+
+    base = ComparisonInputs(annual_irradiation_kwh_m2=1500.0, performance_ratio=0.8,
+                            wind=WindInputs(annual_demand_kwh=5_000_000, mean_speed_ref_ms=6.0),
+                            techs=("pv", "hydrogen"), latitude_deg=45.0)
+    invented = compare_technologies(base)
+    assert invented.hydrogen_design.profile_source == "synthetic"
+    # a "real" year: cloudier and with weaker midday than the invented one
+    ghi = tuple(0.7 * g for g in prof.synthetic_pv_profile(45.0, 1000.0))
+    weather = prof.HourlyWeather(tuple(6.0 for _ in range(prof.HOURS)), ghi, 2020)
+    real = compare_technologies(replace(base, hourly_weather=weather))
+    assert real.hydrogen_design.profile_source == "NASA POWER"
+    assert real.hydrogen.lcoe_eur_per_kwh > 0
