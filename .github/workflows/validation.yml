@@ -45,6 +45,8 @@ jobs:
           cat cross.txt >> "$GITHUB_STEP_SUMMARY"
           body=$(python -c "import urllib.parse;print(urllib.parse.quote(open('cross.txt').read()[-3500:],safe=' |/:.,()-+=*#'))")
           echo "::notice title=Cross-check report::${body}"
+          head_body=$(python -c "import urllib.parse;print(urllib.parse.quote(open('cross.txt').read()[:3500],safe=' |/:.,()-+=*#'))")
+          echo "::notice title=Cross-check report (first part)::${head_body}"
           exit $code
       - uses: actions/upload-artifact@v4
         if: always()
