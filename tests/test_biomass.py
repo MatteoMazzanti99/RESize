@@ -155,3 +155,11 @@ def test_checks_catch_the_main_problems():
     assert {"olr_high"} & codes(check_biomass_design(inp, d), "error")
     inp, d = case("biogas", operating_hours=5000)
     assert "chp_hours" in codes(check_biomass_design(inp, d), "warning")
+
+
+def test_substrate_yields_are_plausible_per_kg_of_volatile_solids():
+    # Buswell: carbohydrates give at most 0.373 Nm3 CH4 per kg VS, proteins 0.50, fats 1.0.
+    # Real substrates sit at roughly 0.15-0.45; values outside would be a typing error.
+    for sub in SUBSTRATES:
+        per_kg_vs = sub.ch4_m3_per_t / (sub.vs_fresh * 1000.0)
+        assert 0.15 < per_kg_vs < 0.45, (sub.name, per_kg_vs)
