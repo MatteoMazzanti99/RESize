@@ -357,7 +357,6 @@ class HydrogenPlantPage(StepPage):
         layout.addStretch(1)
 
     def initializePage(self) -> None:
-        self.country_bar.sync()
         _show_row(self.form, self.cap, self.goal.grid.isChecked())
         self.cheapest.setVisible(self.goal.grid.isChecked())
 
@@ -457,6 +456,9 @@ class HydrogenCostPage(StepPage):
             "quotes. The whole renewable plant is charged to the hydrogen, also the curtailed "
             "energy. No incentives, taxes or grid fees."))
         layout.addStretch(1)
+
+    def initializePage(self) -> None:
+        self.country_bar.sync()
 
     def validatePage(self) -> bool:
         return _warn(self, self._items)
