@@ -38,6 +38,34 @@ def _walk_through(window, app) -> int:
         print("self-test: the comparison charts were not drawn", flush=True)
         return 1
     window._restart()
+    return _project_roundtrip(window, app)
+
+
+def _project_roundtrip(window, app) -> int:
+    """Save a hydrogen project, change a value, reopen the file and find the saved value."""
+    import tempfile
+    from pathlib import Path
+
+    window._start("hydrogen")
+    window.h2_goal.demand.set_value(54321)
+    window.h2_plant.days.set_value(7)
+    window.h2_goal.wind.setChecked(True)
+    with tempfile.TemporaryDirectory() as folder:
+        path = Path(folder) / "test.resize"
+        window.save_to(path)
+        window._restart()
+        window._start("hydrogen")
+        window.h2_goal.demand.set_value(1000)
+        window.h2_goal.wind.setChecked(False)
+        problems = window.open_from(path)
+        app.processEvents()
+        ok = (window.h2_goal.demand.value() == 54321 and window.h2_plant.days.value() == 7
+              and window.h2_goal.wind.isChecked()
+              and window.index == len(window.pages) - 1 and not problems)
+    if not ok:
+        print(f"self-test: reopening a saved project failed ({problems})", flush=True)
+        return 1
+    window._restart()
     return 0
 
 

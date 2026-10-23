@@ -5,12 +5,17 @@ It hosts one flow of steps per technology (photovoltaic, wind, biomass, hydrogen
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtCore import QEasingCurve, QPropertyAnimation
+from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
+    QFileDialog,
     QFrame,
     QGraphicsOpacityEffect,
     QHBoxLayout,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QStackedWidget,
@@ -18,6 +23,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from resize_energy.core import project_file as pf
+from resize_energy.gui import project_io
 from resize_energy.gui.battery_wizard import (
     BATTERY_STEP_NAMES,
     BatteryCostPage,
@@ -152,9 +159,20 @@ class MainWindow(QMainWindow):
         self.restart_button = QPushButton("Start over")
         self.restart_button.setProperty("variant", "ghost")
         self.restart_button.clicked.connect(self._restart)
+        self.save_button = QPushButton("Save project")
+        self.save_button.setProperty("variant", "ghost")
+        self.save_button.setToolTip("Save the values of every step to a .resize file (Ctrl+S)")
+        self.save_button.clicked.connect(self.save_project)
+        self.open_button = QPushButton("Open a saved project…")
+        self.open_button.setProperty("variant", "ghost")
+        self.open_button.clicked.connect(self.open_project)
+        self.project_path: Path | None = None
+        self._build_menu()
 
         footer = QHBoxLayout()
         footer.addWidget(self.back_button)
+        footer.addWidget(self.open_button)
+        footer.addWidget(self.save_button)
         footer.addStretch(1)
         footer.addWidget(self.restart_button)
         footer.addWidget(self.next_button)
@@ -246,5 +264,117 @@ class MainWindow(QMainWindow):
         self.back_button.setVisible(not home)
         self.next_button.setVisible(not home and not last)
         self.restart_button.setVisible(last)
+        self.open_button.setVisible(home)
+        self.save_button.setVisible(not home)
+        self.save_action.setEnabled(not home)
+        self.save_as_action.setEnabled(not home)
+        self._update_title()
         self.next_button.setText("See the results  →" if index == len(self.pages) - 2
                                  else "Next  →")
+
+    # --- projects (save and reopen) -------------------------------------------------
+    def _build_menu(self) -> None:
+        menu = self.menuBar().addMenu("&File")
+        open_action = QAction("&Open project…", self)
+        open_action.setShortcut(QKeySequence.StandardKey.Open)
+        open_action.triggered.connect(self.open_project)
+        self.save_action = QAction("&Save project", self)
+        self.save_action.setShortcut(QKeySequence.StandardKey.Save)
+        self.save_action.triggered.connect(self.save_project)
+        self.save_as_action = QAction("Save project &as…", self)
+        self.save_as_action.setShortcut(QKeySequence.StandardKey.SaveAs)
+        self.save_as_action.triggered.connect(self.save_project_as)
+        home_action = QAction("&Home", self)
+        home_action.triggered.connect(self._restart)
+        for action in (open_action, self.save_action, self.save_as_action):
+            menu.addAction(action)
+        menu.addSeparator()
+        menu.addAction(home_action)
+
+    def _update_title(self) -> None:
+        name = f" - {self.project_path.name}" if self.project_path else ""
+        self.setWindowTitle(f"RESize - renewable energy sizing tutor{name}")
+
+    def project_snapshot(self) -> pf.Project:
+        """The values of every step of the open flow."""
+        flow = self.pages[1:]
+        weather = {}
+        for i, page in enumerate(flow):
+            w = project_io.weather_of(page)
+            if w is not None:
+                weather[str(i)] = w
+        return pf.Project(
+            tech=self.tech, pages=[project_io.capture(p) for p in flow],
+            compare_techs=self.cmp_selection.techs if self.tech == "compare" else (),
+            weather=weather)
+
+    def save_to(self, path: Path) -> None:
+        path = path if path.suffix == pf.EXTENSION else path.with_suffix(pf.EXTENSION)
+        path.write_text(pf.dumps(self.project_snapshot()), encoding="utf-8")
+        self.project_path = path
+        self._update_title()
+
+    def open_from(self, path: Path) -> list[str]:
+        """Load a project, fill the steps and show the last one. Returns fields not restored."""
+        try:
+            project = pf.loads(path.read_text(encoding="utf-8"))
+        except OSError as exc:
+            raise pf.ProjectError(f"the file cannot be read ({exc.strerror or exc})") from exc
+        except UnicodeDecodeError as exc:
+            raise pf.ProjectError("this is not a RESize project file") from exc
+        if project.tech == "compare":
+            self.cmp_selection.techs = project.compare_techs or self.cmp_selection.techs
+        self._start(project.tech)
+        flow = self.pages[1:]
+        problems: list[str] = []
+        for i, (page, state) in enumerate(zip(flow, project.pages, strict=False)):
+            problems += project_io.restore(page, state, project.weather.get(str(i)))
+        self.project_path = path
+        for page in flow:       # as if the steps had been walked through
+            page.initializePage()
+        try:
+            self._go(len(self.pages) - 1)
+        except Exception as exc:  # noqa: BLE001 - a bad value must not leave the window stuck
+            self._go(1)
+            problems.append(f"results ({exc})")
+        self._update_title()
+        return problems
+
+    def save_project(self) -> None:
+        if self.index == 0:
+            return
+        if self.project_path is None:
+            self.save_project_as()
+            return
+        self._save_checked(self.project_path)
+
+    def save_project_as(self) -> None:
+        if self.index == 0:
+            return
+        start = str(self.project_path or Path.home() / pf.default_name(self.tech))
+        name, _ = QFileDialog.getSaveFileName(self, "Save project", start,
+                                              "RESize project (*.resize)")
+        if name:
+            self._save_checked(Path(name))
+
+    def _save_checked(self, path: Path) -> None:
+        try:
+            self.save_to(path)
+        except OSError as exc:
+            QMessageBox.warning(self, "Could not save", f"{path}\n{exc.strerror or exc}")
+
+    def open_project(self) -> None:
+        name, _ = QFileDialog.getOpenFileName(self, "Open project", str(Path.home()),
+                                              "RESize project (*.resize);;All files (*)")
+        if not name:
+            return
+        try:
+            problems = self.open_from(Path(name))
+        except pf.ProjectError as exc:
+            QMessageBox.warning(self, "Could not open the project", str(exc))
+            return
+        if problems:
+            QMessageBox.information(
+                self, "Project opened",
+                "Some values could not be restored and keep their default: "
+                + ", ".join(problems[:8]))

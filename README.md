@@ -61,6 +61,14 @@ Wind can also use a wake model (step 3, Layout): Jensen wakes over a wind rose f
 staggered rows, giving the real wake loss, the efficiency of every turbine and of every
 wind direction, and a turbine count that accounts for it.
 
+## Saving and reopening projects
+
+**Save project** (button at the bottom, or Ctrl+S) writes a small `.resize` file with every value
+of every step and, if you downloaded it, the real hourly weather year. **Open a saved
+project...** (button on the home page, or Ctrl+O) brings you straight to the results of that
+project; press Back to change anything. Files are plain JSON, so they can also be versioned
+or shared; a file saved by a newer RESize says so instead of failing.
+
 ## Sensitivity analysis
 
 Hydrogen, battery and the technology comparison end with two pictures answering "what if my
