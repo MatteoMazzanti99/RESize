@@ -25,8 +25,20 @@ jobs:
           body=$(python -c "import urllib.parse;print(urllib.parse.quote(open('out.txt').read(),safe=' |/:.,()-+=*#'))")
           echo "::notice title=PV validation report::${body}"
           exit $code
+      - name: Wind checks and NASA POWER
+        shell: bash
+        run: |
+          set +e
+          python validation/validate_wind.py --out wind-report.md > wind.txt 2>&1
+          code=$?
+          cat wind.txt >> "$GITHUB_STEP_SUMMARY"
+          body=$(python -c "import urllib.parse;print(urllib.parse.quote(open('wind.txt').read()[-3500:],safe=' |/:.,()-+=*#'))")
+          echo "::notice title=Wind validation report::${body}"
+          exit $code
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: pv-validation-report
-          path: pv-report.md
+          name: validation-reports
+          path: |
+            pv-report.md
+            wind-report.md

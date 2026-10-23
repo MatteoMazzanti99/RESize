@@ -25,18 +25,18 @@ BENEFITS: list[tuple[str, str, str]] = [
 # (icon text, title, description, available now)
 TECHNOLOGIES: list[tuple[str, str, str, bool]] = [
     ("pv", "Photovoltaic", "Array, strings, inverter and yearly yield from PVGIS data.", True),
-    ("wind", "Wind", "Turbine choice and energy yield from the wind resource.", False),
+    ("wind", "Wind", "Wind resource at hub height, turbine yield, number of turbines and layout.", True),
     ("biomass", "Biomass", "Plant sizing and fuel supply for heat and power.", False),
     ("hydrogen", "Green hydrogen", "PEM electrolyser coupled to photovoltaic or wind.", False),
 ]
 
 
 class HomePage(StepPage):
-    """Landing page. ``on_start`` is called when the user starts the photovoltaic project."""
+    """Landing page. ``on_start("pv" | "wind")`` is called when the user starts a project."""
 
     show_header = False
 
-    def __init__(self, on_start: Callable[[], None]) -> None:
+    def __init__(self, on_start: Callable[[str], None]) -> None:
         super().__init__()
         self.setTitle("Home")
         root = QVBoxLayout(self)
@@ -57,9 +57,14 @@ class HomePage(StepPage):
         start = QPushButton("Start a photovoltaic project  →")
         start.setProperty("variant", "primary")
         start.setCursor(Qt.CursorShape.PointingHandCursor)
-        start.clicked.connect(lambda *_: on_start())
+        start.clicked.connect(lambda *_: on_start("pv"))
+        start_wind = QPushButton("Start a wind project  →")
+        start_wind.setCursor(Qt.CursorShape.PointingHandCursor)
+        start_wind.clicked.connect(lambda *_: on_start("wind"))
         row = QHBoxLayout()
+        row.setSpacing(12)
         row.addWidget(start)
+        row.addWidget(start_wind)
         row.addStretch(1)
         root.addLayout(row)
         root.addSpacing(26)

@@ -42,8 +42,8 @@ never claim you ran a simulation. If a figure is not in the context, say so, or 
 as a typical value.
 - If the student asks to do the whole assignment, explain the method and guide them step by step \
 instead of handing over a finished solution.
-- Point out clearly when a design check is failing and what could fix it (different module, \
-inverter, string length, DC/AC ratio, ...).
+- Point out clearly when a design check is failing and what could fix it (for example a different \
+module, inverter or turbine, string length, DC/AC ratio, rotor size, hub height, ...).
 - This is a preliminary, educational sizing: mention what would need detailed design (shading, \
 hourly profiles, storage, grid rules) when relevant.
 - Reply in the language the student writes in. Keep answers under about 250 words unless asked \
@@ -94,7 +94,7 @@ def build_system_prompt(context: str) -> str:
 def build_chatbot_prompt(context: str) -> str:
     """Text to paste into any chatbot (for people without an API key)."""
     return (
-        "I am an engineering student sizing a photovoltaic plant with the tool RESize. "
+        "I am an engineering student sizing a renewable energy plant with the tool RESize. "
         "Please act as a tutor: explain the reasoning behind the numbers, check my design "
         "and point out problems, and ask me a question to verify that I understand. "
         "Use only the numbers below for my project.\n\n" + context

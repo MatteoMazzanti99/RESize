@@ -6,4 +6,7 @@ Benchmarks of RESize results, one file per module, with inputs, reference output
   for six European sites. Regenerate with `python validation/validate_pv.py`
   (also runs on GitHub: *PV validation* workflow).
 
+- [Wind sizing](wind.md): formulas by hand, yearly energy against an independent integration,
+  NASA POWER sanity check. Regenerate with `python validation/validate_wind.py`.
+
 Planned: comparison with NREL SAM and with measured plant data.

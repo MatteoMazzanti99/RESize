@@ -8,18 +8,14 @@ from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
     QFormLayout,
-    QFrame,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
-    QMainWindow,
     QMessageBox,
     QPushButton,
-    QScrollArea,
     QSplitter,
-    QStackedWidget,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -28,17 +24,15 @@ from PySide6.QtWidgets import (
 from resize_energy.core.pv_design import (
     InverterSpec,
     ModuleSpec,
-    PVDesign,
     PVInputs,
     size_pv_system,
 )
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
-from resize_energy.gui.home import HomePage
 from resize_energy.gui.numparse import format_number, parse_in_range
 from resize_energy.gui.theme import COLORS, SCREEN_DOC_CSS
 from resize_energy.gui.tutor_panel import TutorDialog
 from resize_energy.gui.why import WhyButton
-from resize_energy.gui.widgets import Sidebar, StepPage, make_label
+from resize_energy.gui.widgets import StepPage, make_label
 from resize_energy.report.html_report import build_pv_report
 from resize_energy.tutor.checker import Finding, check_pv_design
 from resize_energy.tutor.context import build_project_context
@@ -325,23 +319,30 @@ class ComponentsPage(StepPage):
         return True
 
 
-class ResultsPage(StepPage):
-    def __init__(self, site: SitePage, load: LoadPage, comp: ComponentsPage) -> None:
+class BaseResultsPage(StepPage):
+    """Report on the left, 'Why?' topics on the right, export and tutor buttons.
+
+    A technology fills in :meth:`_compute`, :meth:`_worked` and :meth:`_context`.
+    """
+
+    topic_order: tuple[str, ...] = ()
+    pdf_name = "RESize_report.pdf"
+
+    def __init__(self) -> None:
         super().__init__()
-        self.site, self.load, self.comp = site, load, comp
         self.setMinimumHeight(560)
         self.setTitle("4. Results and design checks")
         self.setSubTitle("Pick a step on the right to see why it is done and the numbers used.")
         self.browser = QTextBrowser()
         self.html = ""  # light version, used for the PDF
         self.html_screen = ""  # dark version, shown in the window
-        self._inputs: PVInputs | None = None
-        self._design: PVDesign | None = None
+        self._inputs: object | None = None
+        self._design: object | None = None
         self._findings: list[Finding] = []
         self._tutor: TutorDialog | None = None
 
         self.topics = QListWidget()
-        for key in TOPIC_ORDER:
+        for key in self.topic_order:
             self.topics.addItem(EXPLANATIONS[key]["title"])
         self.topics.currentRowChanged.connect(self._show_topic)
         self.detail = QTextBrowser()
@@ -379,62 +380,60 @@ class ResultsPage(StepPage):
         layout.addWidget(splitter)
         layout.addLayout(buttons)
 
+    # --- hooks for each technology ----------------------------------------------------
+    def _compute(self) -> tuple[object, object, list[Finding], str, str]:
+        """Return (inputs, design, findings, light report html, dark report html).
+
+        Raises ValueError (readable message) when the numbers cannot be sized.
+        """
+        raise NotImplementedError
+
+    def _worked(self, key: str) -> str | None:
+        raise NotImplementedError
+
+    def _context(self) -> str:
+        raise NotImplementedError
+
+    # --- shared behaviour ----------------------------------------------------------------
     def _open_tutor(self, question: str | None = None) -> None:
         if self._inputs is None or self._design is None:
             QMessageBox.information(self, "RESize", "There is no design to discuss yet.")
             return
-        context = build_project_context(self._inputs, self._design, self._findings)
         if self._tutor is not None:
             self._tutor.close()
-        self._tutor = TutorDialog(context, self)
+        self._tutor = TutorDialog(self._context(), self)
         if isinstance(question, str) and question:
             self._tutor.set_question(question)
         self._tutor.show()
 
     def _ask_about_step(self) -> None:
         row = self.topics.currentRow()
-        if row < 0 or row >= len(TOPIC_ORDER):
+        if row < 0 or row >= len(self.topic_order):
             QMessageBox.information(self, "RESize", "Select a step in the list first.")
             return
-        title = EXPLANATIONS[TOPIC_ORDER[row]]["title"]
+        title = EXPLANATIONS[self.topic_order[row]]["title"]
         self._open_tutor(f"Explain this step for my project and check my numbers: {title}")
 
     def _show_topic(self, row: int) -> None:
-        if row < 0 or row >= len(TOPIC_ORDER):
+        if row < 0 or row >= len(self.topic_order):
             return
-        key = TOPIC_ORDER[row]
+        key = self.topic_order[row]
         worked = None
         if self._inputs is not None and self._design is not None:
-            worked = worked_example(key, self._inputs, self._design)
+            worked = self._worked(key)
         self.detail.setHtml(explanation_html(key, worked, heading=False))
 
     def initializePage(self) -> None:
         try:
-            module, inverter, t_min, t_max = self.comp.specs()
-            inputs = PVInputs(
-                annual_demand_kwh=self.load.demand.value(),
-                annual_irradiation_kwh_m2=self.site.irr.value(),
-                coverage=self.load.coverage.value() / 100.0,
-                performance_ratio=self.load.pr.value(),
-                t_min_c=t_min, t_cell_max_c=t_max, module=module, inverter=inverter,
-            )
-            design = size_pv_system(inputs)
+            inputs, design, findings, light, dark = self._compute()
         except ValueError as exc:
             self.html = self.html_screen = ""
             self._inputs = self._design = None
             self._findings = []
             self.browser.setHtml(f"<p><b>Cannot compute the design:</b> {exc}</p>")
             return
-        self._inputs, self._design = inputs, design
-        findings = check_pv_design(inputs, design)
-        self._findings = findings
-        note = (
-            f"Site: lat {self.site.lat.value():.4f}, lon {self.site.lon.value():.4f}, "
-            f"tilt {self.site.tilt.value():.0f} deg, azimuth {self.site.azimuth.value():.0f} deg."
-        )
-        self.html = build_pv_report(inputs, design, findings, site_note=note, theme="light")
-        self.html_screen = build_pv_report(
-            inputs, design, findings, site_note=note, theme="dark")
+        self._inputs, self._design, self._findings = inputs, design, findings
+        self.html, self.html_screen = light, dark
         self.browser.setHtml(self.html_screen)
         row = self.topics.currentRow()
         if row >= 0:
@@ -445,7 +444,7 @@ class ResultsPage(StepPage):
             QMessageBox.information(self, "RESize", "There is no report to export yet.")
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, "Save report", "RESize_PV_report.pdf", "PDF files (*.pdf)"
+            self, "Save report", self.pdf_name, "PDF files (*.pdf)"
         )
         if not path:
             return
@@ -457,109 +456,43 @@ class ResultsPage(StepPage):
         QMessageBox.information(self, "RESize", f"Report saved to:\n{path}")
 
 
+class ResultsPage(BaseResultsPage):
+    """Results of the photovoltaic design."""
+
+    topic_order = TOPIC_ORDER
+    pdf_name = "RESize_PV_report.pdf"
+
+    def __init__(self, site: SitePage, load: LoadPage, comp: ComponentsPage) -> None:
+        self.site, self.load, self.comp = site, load, comp
+        super().__init__()
+
+    def _compute(self) -> tuple[object, object, list[Finding], str, str]:
+        module, inverter, t_min, t_max = self.comp.specs()
+        inputs = PVInputs(
+            annual_demand_kwh=self.load.demand.value(),
+            annual_irradiation_kwh_m2=self.site.irr.value(),
+            coverage=self.load.coverage.value() / 100.0,
+            performance_ratio=self.load.pr.value(),
+            t_min_c=t_min, t_cell_max_c=t_max, module=module, inverter=inverter,
+        )
+        design = size_pv_system(inputs)
+        findings = check_pv_design(inputs, design)
+        note = (
+            f"Site: lat {self.site.lat.value():.4f}, lon {self.site.lon.value():.4f}, "
+            f"tilt {self.site.tilt.value():.0f} deg, azimuth {self.site.azimuth.value():.0f} deg."
+        )
+        light = build_pv_report(inputs, design, findings, site_note=note, theme="light")
+        dark = build_pv_report(inputs, design, findings, site_note=note, theme="dark")
+        return inputs, design, findings, light, dark
+
+    def _worked(self, key: str) -> str | None:
+        return worked_example(key, self._inputs, self._design)
+
+    def _context(self) -> str:
+        return build_project_context(self._inputs, self._design, self._findings)
+
+
 STEP_NAMES = ["Site and solar resource", "Electricity demand", "Module and inverter",
               "Results and checks"]
 
 
-class MainWindow(QMainWindow):
-    """Left navigation, page header, the current step and the Back / Next buttons."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.setWindowTitle("RESize - renewable energy sizing tutor")
-        self.setMinimumSize(1040, 700)
-        self.resize(1240, 820)
-
-        self.site = SitePage()
-        self.load = LoadPage(self.site)
-        self.comp = ComponentsPage()
-        self.results = ResultsPage(self.site, self.load, self.comp)
-        self.home = HomePage(self._start)
-        self.pages: list[StepPage] = [self.home, self.site, self.load, self.comp, self.results]
-        self.index = 0
-
-        self.sidebar = Sidebar(STEP_NAMES)
-        self.header_title = make_label("", "pageTitle", wrap=False)
-        self.header_subtitle = make_label("", "pageSubtitle")
-
-        self.stack = QStackedWidget()
-        for page in self.pages:
-            scroll = QScrollArea()
-            scroll.setWidgetResizable(True)
-            scroll.setFrameShape(QFrame.Shape.NoFrame)
-            scroll.setWidget(page)
-            scroll.setViewportMargins(0, 0, 22, 0)  # air between content and scroll bar
-            self.stack.addWidget(scroll)
-
-        self.back_button = QPushButton("←  Back")
-        self.back_button.setProperty("variant", "ghost")
-        self.back_button.clicked.connect(self._back)
-        self.next_button = QPushButton("Next  →")
-        self.next_button.setProperty("variant", "primary")
-        self.next_button.clicked.connect(self._next)
-        self.restart_button = QPushButton("Start over")
-        self.restart_button.setProperty("variant", "ghost")
-        self.restart_button.clicked.connect(self._restart)
-
-        footer = QHBoxLayout()
-        footer.addWidget(self.back_button)
-        footer.addStretch(1)
-        footer.addWidget(self.restart_button)
-        footer.addWidget(self.next_button)
-
-        right = QWidget()
-        column = QVBoxLayout(right)
-        column.setContentsMargins(36, 28, 36, 20)
-        column.setSpacing(0)
-        column.addWidget(self.header_title)
-        column.addWidget(self.header_subtitle)
-        column.addSpacing(16)
-        column.addWidget(self.stack, 1)
-        column.addSpacing(12)
-        column.addLayout(footer)
-
-        central = QWidget()
-        row = QHBoxLayout(central)
-        row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(0)
-        row.addWidget(self.sidebar)
-        row.addWidget(right, 1)
-        self.setCentralWidget(central)
-        self._show(0)
-
-    # --- navigation ---------------------------------------------------------------
-    def _start(self) -> None:
-        self._go(1)
-
-    def _back(self) -> None:
-        self._go(self.index - 1)
-
-    def _restart(self) -> None:
-        self._go(0)
-
-    def _next(self) -> None:
-        if self.pages[self.index].validatePage():
-            self._go(self.index + 1)
-
-    def _go(self, index: int) -> None:
-        if not 0 <= index < len(self.pages):
-            return
-        forward = index > self.index
-        if forward:
-            self.pages[index].initializePage()
-        self._show(index)
-
-    def _show(self, index: int) -> None:
-        self.index = index
-        page = self.pages[index]
-        self.stack.setCurrentIndex(index)
-        self.sidebar.set_current(index - 1)
-        self.header_title.setVisible(page.show_header)
-        self.header_subtitle.setVisible(page.show_header)
-        self.header_title.setText(page.title())
-        self.header_subtitle.setText(page.subTitle())
-        last = index == len(self.pages) - 1
-        home = index == 0
-        self.back_button.setVisible(not home)
-        self.next_button.setVisible(not home and not last)
-        self.restart_button.setVisible(last)

@@ -57,18 +57,30 @@ class Sidebar(QWidget):
         layout.addSpacing(30)
         layout.addWidget(make_label("SIZING PATH", "sidebarNote", wrap=False))
         layout.addSpacing(6)
-        for _ in steps:
-            label = QLabel()
-            label.setTextFormat(Qt.TextFormat.RichText)
-            label.setContentsMargins(0, 7, 0, 7)
-            self._labels.append(label)
-            layout.addWidget(label)
+        self._steps_layout = QVBoxLayout()
+        self._steps_layout.setSpacing(4)
+        layout.addLayout(self._steps_layout)
         layout.addStretch(1)
         layout.addWidget(make_label(
             "Preliminary and educational sizing. Not a substitute for detailed engineering "
             "design.", "sidebarNote"))
         layout.addSpacing(4)
         layout.addWidget(make_label(f"v{__version__}", "sidebarNote", wrap=False))
+        self.set_steps(steps)
+
+    def set_steps(self, steps: list[str]) -> None:
+        """Replace the listed steps (each technology has its own path)."""
+        for label in self._labels:
+            self._steps_layout.removeWidget(label)
+            label.deleteLater()
+        self._labels = []
+        self._steps = steps
+        for _ in steps:
+            label = QLabel()
+            label.setTextFormat(Qt.TextFormat.RichText)
+            label.setContentsMargins(0, 7, 0, 7)
+            self._labels.append(label)
+            self._steps_layout.addWidget(label)
         self.set_current(-1)
 
     def set_current(self, index: int) -> None:

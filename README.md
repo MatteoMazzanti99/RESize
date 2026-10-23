@@ -6,7 +6,7 @@ RESize guides MSc students (and engineers doing a first-pass design) through the
 renewable energy plants. At every step it shows the formula, the assumptions and the
 reasoning, so you learn *why* a choice is made, not just the number that comes out.
 
-> **Status:** early release (v0.1). Photovoltaic is available; wind, biomass and green hydrogen
+> **Status:** early release. Photovoltaic and wind are available; biomass and green hydrogen
 > are planned. Interfaces and results may change.
 
 ![RESize home screen](docs/images/home.png)
@@ -32,7 +32,17 @@ Prefer Python? See *Quick start* below.
 | **3. Module and inverter** | **4. Results, checks and Why?** |
 | ![Components step](docs/images/step3-components.png) | ![Results step](docs/images/step4-results.png) |
 
-Validation against PVGIS and hand calculations: [docs/validation](docs/validation/README.md).
+Validation against PVGIS, independent integrations and hand calculations:
+[docs/validation](docs/validation/README.md).
+
+## Wind module
+
+Start it from the home screen (**Start a wind project**). Steps: site and wind resource
+(NASA POWER or your own data, Weibull distribution, shear, air density), demand and losses,
+turbine and layout, results. You get the capacity factor, the energy of one turbine, the number
+of turbines to cover the demand, land use, design checks, **Why?** panels with your numbers and
+a PDF report, like the photovoltaic flow. The default power curve is generic: for a real
+project use the manufacturer's curve and a measured wind resource.
 
 ## Quick start
 
@@ -73,7 +83,7 @@ or less. AI answers can be wrong: the formulas in the **Why?** panel are the ref
 |---|---|
 | v0.1 | Guided photovoltaic wizard (resource data, strings, inverter, losses, yield) + PDF report |
 | v0.2 | "Why?" panels (done), rule-based design checker (done), optional AI tutor (done), Italian interface |
-| v0.3 | Wind module + technology comparison (LCOE, payback, avoided CO2) |
+| v0.3 | Wind module (done: resource, Weibull, turbine yield, layout, checks, report) + technology comparison (LCOE, payback, avoided CO2) |
 | v0.4 | Green hydrogen: PEM electrolyser coupled to PV/wind |
 
 ## Design principles

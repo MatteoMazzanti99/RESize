@@ -141,3 +141,9 @@ TOPIC_ORDER: tuple[str, ...] = (
     "pv.dc_ac_ratio",
     "pv.annual_energy",
 )
+
+
+# The wind module keeps its texts in its own file; they share the same lookup table.
+from resize_energy.tutor.explanations_wind import WIND_EXPLANATIONS  # noqa: E402
+
+EXPLANATIONS.update(WIND_EXPLANATIONS)
