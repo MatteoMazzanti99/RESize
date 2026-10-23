@@ -5,6 +5,7 @@ from __future__ import annotations
 from resize_energy.core import wind
 from resize_energy.core.wind_design import WindDesign, WindInputs
 from resize_energy.tutor.checker import Finding
+from resize_energy.tutor.econ_support import check_economics
 
 
 def check_wind_design(inp: WindInputs, d: WindDesign) -> list[Finding]:
@@ -150,4 +151,5 @@ def check_wind_design(inp: WindInputs, d: WindDesign) -> list[Finding]:
                 "With the wake model on, 'other losses' should no longer include the wake: "
                 "10 % was a value for wake plus electrical losses; 3-6 % is more usual now.",
                 "wind.losses"))
+    out += check_economics("wind", inp.economics, d.economics)
     return out

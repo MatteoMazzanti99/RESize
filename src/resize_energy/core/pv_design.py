@@ -7,9 +7,15 @@ with generic defaults so the wizard works out of the box.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from resize_energy.core import pv
+from resize_energy.core.plant_economics import (
+    EconomicInputs,
+    Economics,
+    evaluate_economics,
+    with_sensitivity,
+)
 from resize_energy.core.pv_extra import monthly_energy_kwh
 
 
@@ -55,6 +61,7 @@ class PVInputs:
     shading_loss: float = 0.0     # share of the yearly energy lost to nearby obstacles
     module: ModuleSpec = field(default_factory=ModuleSpec)
     inverter: InverterSpec = field(default_factory=InverterSpec)
+    economics: EconomicInputs | None = None   # costs and prices; None = no economic step
 
 
 @dataclass(frozen=True)
@@ -82,6 +89,7 @@ class PVDesign:
     shading_loss: float = 0.0
     performance_ratio_effective: float = 0.0
     monthly_kwh: tuple[float, ...] = ()
+    economics: Economics | None = None
 
 
 def size_pv_system(inp: PVInputs) -> PVDesign:
@@ -140,7 +148,7 @@ def size_pv_system(inp: PVInputs) -> PVDesign:
     energy = dc_kwp * h * pr_eff
     demand = inp.annual_demand_kwh
 
-    return PVDesign(
+    design = PVDesign(
         target_kwp=target_kwp,
         modules_target=modules_target,
         n_series_min=n_min,
@@ -167,3 +175,7 @@ def size_pv_system(inp: PVInputs) -> PVDesign:
         shading_loss=inp.shading_loss, performance_ratio_effective=pr_eff,
         monthly_kwh=monthly_energy_kwh(inp.latitude_deg, energy),
     )
+    if inp.economics is not None and feasible and dc_kwp > 0 and energy > 0 and demand > 0:
+        econ = evaluate_economics(dc_kwp, energy, demand, inp.economics)
+        design = replace(design, economics=with_sensitivity(econ, dc_kwp, demand, inp.economics))
+    return design

@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from resize_energy.core import wind
 from resize_energy.core import wind_wake as ww
+from resize_energy.core.plant_economics import (
+    EconomicInputs,
+    Economics,
+    evaluate_economics,
+    with_sensitivity,
+)
 
 
 @dataclass(frozen=True)
@@ -50,6 +56,7 @@ class WindInputs:
     prevailing_direction_deg: float = 270.0
     rose_concentration: float = 1.0
     turbine: TurbineSpec = field(default_factory=TurbineSpec)
+    economics: EconomicInputs | None = None   # costs and prices; None = no economic step
 
 
 @dataclass(frozen=True)
@@ -78,6 +85,7 @@ class WindDesign:
     wake: ww.WakeResult | None = None
     turbines_per_row: int = 0
     rows: int = 0
+    economics: Economics | None = None
 
 
 def size_wind_plant(inp: WindInputs) -> WindDesign:
@@ -130,7 +138,7 @@ def size_wind_plant(inp: WindInputs) -> WindDesign:
             n = needed
     net = net_free * (wake.array_efficiency if wake else 1.0)
     energy = n * net
-    return WindDesign(
+    design = WindDesign(
         mean_speed_hub_ms=v_hub,
         weibull_scale_ms=scale,
         air_density=rho,
@@ -154,3 +162,9 @@ def size_wind_plant(inp: WindInputs) -> WindDesign:
         wake_loss=wake.wake_loss if wake else 0.0, wake=wake, turbines_per_row=per_row,
         rows=math.ceil(n / per_row) if per_row else 0,
     )
+    if inp.economics is not None and energy > 0:
+        econ = evaluate_economics(design.installed_power_kw, energy, inp.annual_demand_kwh,
+                                  inp.economics)
+        design = replace(design, economics=with_sensitivity(
+            econ, design.installed_power_kw, inp.annual_demand_kwh, inp.economics))
+    return design

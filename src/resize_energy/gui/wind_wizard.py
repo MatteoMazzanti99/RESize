@@ -32,7 +32,7 @@ from resize_energy.tutor.explanations_wind import WIND_TOPIC_ORDER
 from resize_energy.tutor.worked_wind import wind_worked_example
 
 WIND_STEP_NAMES = ["Site and wind resource", "Demand and losses", "Turbine and layout",
-                   "Results and checks"]
+                   "Costs and savings", "Results and checks"]
 
 
 def _warn(page: StepPage, items: list[tuple[str, NumberField]]) -> bool:
@@ -294,9 +294,11 @@ class WindResultsPage(BaseResultsPage):
     topic_order = WIND_TOPIC_ORDER
     pdf_name = "RESize_wind_report.pdf"
 
-    def __init__(self, site: WindSitePage, load: WindLoadPage, turbine: WindTurbinePage) -> None:
-        self.site, self.load, self.turbine = site, load, turbine
+    def __init__(self, site: WindSitePage, load: WindLoadPage, turbine: WindTurbinePage,
+                 costs) -> None:
+        self.site, self.load, self.turbine, self.costs = site, load, turbine, costs
         super().__init__()
+        self.setTitle("5. Results and design checks")
 
     def _compute(self) -> tuple[object, object, list[Finding], str, str]:
         inputs = WindInputs(
@@ -317,7 +319,7 @@ class WindResultsPage(BaseResultsPage):
             stagger_rows=self.turbine.stagger.isChecked(), wake_decay=self.turbine.decay.value(),
             prevailing_direction_deg=self.turbine.prevailing.value(),
             rose_concentration=self.turbine.conc.value(),
-            turbine=self.turbine.spec(),
+            turbine=self.turbine.spec(), economics=self.costs.inputs(),
         )
         design = size_wind_plant(inputs)
         findings = check_wind_design(inputs, design)

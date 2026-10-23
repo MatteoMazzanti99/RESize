@@ -57,6 +57,7 @@ from resize_energy.gui.hydrogen_wizard import (
     HydrogenResultsPage,
     HydrogenSitePage,
 )
+from resize_energy.gui.plant_cost_page import PlantCostPage
 from resize_energy.gui.widgets import Sidebar, StepPage, make_label
 from resize_energy.gui.wind_wizard import (
     WIND_STEP_NAMES,
@@ -88,11 +89,14 @@ class MainWindow(QMainWindow):
         self.site = SitePage()
         self.load = LoadPage(self.site)
         self.comp = ComponentsPage()
-        self.results = ResultsPage(self.site, self.load, self.comp)
+        self.pv_costs = PlantCostPage("pv", 4)
+        self.results = ResultsPage(self.site, self.load, self.comp, self.pv_costs)
         self.wind_site = WindSitePage()
         self.wind_load = WindLoadPage()
         self.wind_turbine = WindTurbinePage()
-        self.wind_results = WindResultsPage(self.wind_site, self.wind_load, self.wind_turbine)
+        self.wind_costs = PlantCostPage("wind", 4)
+        self.wind_results = WindResultsPage(self.wind_site, self.wind_load, self.wind_turbine,
+                                            self.wind_costs)
 
         self.bio_demand = BiomassDemandPage()
         self.bio_fuel = BiomassFuelPage(self.bio_demand)
@@ -118,9 +122,10 @@ class MainWindow(QMainWindow):
                                               self.cmp_selection)
 
         self.flows: dict[str, tuple[list[str], list[StepPage]]] = {
-            "pv": (STEP_NAMES, [self.site, self.load, self.comp, self.results]),
+            "pv": (STEP_NAMES, [self.site, self.load, self.comp, self.pv_costs,
+                                self.results]),
             "wind": (WIND_STEP_NAMES, [self.wind_site, self.wind_load, self.wind_turbine,
-                                       self.wind_results]),
+                                       self.wind_costs, self.wind_results]),
             "biomass": (BIOMASS_STEP_NAMES, [self.bio_demand, self.bio_fuel, self.bio_plant,
                                              self.bio_results]),
             "hydrogen": (HYDROGEN_STEP_NAMES, [self.h2_goal, self.h2_site, self.h2_plant,

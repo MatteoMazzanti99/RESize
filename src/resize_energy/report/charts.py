@@ -15,6 +15,7 @@ from resize_energy.core.battery_design import BatteryDesign, BatteryInputs
 from resize_energy.core.biomass_design import BiomassDesign, BiomassInputs
 from resize_energy.core.comparison import ComparisonInputs, ComparisonResult
 from resize_energy.core.hydrogen_design import HydrogenDesign, HydrogenInputs
+from resize_energy.core.plant_economics import Economics
 from resize_energy.core.pv_design import PVDesign, PVInputs
 from resize_energy.core.pv_extra import battery_view
 from resize_energy.core.sensitivity import Sensitivity
@@ -139,7 +140,7 @@ def pv_charts(inp: PVInputs, d: PVDesign) -> dict[str, ChartSpec]:
             caption="Green bars respect the inverter. The cold Voc must stay left of 'Vdc max', "
                     "the other two inside the MPPT window."),
     }
-    return {**base, **extra}
+    return {**base, **extra} | economics_charts("pv", d.economics)
 
 
 # --- wind ----------------------------------------------------------------------------------
@@ -179,7 +180,7 @@ def _wake_charts(d: WindDesign) -> dict[str, ChartSpec]:
 
 def wind_charts(inp: WindInputs, d: WindDesign) -> dict[str, ChartSpec]:
     out = _wind_base_charts(inp, d)
-    return out | _wake_charts(d)
+    return out | _wake_charts(d) | economics_charts("wind", d.economics)
 
 
 def _wind_base_charts(inp: WindInputs, d: WindDesign) -> dict[str, ChartSpec]:
@@ -336,6 +337,35 @@ def hydrogen_charts(inp: HydrogenInputs, d: HydrogenDesign) -> dict[str, ChartSp
 
 # --- sensitivity ---------------------------------------------------------------------------
 _CURVE_COLORS = (BLUE, GREEN, AMBER, PURPLE, RED, TEAL, GREY, "#9C4F96")
+
+
+def economics_charts(prefix: str, econ: Economics | None) -> dict[str, ChartSpec]:
+    """Cash flow, costs against savings, and the sensitivity of the net present value."""
+    if econ is None:
+        return {}
+    years = tuple(float(y) for y in range(len(econ.cash)))
+    out = {
+        f"{prefix}_cash": ChartSpec(
+            "lines", "Money over the life of the plant (discounted, in thousand euro)", (),
+            (Series("cumulative result [kEUR]", tuple(c / 1000.0 for c in econ.cash), GREEN,
+                    x=years, fill=True),),
+            x_label="Year", y_label="Cumulative result [thousand euro]", decimals=1, height=280,
+            hlines=((0.0, "break-even"),),
+            caption=f"The line starts at -{econ.capex:,.0f} euro (the investment) and crosses "
+                    f"zero after about {econ.discounted_payback_years:.1f} years once future "
+                    f"money is discounted; it ends at the net present value, "
+                    f"{econ.npv:,.0f} euro."),
+        f"{prefix}_unit_cost": ChartSpec(
+            "hbars", "Cost of making a kWh against its value",
+            ("Cost of this plant (LCOE)", "Average value of its energy"),
+            (Series("euro/kWh", (econ.lcoe, econ.savings_per_year / econ.energy_kwh),
+                    colors=(RED, GREEN)),),
+            x_label="euro per kWh", decimals=3,
+            caption="Green longer than red: each kWh saves more than it costs to produce. "
+                    "The green bar averages the energy you use (valued at the retail price) "
+                    "and the surplus you export (at the lower export price)."),
+    }
+    return out | sensitivity_charts(prefix, econ.sensitivity)
 
 
 def sensitivity_charts(prefix: str, sens: Sensitivity | None) -> dict[str, ChartSpec]:

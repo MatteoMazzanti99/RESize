@@ -22,6 +22,9 @@ def _walk_through(window, app) -> int:
         if window.index != len(window.pages) - 1 or marker not in results.html:
             print(f"self-test: the {tech} flow did not reach its results", flush=True)
             return 1
+        if tech in ("pv", "wind") and "Net present value" not in results.html:
+            print(f"self-test: the {tech} results lack the economics", flush=True)
+            return 1
         if not results.chart_images or any(i.isNull() for i in results.chart_images.values()):
             print(f"self-test: the {tech} charts were not drawn", flush=True)
             return 1

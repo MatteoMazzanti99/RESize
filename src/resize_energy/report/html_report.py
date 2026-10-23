@@ -126,8 +126,10 @@ def _versus_html(r: ComparisonResult) -> str:
     return f'<table cellpadding="2">{"".join(out)}</table>'
 
 
-def _glance(kpis: list[tuple[str, str]], verdict: str) -> str:
-    return f"{_kpi_html(kpis)}<p>{verdict}</p>"
+def _glance(kpis: list[tuple[str, str]], verdict: str,
+            more: list[tuple[str, str]] | None = None) -> str:
+    second = _kpi_html(more) if more else ""
+    return f"{_kpi_html(kpis)}{second}<p>{verdict}</p>"
 
 
 def _status_phrase(findings: list[Finding]) -> str:
@@ -146,6 +148,41 @@ def _energy(kwh: float) -> str:
     if abs(kwh) >= 5e3:
         return f"{kwh / 1e3:,.1f} MWh"
     return f"{kwh:,.0f} kWh"
+
+
+def _economics_rows(e, econ) -> tuple[str, str]:
+    """(input rows, result rows) of the cost step; empty when it was not filled in."""
+    if e is None or econ is None:
+        return "", ""
+    inputs = "".join([
+        _row("Cost of the plant", f"{e.capex_per_kw:,.0f} euro/kW"),
+        _row("Operation and maintenance", f"{e.om_per_kw_year:,.0f} euro/kW per year"),
+        _row("Lifetime / discount rate", f"{e.life_years:g} years / {e.discount_rate:.1%}"),
+        _row("Price paid for electricity / paid for the surplus",
+             f"{e.retail_price:.3f} / {e.export_price:.3f} euro/kWh"),
+        _row("Grid emission factor / plant life-cycle",
+             f"{e.grid_ef:.2f} kg/kWh / {e.lifecycle_g_per_kwh:.0f} g/kWh"),
+    ])
+    results = "".join([
+        _row("Investment (CAPEX)", f"{econ.capex:,.0f} euro"),
+        _row("Maintenance per year", f"{econ.om_per_year:,.0f} euro"),
+        _row("Savings per year", f"{econ.savings_per_year:,.0f} euro "
+             f"({econ.self_used_kwh:,.0f} kWh used, {econ.exported_kwh:,.0f} kWh exported)"),
+        _row("Cost of the energy (LCOE)", f"{econ.lcoe:.3f} euro/kWh"),
+        _row("Payback (simple / discounted)",
+             f"{econ.payback_years:.1f} / {econ.discounted_payback_years:.1f} years"),
+        _row("Net present value", f"{econ.npv:,.0f} euro"),
+        _row("CO2 avoided", f"{econ.co2_avoided_t_per_year:.2f} t per year"),
+    ])
+    return inputs, results
+
+
+def _economics_glance(econ) -> list[tuple[str, str]]:
+    if econ is None:
+        return []
+    pay = f"{econ.payback_years:.1f} years" if econ.payback_years < 1e3 else "never"
+    return [(f"{econ.lcoe:.3f} euro/kWh", "cost of the energy (LCOE)"),
+            (pay, "simple payback"), (f"{econ.npv:,.0f} euro", "net present value")]
 
 
 def build_pv_report(
@@ -180,7 +217,7 @@ def build_pv_report(
         _row("Inverter Vdc,max / MPPT window",
              f"{inv.vdc_max_v:.0f} V / {inv.mppt_vmin_v:.0f}-{inv.mppt_vmax_v:.0f} V"),
         _row("Inverter MPPT inputs / current each", f"{inv.n_mppt} / {inv.imax_per_mppt_a:.1f} A"),
-    ])
+    ]) + _economics_rows(inp.economics, design.economics)[0]
 
     results_rows = "".join([
         _row("Target peak power", f"{design.target_kwp:.2f} kWp"),
@@ -196,7 +233,7 @@ def build_pv_report(
         _row("Expected annual energy", f"{design.annual_energy_kwh:,.0f} kWh"),
         _row("Specific yield", f"{design.specific_yield_kwh_per_kwp:,.0f} kWh/kWp"),
         _row("Demand covered", f"{design.achieved_coverage:.0%}"),
-    ])
+    ]) + _economics_rows(inp.economics, design.economics)[1]
 
 
     why = "".join(
@@ -220,7 +257,7 @@ def build_pv_report(
          "strings"),
         (_energy(design.annual_energy_kwh), "expected energy per year"),
         (f"{design.achieved_coverage:.0%}", "of your demand covered"),
-    ], verdict)
+    ], verdict, _economics_glance(design.economics))
     charts_html = _charts_html(pv_charts(inp, design))
     checks_html = _checks_html(findings, colors)
     note = f"<p>{escape(site_note)}</p>" if site_note else ""
@@ -275,7 +312,7 @@ def build_wind_report(
              else "off: the single 'other losses' number"),
         _row("Spacing (across x along the wind)",
              f"{inp.crosswind_spacing_d:.0f} D x {inp.downwind_spacing_d:.0f} D"),
-    ])
+    ]) + _economics_rows(inp.economics, design.economics)[0]
     results_rows = "".join([
         _row("Mean speed at hub height", f"{design.mean_speed_hub_ms:.2f} m/s"),
         _row("Weibull scale A", f"{design.weibull_scale_ms:.2f} m/s"),
@@ -293,7 +330,7 @@ def build_wind_report(
         _row("Expected annual energy", f"{design.annual_energy_kwh:,.0f} kWh"),
         _row("Demand covered", f"{design.achieved_coverage:.0%}"),
         _row("Land for the array", f"{design.array_area_km2:.2f} km2"),
-    ])
+    ]) + _economics_rows(inp.economics, design.economics)[1]
     why = "".join(
         explanation_html(key, wind_worked_example(key, inp, design))
         for key in WIND_TOPIC_ORDER
@@ -309,7 +346,7 @@ def build_wind_report(
         (_energy(design.annual_energy_kwh), "expected energy per year"),
         (f"{design.capacity_factor_net:.0%}", "capacity factor (time at full power)"),
         (f"{design.achieved_coverage:.0%}", "of your demand covered"),
-    ], verdict)
+    ], verdict, _economics_glance(design.economics))
     charts_html = _charts_html(wind_charts(inp, design))
     checks_html = _checks_html(findings, colors)
     note = f"<p>{escape(site_note)}</p>" if site_note else ""

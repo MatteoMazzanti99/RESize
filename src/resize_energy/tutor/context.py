@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from resize_energy.core.pv_design import PVDesign, PVInputs
 from resize_energy.tutor.checker import Finding
+from resize_energy.tutor.econ_support import context_lines
 
 _SEVERITY = {"error": "ERROR", "warning": "WARNING", "info": "NOTE", "ok": "OK"}
 
@@ -46,4 +47,5 @@ def build_project_context(inp: PVInputs, design: PVDesign, findings: list[Findin
         "DESIGN CHECKS",
     ]
     lines += [f"- [{_SEVERITY[f.severity]}] {f.message}" for f in findings] or ["- (none)"]
+    lines += context_lines(inp.economics, design.economics)
     return "\n".join(lines)

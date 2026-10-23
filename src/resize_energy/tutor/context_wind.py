@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from resize_energy.core.wind_design import WindDesign, WindInputs
 from resize_energy.tutor.checker import Finding
+from resize_energy.tutor.econ_support import context_lines
 
 _SEVERITY = {"error": "ERROR", "warning": "WARNING", "info": "NOTE", "ok": "OK"}
 
@@ -43,4 +44,5 @@ def build_wind_context(inp: WindInputs, d: WindDesign, findings: list[Finding]) 
         "DESIGN CHECKS",
     ]
     lines += [f"- [{_SEVERITY[f.severity]}] {f.message}" for f in findings] or ["- (none)"]
+    lines += context_lines(inp.economics, d.economics)
     return "\n".join(lines)

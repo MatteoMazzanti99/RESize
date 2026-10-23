@@ -524,9 +524,10 @@ class ResultsPage(BaseResultsPage):
     topic_order = TOPIC_ORDER
     pdf_name = "RESize_PV_report.pdf"
 
-    def __init__(self, site: SitePage, load: LoadPage, comp: ComponentsPage) -> None:
-        self.site, self.load, self.comp = site, load, comp
+    def __init__(self, site: SitePage, load: LoadPage, comp: ComponentsPage, costs) -> None:
+        self.site, self.load, self.comp, self.costs = site, load, comp, costs
         super().__init__()
+        self.setTitle("5. Results and design checks")
 
     def _compute(self) -> tuple[object, object, list[Finding], str, str]:
         module, inverter, t_min, t_max = self.comp.specs()
@@ -537,6 +538,7 @@ class ResultsPage(BaseResultsPage):
             performance_ratio=self.load.pr.value(),
             t_min_c=t_min, t_cell_max_c=t_max, module=module, inverter=inverter,
             latitude_deg=self.site.lat.value(), shading_loss=self.load.shading(),
+            economics=self.costs.inputs(),
         )
         design = size_pv_system(inputs)
         findings = check_pv_design(inputs, design)
@@ -559,6 +561,6 @@ class ResultsPage(BaseResultsPage):
 
 
 STEP_NAMES = ["Site and solar resource", "Electricity demand", "Module and inverter",
-              "Results and checks"]
+              "Costs and savings", "Results and checks"]
 
 

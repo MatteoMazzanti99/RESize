@@ -159,4 +159,7 @@ def check_pv_design(inp: PVInputs, design: PVDesign) -> list[Finding]:
                 f"In the worst month the plant makes only {worst:,.0f} kWh against a monthly "
                 f"demand of {inp.annual_demand_kwh / 12:,.0f} kWh: in winter you still buy "
                 "most of your electricity.", "pv.monthly"))
+    from resize_energy.tutor.econ_support import check_economics
+
+    out += check_economics("pv", inp.economics, design.economics)
     return out

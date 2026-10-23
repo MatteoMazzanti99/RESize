@@ -143,6 +143,8 @@ TOPIC_ORDER: tuple[str, ...] = (
     "pv.shading",
     "pv.monthly",
     "pv.battery",
+    "pv.economics",
+    "pv.sensitivity",
 )
 
 
@@ -175,3 +177,12 @@ EXPLANATIONS.update(BATTERY_EXPLANATIONS)
 from resize_energy.tutor.explanations_pv_extra import PV_EXTRA_EXPLANATIONS  # noqa: E402
 
 EXPLANATIONS.update(PV_EXTRA_EXPLANATIONS)
+
+# And the cost step of the PV and wind flows.
+from resize_energy.tutor.explanations_plant_econ import (  # noqa: E402
+    PV_ECON_EXPLANATIONS,
+    WIND_ECON_EXPLANATIONS,
+)
+
+EXPLANATIONS.update(PV_ECON_EXPLANATIONS)
+EXPLANATIONS.update(WIND_ECON_EXPLANATIONS)

@@ -7,6 +7,7 @@ import math
 from resize_energy.core import pv
 from resize_energy.core.pv_design import PVDesign, PVInputs
 from resize_energy.core.pv_extra import battery_view
+from resize_energy.tutor.econ_support import worked_economics
 
 
 def worked_example(key: str, inp: PVInputs, design: PVDesign) -> str | None:
@@ -138,5 +139,9 @@ def worked_example(key: str, inp: PVInputs, design: PVDesign) -> str | None:
                 f"{inp.annual_demand_kwh:,.0f} kWh demand"
             )
         return text
+
+    if key in ("pv.economics", "pv.sensitivity"):
+        return worked_economics(key, inp.economics, design.economics, design.dc_power_kwp,
+                                inp.annual_demand_kwh)
 
     return None

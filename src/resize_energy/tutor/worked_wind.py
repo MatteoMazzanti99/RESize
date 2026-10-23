@@ -6,6 +6,7 @@ import math
 
 from resize_energy.core import wind
 from resize_energy.core.wind_design import WindDesign, WindInputs
+from resize_energy.tutor.econ_support import worked_economics
 
 
 def wind_worked_example(key: str, inp: WindInputs, d: WindDesign) -> str | None:
@@ -113,4 +114,7 @@ def wind_worked_example(key: str, inp: WindInputs, d: WindDesign) -> str | None:
             f" m x {inp.downwind_spacing_d * t.rotor_diameter_m:.0f} m per turbine\n"
             f"Area for {d.n_turbines} turbine(s) = {d.array_area_km2:.2f} km2"
         )
+    if key in ("wind.economics", "wind.sensitivity"):
+        return worked_economics(key, inp.economics, d.economics, d.installed_power_kw,
+                                inp.annual_demand_kwh)
     return None

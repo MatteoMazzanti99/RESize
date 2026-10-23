@@ -230,4 +230,6 @@ WIND_TOPIC_ORDER: tuple[str, ...] = (
     "wind.spacing",
     "wind.wake",
     "wind.rose",
+    "wind.economics",
+    "wind.sensitivity",
 )
