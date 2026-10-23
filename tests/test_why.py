@@ -2,6 +2,7 @@ from resize_energy.core.pv_design import InverterSpec, PVInputs, size_pv_system
 from resize_energy.report.html_report import build_pv_report
 from resize_energy.tutor.checker import check_pv_design
 from resize_energy.tutor.explanations import EXPLANATIONS, TOPIC_ORDER
+from resize_energy.tutor.explanations_compare import COMPARE_TOPIC_ORDER
 from resize_energy.tutor.explanations_wind import WIND_TOPIC_ORDER
 from resize_energy.tutor.why_html import explanation_html
 from resize_energy.tutor.worked import worked_example
@@ -15,8 +16,9 @@ def case(**kw):
 
 
 def test_topic_order_covers_exactly_the_explanations():
-    assert set(TOPIC_ORDER) | set(WIND_TOPIC_ORDER) == set(EXPLANATIONS)
-    assert not set(TOPIC_ORDER) & set(WIND_TOPIC_ORDER)
+    orders = [set(TOPIC_ORDER), set(WIND_TOPIC_ORDER), set(COMPARE_TOPIC_ORDER)]
+    assert set().union(*orders) == set(EXPLANATIONS)
+    assert sum(len(o) for o in orders) == len(set().union(*orders))
     assert len(TOPIC_ORDER) == len(set(TOPIC_ORDER))
 
 

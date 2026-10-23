@@ -147,3 +147,8 @@ TOPIC_ORDER: tuple[str, ...] = (
 from resize_energy.tutor.explanations_wind import WIND_EXPLANATIONS  # noqa: E402
 
 EXPLANATIONS.update(WIND_EXPLANATIONS)
+
+# Same for the technology comparison (economics and carbon).
+from resize_energy.tutor.explanations_compare import COMPARE_EXPLANATIONS  # noqa: E402
+
+EXPLANATIONS.update(COMPARE_EXPLANATIONS)

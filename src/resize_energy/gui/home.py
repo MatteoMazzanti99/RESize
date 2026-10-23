@@ -32,7 +32,7 @@ TECHNOLOGIES: list[tuple[str, str, str, bool]] = [
 
 
 class HomePage(StepPage):
-    """Landing page. ``on_start("pv" | "wind")`` is called when the user starts a project."""
+    """Landing page. ``on_start("pv" | "wind" | "compare")`` is called when the user starts a project."""
 
     show_header = False
 
@@ -61,10 +61,15 @@ class HomePage(StepPage):
         start_wind = QPushButton("Start a wind project  →")
         start_wind.setCursor(Qt.CursorShape.PointingHandCursor)
         start_wind.clicked.connect(lambda *_: on_start("wind"))
+        compare = QPushButton("Compare technologies  →")
+        compare.setToolTip("Photovoltaic and wind side by side: cost of energy, payback, CO2")
+        compare.setCursor(Qt.CursorShape.PointingHandCursor)
+        compare.clicked.connect(lambda *_: on_start("compare"))
         row = QHBoxLayout()
         row.setSpacing(12)
         row.addWidget(start)
         row.addWidget(start_wind)
+        row.addWidget(compare)
         row.addStretch(1)
         root.addLayout(row)
         root.addSpacing(26)

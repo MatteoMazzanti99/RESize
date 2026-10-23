@@ -50,6 +50,16 @@ distributed machines) with tabulated power curves, taken from the open
 manufacturer-certified data: for a real project use the manufacturer's curve and a measured
 wind resource. Editing a value switches back to the generic curve.
 
+
+## Technology comparison
+
+The **Compare technologies** button on the home screen sizes a photovoltaic and a wind plant
+for the same site and demand and puts them side by side: cost of energy (LCOE), simple and
+discounted payback, net present value and avoided CO2, with **Why?** panels for every
+formula and a PDF report. Prices, lifetimes and emission factors are round placeholders to
+replace with local quotes; the model is an annual balance (no hourly match, no storage,
+no incentives or taxes).
+
 ## Quick start
 
 ```bash
@@ -89,7 +99,7 @@ or less. AI answers can be wrong: the formulas in the **Why?** panel are the ref
 |---|---|
 | v0.1 | Guided photovoltaic wizard (resource data, strings, inverter, losses, yield) + PDF report |
 | v0.2 | "Why?" panels (done), rule-based design checker (done), optional AI tutor (done), Italian interface |
-| v0.3 | Wind module (done: resource, Weibull, turbine yield, layout, checks, report) + technology comparison (LCOE, payback, avoided CO2) |
+| v0.3 | Wind module (done: resource, Weibull, turbine yield, layout, checks, report) + technology comparison (done: LCOE, payback, NPV, avoided CO2) |
 | v0.4 | Green hydrogen: PEM electrolyser coupled to PV/wind |
 
 ## Design principles

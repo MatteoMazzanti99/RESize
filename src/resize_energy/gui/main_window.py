@@ -1,6 +1,6 @@
 """Main window: left navigation, page header, the current step and the Back / Next buttons.
 
-It hosts one flow of steps per technology (photovoltaic, wind); the home page starts one.
+It hosts one flow of steps per technology (photovoltaic, wind, comparison); the home page starts one.
 """
 
 from __future__ import annotations
@@ -16,6 +16,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from resize_energy.gui.compare_wizard import (
+    COMPARE_STEP_NAMES,
+    CompareCostPage,
+    ComparePlantPage,
+    CompareResultsPage,
+    CompareSitePage,
+)
 from resize_energy.gui.home import HomePage
 from resize_energy.gui.widgets import Sidebar, StepPage, make_label
 from resize_energy.gui.wind_wizard import (
@@ -51,10 +58,17 @@ class MainWindow(QMainWindow):
         self.wind_turbine = WindTurbinePage()
         self.wind_results = WindResultsPage(self.wind_site, self.wind_load, self.wind_turbine)
 
+        self.cmp_site = CompareSitePage()
+        self.cmp_plant = ComparePlantPage(self.cmp_site)
+        self.cmp_costs = CompareCostPage()
+        self.cmp_results = CompareResultsPage(self.cmp_site, self.cmp_plant, self.cmp_costs)
+
         self.flows: dict[str, tuple[list[str], list[StepPage]]] = {
             "pv": (STEP_NAMES, [self.site, self.load, self.comp, self.results]),
             "wind": (WIND_STEP_NAMES, [self.wind_site, self.wind_load, self.wind_turbine,
                                        self.wind_results]),
+            "compare": (COMPARE_STEP_NAMES, [self.cmp_site, self.cmp_plant, self.cmp_costs,
+                                             self.cmp_results]),
         }
         self.tech = "pv"
         self.pages: list[StepPage] = [self.home, *self.flows["pv"][1]]
@@ -66,7 +80,7 @@ class MainWindow(QMainWindow):
 
         self.stack = QStackedWidget()
         self._scroll_of: dict[int, QScrollArea] = {}
-        for page in [self.home, *self.flows["pv"][1], *self.flows["wind"][1]]:
+        for page in [self.home, *(p for _, pages in self.flows.values() for p in pages)]:
             scroll = QScrollArea()
             scroll.setWidgetResizable(True)
             scroll.setFrameShape(QFrame.Shape.NoFrame)
@@ -113,7 +127,7 @@ class MainWindow(QMainWindow):
 
     # --- navigation ---------------------------------------------------------------
     def _start(self, tech: str = "pv") -> None:
-        """Open the first step of the ``tech`` flow ("pv" or "wind")."""
+        """Open the first step of the ``tech`` flow ("pv", "wind" or "compare")."""
         if tech not in self.flows:
             tech = "pv"
         self.tech = tech

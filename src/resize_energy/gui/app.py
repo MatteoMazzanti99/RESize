@@ -12,13 +12,14 @@ def _walk_through(window, app) -> int:
     if len(load_library()) < 10:
         print("self-test: the turbine library is missing from the build", flush=True)
         return 1
-    for tech in ("pv", "wind"):
+    markers = {"pv": "Design checks", "wind": "Design checks", "compare": "Which is better"}
+    for tech, marker in markers.items():
         window._start(tech)
         for _ in range(3):
             window._next()
             app.processEvents()
         results = window.pages[-1]
-        if window.index != len(window.pages) - 1 or "Design checks" not in results.html:
+        if window.index != len(window.pages) - 1 or marker not in results.html:
             print(f"self-test: the {tech} flow did not reach its results", flush=True)
             return 1
         window._restart()
