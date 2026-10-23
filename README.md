@@ -43,6 +43,11 @@ verdict. Then come the charts (energy balance, wind distribution and power curve
 curve, cost build-up, hydrogen per month, comparison of cost, payback, cash flow and CO2), the
 design checks sorted by importance, and finally the detailed tables and the formulas.
 
+For photovoltaic and wind, **Export to Excel (live formulas)** writes a workbook in which every
+step is a formula with named inputs (change a cell, watch the results move) plus a *Check*
+sheet comparing it with the numbers computed by RESize. It is verified in the tests by
+recalculating the workbook with LibreOffice.
+
 ## Wind module
 
 Start it from the home screen (click the **Wind** card). Steps: site and wind resource

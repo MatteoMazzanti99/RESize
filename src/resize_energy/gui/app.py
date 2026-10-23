@@ -28,6 +28,14 @@ def _walk_through(window, app) -> int:
         if tech in ("pv", "wind") and "Net present value" not in results.html:
             print(f"self-test: the {tech} results lack the economics", flush=True)
             return 1
+        if tech in ("pv", "wind"):
+            try:
+                wb = results._workbook()
+            except ImportError:
+                wb = None
+            if wb is None or "Check" not in wb.sheetnames:
+                print(f"self-test: the {tech} Excel workbook was not built", flush=True)
+                return 1
         if not results.chart_images or any(i.isNull() for i in results.chart_images.values()):
             print(f"self-test: the {tech} charts were not drawn", flush=True)
             return 1

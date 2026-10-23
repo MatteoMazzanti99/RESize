@@ -393,6 +393,7 @@ class BaseResultsPage(StepPage):
 
     topic_order: tuple[str, ...] = ()
     pdf_name = "RESize_report.pdf"
+    has_excel = False          # technologies that can export a workbook set this and _workbook
 
     def __init__(self) -> None:
         super().__init__()
@@ -454,6 +455,12 @@ class BaseResultsPage(StepPage):
         buttons = QHBoxLayout()
         buttons.addWidget(keep)
         buttons.addWidget(self.explain_button)
+        self.excel_button = QPushButton("Export to Excel (live formulas)...")
+        self.excel_button.setToolTip("A workbook where every step is a formula: change an "
+                                     "input and watch the results move.")
+        self.excel_button.clicked.connect(self._export_excel)
+        self.excel_button.setVisible(self.has_excel)
+        buttons.addWidget(self.excel_button)
         buttons.addStretch(1)
         buttons.addWidget(ask)
         buttons.addWidget(export)
@@ -572,6 +579,30 @@ class BaseResultsPage(StepPage):
             QApplication.restoreOverrideCursor()
         self._compose()
 
+    def _workbook(self):
+        """The Excel workbook of the current design (technologies with ``has_excel``)."""
+        raise NotImplementedError
+
+    def _export_excel(self) -> None:
+        if self._design is None:
+            QMessageBox.information(self, "RESize", "There are no results to export yet.")
+            return
+        try:
+            wb = self._workbook()
+        except ImportError:
+            QMessageBox.information(self, "RESize", "Excel export needs the openpyxl package: "
+                                    "pip install openpyxl")
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save workbook", self.pdf_name.replace(".pdf", ".xlsx"),
+            "Excel workbooks (*.xlsx)")
+        if not path:
+            return
+        from resize_energy.report.excel import save_workbook
+
+        save_workbook(wb, path)
+        QMessageBox.information(self, "RESize", f"Workbook saved to:\n{path}")
+
     def _export_pdf(self) -> None:
         if not self.html:
             QMessageBox.information(self, "RESize", "There is no report to export yet.")
@@ -594,6 +625,7 @@ class ResultsPage(BaseResultsPage):
 
     topic_order = TOPIC_ORDER
     pdf_name = "RESize_PV_report.pdf"
+    has_excel = True
 
     def __init__(self, site: SitePage, load: LoadPage, comp: ComponentsPage, costs) -> None:
         self.site, self.load, self.comp, self.costs = site, load, comp, costs
@@ -620,6 +652,11 @@ class ResultsPage(BaseResultsPage):
         light = build_pv_report(inputs, design, findings, site_note=note, theme="light")
         dark = build_pv_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, dark
+
+    def _workbook(self):
+        from resize_energy.report.excel import build_pv_workbook
+
+        return build_pv_workbook(self._inputs, self._design)
 
     def _worked(self, key: str) -> str | None:
         return worked_example(key, self._inputs, self._design)

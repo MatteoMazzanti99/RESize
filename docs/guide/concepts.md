@@ -59,6 +59,14 @@ for that input.
 **Save the report as PDF** writes the page you see, in a light version, with the charts and
 the formulas used.
 
+**Export to Excel (live formulas)** — photovoltaic and wind — writes a workbook where every
+step is a spreadsheet formula with named inputs, so a formula reads like the textbook one
+(`=coverage*demand_kwh/(irradiation*pr_effective)`). Change a yellow input cell and the
+results follow. The sheets are: About, Inputs, Calculation, Layout (PV string lengths) or
+Energy (wind speed bins x power curve), Economics, Cash flow, and Check, which compares every
+key result with the value RESize computed. Not reproduced: the monthly profile (PV) and the
+wake model (wind; its result is kept as a fixed input).
+
 ## Projects
 
 **Save project** (Ctrl+S) writes a small `.resize` file with every value of every step and,

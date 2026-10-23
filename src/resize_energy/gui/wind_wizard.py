@@ -293,6 +293,7 @@ class WindResultsPage(BaseResultsPage):
 
     topic_order = WIND_TOPIC_ORDER
     pdf_name = "RESize_wind_report.pdf"
+    has_excel = True
 
     def __init__(self, site: WindSitePage, load: WindLoadPage, turbine: WindTurbinePage,
                  costs) -> None:
@@ -327,6 +328,11 @@ class WindResultsPage(BaseResultsPage):
         light = build_wind_report(inputs, design, findings, site_note=note, theme="light")
         dark = build_wind_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, dark
+
+    def _workbook(self):
+        from resize_energy.report.excel import build_wind_workbook
+
+        return build_wind_workbook(self._inputs, self._design)
 
     def _worked(self, key: str) -> str | None:
         return wind_worked_example(key, self._inputs, self._design)
