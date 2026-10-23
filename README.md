@@ -57,6 +57,10 @@ manufacturer-certified data: for a real project use the manufacturer's curve and
 wind resource. Editing a value switches back to the generic curve.
 
 
+Wind can also use a wake model (step 3, Layout): Jensen wakes over a wind rose for a grid of
+staggered rows, giving the real wake loss, the efficiency of every turbine and of every
+wind direction, and a turbine count that accounts for it.
+
 ## Biomass module
 
 Start it from the home screen (click the **Biomass** card) and pick the pathway:

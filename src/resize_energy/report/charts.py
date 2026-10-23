@@ -150,7 +150,38 @@ def _turbine_power(inp: WindInputs, rho: float):
                                            t.cut_out_ms, rho)
 
 
+def _wake_charts(d: WindDesign) -> dict[str, ChartSpec]:
+    w = d.wake
+    if w is None:
+        return {}
+    dirs = tuple(f"{i * 30}" for i in range(len(w.sector_efficiency)))
+    return {
+        "wind_wake_rose": ChartSpec(
+            "bars", "Where the wind comes from, and how much the wakes cost from there", dirs,
+            (Series("share of the time [%]", tuple(x * 100 for x in w.sector_weights), BLUE),
+             Series("wake loss from that direction [%]",
+                    tuple((1 - x) * 100 for x in w.sector_efficiency), RED)),
+            x_label="Direction the wind comes from [deg, 0 = north, 90 = east]",
+            y_label="Percent", decimals=0,
+            caption=f"Overall wake loss {d.wake_loss:.1%}. The loss is highest when the wind "
+                    "runs along a line of turbines."),
+        "wind_wake_turbines": ChartSpec(
+            "bars", f"Energy of each turbine against a lone turbine ({d.rows} rows)",
+            tuple(str(i + 1) for i in range(len(w.turbine_efficiency))),
+            (Series("share [%]", tuple(x * 100 for x in w.turbine_efficiency), GREEN),),
+            x_label="Turbine (row by row, first row first)", y_label="Percent of a free turbine",
+            decimals=0,
+            caption="The first row sees free wind; the others lose a little in every direction "
+                    "from which they are behind a turbine."),
+    }
+
+
 def wind_charts(inp: WindInputs, d: WindDesign) -> dict[str, ChartSpec]:
+    out = _wind_base_charts(inp, d)
+    return out | _wake_charts(d)
+
+
+def _wind_base_charts(inp: WindInputs, d: WindDesign) -> dict[str, ChartSpec]:
     t = inp.turbine
     power = _turbine_power(inp, d.air_density)
     top = int(math.ceil(t.cut_out_ms)) + 1

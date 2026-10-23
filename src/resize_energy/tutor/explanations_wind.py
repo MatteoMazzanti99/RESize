@@ -174,6 +174,46 @@ WIND_EXPLANATIONS: dict[str, dict[str, str]] = {
         ),
         "reference": "Burton et al., Wind Energy Handbook, ch. 8; local planning rules.",
     },
+    "wind.wake": {
+        "title": "Wake losses: the Jensen (Park) model",
+        "formula": "deficit = (1 - sqrt(1 - Ct)) * (r0 / (r0 + k x))^2;  v = v0 * (1 - sqrt(sum of deficits^2))",
+        "why": (
+            "Behind a turbine there is a cone of slower air that widens as it goes downwind: "
+            "its radius grows by k metres for every metre of distance (k = 0.075 on land, "
+            "about 0.04 at sea where the air is less turbulent). The speed deficit is "
+            "largest right behind the rotor and decays with the square of the cone radius. "
+            "A turbine only suffers when the cone overlaps its rotor, fully or partly. With "
+            "several upwind turbines the deficits are combined as the root of the sum of "
+            "squares. The energy is then recomputed with the reduced speed through the power "
+            "curve, for every wind direction and every speed. The sum, compared with the "
+            "energy without wakes, is the array efficiency: the wake loss is what is missing."
+        ),
+        "assumptions": (
+            "Top-hat wake, a generic thrust curve (0.8 below rated speed), one wind-speed "
+            "distribution for all directions, flat terrain, neutral stability. Real farms also "
+            "have turbulence effects, blockage and terrain: the Jensen model is a first-pass "
+            "tool (typically within a few points of the loss of real onshore farms)."
+        ),
+        "reference": "Jensen, A note on wind generator interaction, Risoe-M-2411 (1983); Katic et al., EWEC 1986.",
+    },
+    "wind.rose": {
+        "title": "Wind rose and layout across the prevailing wind",
+        "formula": "weight(sector) ~ exp(c cos(sector - prevailing direction))",
+        "why": (
+            "The wind does not blow equally from all directions. If it comes mostly from one "
+            "side, the best layout puts the rows across that direction and leaves a large "
+            "distance along it; the turbines in a row then do not shade each other much. When "
+            "the wind turns by 90 degrees, however, a row becomes a line of turbines one "
+            "behind the other and the loss in that sector is large. Staggering the rows "
+            "reduces it. A concentration of 0 means a uniform rose, 1-2 is a typical site "
+            "with a prevailing direction."
+        ),
+        "assumptions": (
+            "A one-peak rose built from two numbers: use the rose of your site if you have it. "
+            "Regular grid layout, rows of equal length except the last."
+        ),
+        "reference": "Burton et al., Wind Energy Handbook, ch. 8; Global Wind Atlas wind roses.",
+    },
 }
 
 WIND_TOPIC_ORDER: tuple[str, ...] = (
@@ -188,4 +228,6 @@ WIND_TOPIC_ORDER: tuple[str, ...] = (
     "wind.capacity_factor",
     "wind.number_of_turbines",
     "wind.spacing",
+    "wind.wake",
+    "wind.rose",
 )

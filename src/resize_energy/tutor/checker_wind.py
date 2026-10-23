@@ -131,4 +131,23 @@ def check_wind_design(inp: WindInputs, d: WindDesign) -> list[Finding]:
                                f"The plant covers {d.achieved_coverage:.0%} of the demand "
                                f"versus {inp.coverage:.0%} requested (turbines come in whole "
                                "units).", "wind.number_of_turbines"))
+    if d.wake is not None:
+        if d.wake_loss > 0.12:
+            out.append(Finding(
+                "warning", "wake_high",
+                f"The wake loss is {d.wake_loss:.1%}: widen the spacing along the prevailing "
+                "wind or reduce the number of rows.", "wind.wake"))
+        worst = min(d.wake.sector_efficiency)
+        if worst < 0.75:
+            out.append(Finding(
+                "info", "wake_sector",
+                f"From the worst direction the array makes only {worst:.0%} of its free-wind "
+                "energy (turbines in line): fine if that wind is rare, check the rose.",
+                "wind.rose"))
+        if inp.other_losses >= 0.10:
+            out.append(Finding(
+                "info", "double_count",
+                "With the wake model on, 'other losses' should no longer include the wake: "
+                "10 % was a value for wake plus electrical losses; 3-6 % is more usual now.",
+                "wind.losses"))
     return out

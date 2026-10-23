@@ -66,6 +66,27 @@ def wind_worked_example(key: str, inp: WindInputs, d: WindDesign) -> str | None:
             f"Weibull k = {k:.2f}, A = {d.weibull_scale_ms:.2f} m/s, rho = {d.air_density:.3f}\n"
             f"Gross energy per turbine = {d.gross_energy_per_turbine_kwh:,.0f} kWh/year"
         )
+    if key == "wind.wake":
+        if d.wake is None:
+            return (f"The wake model is off: only the single 'other losses' number "
+                    f"({inp.other_losses:.0%}) is used.")
+        free = d.net_energy_per_turbine_kwh / max(1e-9, 1.0 - d.wake_loss)
+        return (f"Layout {d.rows} rows x {d.turbines_per_row} turbines, {inp.crosswind_spacing_d:g} D "
+                f"across, {inp.downwind_spacing_d:g} D along, k = {inp.wake_decay}\n"
+                f"Array efficiency {d.wake.array_efficiency:.1%} -> wake loss "
+                f"{d.wake_loss:.1%}; per turbine {free:,.0f} -> "
+                f"{d.net_energy_per_turbine_kwh:,.0f} kWh/year")
+    if key == "wind.rose":
+        if d.wake is None:
+            return (f"The wake model is off: the wind rose is not used (spacing "
+                    f"{inp.crosswind_spacing_d:g} D x {inp.downwind_spacing_d:g} D only sets "
+                    "the land).")
+        s_best = max(range(12), key=lambda i: d.wake.sector_efficiency[i])
+        s_worst = min(range(12), key=lambda i: d.wake.sector_efficiency[i])
+        return (f"Prevailing wind from {inp.prevailing_direction_deg:.0f} deg, concentration "
+                f"{inp.rose_concentration:g}\nBest sector {s_best * 30} deg: "
+                f"{d.wake.sector_efficiency[s_best]:.1%}; worst sector {s_worst * 30} deg: "
+                f"{d.wake.sector_efficiency[s_worst]:.1%}")
     if key == "wind.losses":
         return (
             f"E_net = {d.gross_energy_per_turbine_kwh:,.0f} x {inp.availability:.2f} x "

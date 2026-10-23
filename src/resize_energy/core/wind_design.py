@@ -6,6 +6,7 @@ import math
 from dataclasses import dataclass, field
 
 from resize_energy.core import wind
+from resize_energy.core import wind_wake as ww
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,13 @@ class WindInputs:
     other_losses: float = 0.10          # wake, electrical, icing, curtailment, ...
     crosswind_spacing_d: float = 5.0
     downwind_spacing_d: float = 7.0
+    # --- wake model (off: the single 'other losses' number is used, as before) ---
+    wake_model: bool = False
+    turbines_per_row: int = 0           # 0 = about square
+    stagger_rows: bool = True
+    wake_decay: float = 0.075           # 0.075 onshore, 0.04-0.05 offshore
+    prevailing_direction_deg: float = 270.0
+    rose_concentration: float = 1.0
     turbine: TurbineSpec = field(default_factory=TurbineSpec)
 
 
@@ -66,6 +74,10 @@ class WindDesign:
     array_area_km2: float
     tip_clearance_m: float
     rated_to_mean_ratio: float
+    wake_loss: float = 0.0
+    wake: ww.WakeResult | None = None
+    turbines_per_row: int = 0
+    rows: int = 0
 
 
 def size_wind_plant(inp: WindInputs) -> WindDesign:
@@ -92,8 +104,31 @@ def size_wind_plant(inp: WindInputs) -> WindDesign:
                                      t.cut_out_ms, rho)
 
     gross = wind.annual_energy_kwh(curve, inp.weibull_k, scale)
-    net = gross * inp.availability * (1.0 - inp.other_losses)
-    n = wind.required_turbines(inp.annual_demand_kwh, net, inp.coverage)
+    net_free = gross * inp.availability * (1.0 - inp.other_losses)
+    n = wind.required_turbines(inp.annual_demand_kwh, net_free, inp.coverage)
+    wake: ww.WakeResult | None = None
+    per_row = 0
+    if inp.wake_model:
+        weights = ww.rose_weights(inp.prevailing_direction_deg, inp.rose_concentration)
+
+        def evaluate(count: int) -> tuple[ww.WakeResult, int]:
+            row = inp.turbines_per_row or max(1, round(math.sqrt(count)))
+            layout = ww.grid_layout(count, row, inp.crosswind_spacing_d, inp.downwind_spacing_d,
+                                    t.rotor_diameter_m, inp.stagger_rows,
+                                    inp.prevailing_direction_deg)
+            return ww.wake_efficiency(layout, curve, t.rotor_diameter_m, v_hub, inp.weibull_k,
+                                      t.cut_in_ms, t.rated_speed_ms, t.cut_out_ms,
+                                      inp.wake_decay, weights), row
+
+        # more turbines mean more wake: raise the number until the demand is covered
+        for _ in range(25):
+            wake, per_row = evaluate(n)
+            needed = wind.required_turbines(inp.annual_demand_kwh,
+                                            net_free * wake.array_efficiency, inp.coverage)
+            if needed <= n:
+                break
+            n = needed
+    net = net_free * (wake.array_efficiency if wake else 1.0)
     energy = n * net
     return WindDesign(
         mean_speed_hub_ms=v_hub,
@@ -116,4 +151,6 @@ def size_wind_plant(inp: WindInputs) -> WindDesign:
                                            inp.downwind_spacing_d),
         tip_clearance_m=t.hub_height_m - t.rotor_diameter_m / 2.0,
         rated_to_mean_ratio=t.rated_speed_ms / v_hub,
+        wake_loss=wake.wake_loss if wake else 0.0, wake=wake, turbines_per_row=per_row,
+        rows=math.ceil(n / per_row) if per_row else 0,
     )

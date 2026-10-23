@@ -269,6 +269,10 @@ def build_wind_report(
              f"tabulated, {len(t.power_curve)} points ({t.curve_source})" if t.power_curve
              else "generic (cubic between cut-in and rated)"),
         _row("Availability / other losses", f"{inp.availability:.0%} / {inp.other_losses:.0%}"),
+        _row("Wake model", f"Jensen, k = {inp.wake_decay}, wind from "
+             f"{inp.prevailing_direction_deg:.0f} deg (concentration {inp.rose_concentration:g}), "
+             f"{'staggered' if inp.stagger_rows else 'aligned'} rows" if inp.wake_model
+             else "off: the single 'other losses' number"),
         _row("Spacing (across x along the wind)",
              f"{inp.crosswind_spacing_d:.0f} D x {inp.downwind_spacing_d:.0f} D"),
     ])

@@ -7,6 +7,7 @@ from dataclasses import replace
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QFormLayout,
     QGroupBox,
@@ -201,14 +202,30 @@ class WindTurbinePage(StepPage):
         form.addRow("Cut-in wind speed", self.cut_in)
         form.addRow("Rated wind speed", self.rated)
         form.addRow("Cut-out wind speed", self.cut_out)
+        self.wake = QCheckBox("Calculate the wake losses (Jensen model, wind rose)")
+        self.per_row = NumberField(0, 0, 100, 0, "turbines (0 = about a square)", "wind.rose")
+        self.stagger = QCheckBox("Stagger the rows")
+        self.stagger.setChecked(True)
+        self.decay = NumberField(0.075, 0.02, 0.12, 3, "0.075 land, 0.04 sea", "wind.wake")
+        self.prevailing = NumberField(270, 0, 359, 0, "deg the wind comes from (270 = west)",
+                                      "wind.rose")
+        self.conc = NumberField(1.0, 0, 5, 1, "0 = all directions equal", "wind.rose")
         lay = QGroupBox("Layout")
         lf = QFormLayout(lay)
         lf.addRow("Spacing across the wind", self.crosswind)
         lf.addRow("Spacing along the wind", self.downwind)
+        lf.addRow(self.wake)
+        lf.addRow("Turbines per row", self.per_row)
+        lf.addRow(self.stagger)
+        lf.addRow("Wake decay constant k", self.decay)
+        lf.addRow("Prevailing wind", self.prevailing)
+        lf.addRow("Rose concentration", self.conc)
         self._items = [("Rated power", self.power), ("Rotor diameter", self.rotor),
                        ("Hub height", self.hub), ("Cut-in speed", self.cut_in),
                        ("Rated speed", self.rated), ("Cut-out speed", self.cut_out),
-                       ("Spacing across", self.crosswind), ("Spacing along", self.downwind)]
+                       ("Spacing across", self.crosswind), ("Spacing along", self.downwind),
+                       ("Turbines per row", self.per_row), ("Wake decay", self.decay),
+                       ("Prevailing wind", self.prevailing), ("Rose concentration", self.conc)]
 
         layout = QVBoxLayout(self)
         layout.addWidget(pick_box)
@@ -295,6 +312,11 @@ class WindResultsPage(BaseResultsPage):
             other_losses=self.load.losses.value() / 100.0,
             crosswind_spacing_d=self.turbine.crosswind.value(),
             downwind_spacing_d=self.turbine.downwind.value(),
+            wake_model=self.turbine.wake.isChecked(),
+            turbines_per_row=int(self.turbine.per_row.value()),
+            stagger_rows=self.turbine.stagger.isChecked(), wake_decay=self.turbine.decay.value(),
+            prevailing_direction_deg=self.turbine.prevailing.value(),
+            rose_concentration=self.turbine.conc.value(),
             turbine=self.turbine.spec(),
         )
         design = size_wind_plant(inputs)
