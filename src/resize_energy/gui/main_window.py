@@ -18,6 +18,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from resize_energy.gui.biomass_wizard import (
+    BIOMASS_STEP_NAMES,
+    BiomassDemandPage,
+    BiomassFuelPage,
+    BiomassPlantPage,
+    BiomassResultsPage,
+)
 from resize_energy.gui.compare_wizard import (
     COMPARE_STEP_NAMES,
     CompareCostPage,
@@ -60,6 +67,10 @@ class MainWindow(QMainWindow):
         self.wind_turbine = WindTurbinePage()
         self.wind_results = WindResultsPage(self.wind_site, self.wind_load, self.wind_turbine)
 
+        self.bio_demand = BiomassDemandPage()
+        self.bio_fuel = BiomassFuelPage(self.bio_demand)
+        self.bio_plant = BiomassPlantPage(self.bio_demand)
+        self.bio_results = BiomassResultsPage(self.bio_demand, self.bio_fuel, self.bio_plant)
         self.cmp_site = CompareSitePage()
         self.cmp_plant = ComparePlantPage(self.cmp_site)
         self.cmp_costs = CompareCostPage()
@@ -69,6 +80,8 @@ class MainWindow(QMainWindow):
             "pv": (STEP_NAMES, [self.site, self.load, self.comp, self.results]),
             "wind": (WIND_STEP_NAMES, [self.wind_site, self.wind_load, self.wind_turbine,
                                        self.wind_results]),
+            "biomass": (BIOMASS_STEP_NAMES, [self.bio_demand, self.bio_fuel, self.bio_plant,
+                                             self.bio_results]),
             "compare": (COMPARE_STEP_NAMES, [self.cmp_site, self.cmp_plant, self.cmp_costs,
                                              self.cmp_results]),
         }
@@ -129,7 +142,7 @@ class MainWindow(QMainWindow):
 
     # --- navigation ---------------------------------------------------------------
     def _start(self, tech: str = "pv") -> None:
-        """Open the first step of the ``tech`` flow ("pv", "wind" or "compare")."""
+        """Open the first step of the ``tech`` flow ("pv", "wind", "biomass" or "compare")."""
         if tech not in self.flows:
             tech = "pv"
         self.tech = tech

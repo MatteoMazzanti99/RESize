@@ -152,3 +152,8 @@ EXPLANATIONS.update(WIND_EXPLANATIONS)
 from resize_energy.tutor.explanations_compare import COMPARE_EXPLANATIONS  # noqa: E402
 
 EXPLANATIONS.update(COMPARE_EXPLANATIONS)
+
+# And for the biomass module.
+from resize_energy.tutor.explanations_biomass import BIOMASS_EXPLANATIONS  # noqa: E402
+
+EXPLANATIONS.update(BIOMASS_EXPLANATIONS)

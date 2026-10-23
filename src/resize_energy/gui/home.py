@@ -27,13 +27,13 @@ BENEFITS: list[tuple[str, str, str]] = [
 TECHNOLOGIES: list[tuple[str, str, str, bool]] = [
     ("pv", "Photovoltaic", "Array, strings, inverter and yearly yield from PVGIS data.", True),
     ("wind", "Wind", "Wind resource at hub height, turbine yield, number of turbines and layout.", True),
-    ("biomass", "Biomass", "Plant sizing and fuel supply for heat and power.", False),
+    ("biomass", "Biomass", "Boiler, ORC cogeneration or biogas: plant size, fuel supply, digester.", True),
     ("hydrogen", "Green hydrogen", "PEM electrolyser coupled to photovoltaic or wind.", False),
 ]
 
 
 class HomePage(StepPage):
-    """Landing page. ``on_start("pv" | "wind" | "compare")`` is called when the user starts a project."""
+    """Landing page. ``on_start("pv" | "wind" | "biomass" | "compare")`` is called when the user starts a project."""
 
     show_header = False
 
@@ -64,6 +64,9 @@ class HomePage(StepPage):
         start_wind = QPushButton("Start a wind project  →")
         start_wind.setCursor(Qt.CursorShape.PointingHandCursor)
         start_wind.clicked.connect(lambda *_: on_start("wind"))
+        start_bio = QPushButton("Start a biomass project  →")
+        start_bio.setCursor(Qt.CursorShape.PointingHandCursor)
+        start_bio.clicked.connect(lambda *_: on_start("biomass"))
         compare = QPushButton("Compare technologies  →")
         compare.setToolTip("Photovoltaic and wind side by side: cost of energy, payback, CO2")
         compare.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -72,9 +75,15 @@ class HomePage(StepPage):
         row.setSpacing(12)
         row.addWidget(start)
         row.addWidget(start_wind)
-        row.addWidget(compare)
         row.addStretch(1)
         text.addLayout(row)
+        text.addSpacing(10)
+        row2 = QHBoxLayout()
+        row2.setSpacing(12)
+        row2.addWidget(start_bio)
+        row2.addWidget(compare)
+        row2.addStretch(1)
+        text.addLayout(row2)
 
         top = QHBoxLayout()
         top.setSpacing(28)
