@@ -76,7 +76,7 @@ def coins(phase: float) -> str:
     keys = "".join(
         f'<rect x="{62 + 18 * c}" y="{58 + 14 * r}" width="14" height="10" rx="2.5" fill="{t["grey"]}" opacity="0.7"/>'
         for r in range(3) for c in range(4))
-    drop = (phase * 2) % 1.0
+    drop = phase % 1.0
     y = 6 + 40 * drop
     fade = 1.0 if drop < 0.8 else (1 - drop) * 5
     coin = (f'<g opacity="{fade:.2f}"><circle cx="160" cy="{y:.1f}" r="10" fill="{t["sun"]}" stroke="{t["orange"]}" stroke-width="2"/>'
