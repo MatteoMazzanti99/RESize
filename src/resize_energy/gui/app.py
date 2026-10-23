@@ -23,6 +23,15 @@ def _walk_through(window, app) -> int:
             print(f"self-test: the {tech} flow did not reach its results", flush=True)
             return 1
         window._restart()
+    # the comparison of all four technologies, as started from the Compare zone
+    window._start_compare(["pv", "wind", "biomass", "hydrogen"])
+    for _ in range(len(window.pages) - 2):
+        window._next()
+        app.processEvents()
+    if window.index != len(window.pages) - 1 or "Biomass" not in window.pages[-1].html:
+        print("self-test: the four-technology comparison did not reach its results", flush=True)
+        return 1
+    window._restart()
     return 0
 
 
@@ -35,6 +44,13 @@ def _screenshots(window, app, folder: str) -> None:
     window.resize(1240, 820)
     app.processEvents()
     window.grab().save(str(out / "home.png"))
+    zone = window.home.zone
+    for key in ("pv", "hydrogen", "biomass"):
+        zone.add(key)
+    for _ in range(25):  # let the icons drift for a moment
+        app.processEvents()
+    window.grab().save(str(out / "home_compare.png"))
+    zone.clear()
     for tech in ("pv", "wind", "biomass", "hydrogen", "compare"):
         window._start(tech)
         app.processEvents()

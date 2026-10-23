@@ -27,9 +27,12 @@ def make_label(text: str, name: str = "", wrap: bool = True) -> QLabel:
     return label
 
 
-def make_card(kind: str = "card") -> tuple[QFrame, QVBoxLayout]:
-    """Rounded panel. ``kind``: 'card', 'cardActive' (available) or 'cardDim' (planned)."""
-    frame = QFrame()
+def make_card(kind: str = "card", frame: QFrame | None = None) -> tuple[QFrame, QVBoxLayout]:
+    """Rounded panel. ``kind``: 'card', 'cardActive' (available) or 'cardDim' (planned).
+
+    Pass ``frame`` to build the card on a QFrame subclass (for instance a clickable card).
+    """
+    frame = frame if frame is not None else QFrame()
     frame.setObjectName(kind)
     layout = QVBoxLayout(frame)
     layout.setContentsMargins(18, 16, 18, 16)

@@ -1,13 +1,36 @@
-"""Side-by-side comparison of a photovoltaic and a wind plant sized for the same demand."""
+"""Side-by-side comparison of two to four technologies sized for the same energy target.
+
+Photovoltaic, wind and biogas CHP deliver electricity (compared with the grid); green hydrogen
+delivers hydrogen (compared with hydrogen from natural gas, on its lower heating value).
+Every plant is sized for the same yearly energy and share to cover.
+"""
 
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from resize_energy.core import economics as eco
-from resize_energy.core import pv
+from resize_energy.core import hydrogen as h2
+from resize_energy.core import profiles as prof
+from resize_energy.core import pv, wind
+from resize_energy.core.biomass_design import (
+    BiomassDesign,
+    BiomassInputs,
+    default_efficiencies,
+    size_biomass_plant,
+)
+from resize_energy.core.hydrogen_design import (
+    HydrogenDesign,
+    HydrogenInputs,
+    HydrogenProfiles,
+    size_hydrogen_plant,
+)
 from resize_energy.core.wind_design import WindDesign, WindInputs, size_wind_plant
+
+TECHS = ("pv", "wind", "biomass", "hydrogen")
+TECH_NAMES = {"pv": "Photovoltaic", "wind": "Wind", "biomass": "Biomass (biogas CHP)",
+              "hydrogen": "Green hydrogen"}
 
 
 @dataclass(frozen=True)
@@ -26,16 +49,31 @@ class CostAssumptions:
     retail_price_eur_per_kwh: float = 0.15
     export_price_eur_per_kwh: float = 0.07
     grid_kg_co2_per_kwh: float = 0.25
+    # biogas CHP (digester, engine, grid connection)
+    bio_capex_eur_per_kwe: float = 4500.0
+    bio_om_eur_per_kwe_year: float = 250.0
+    bio_feedstock_eur_per_t: float = 25.0
+    bio_lifetime_years: float = 20.0
+    bio_lifecycle_g_per_kwh: float = 100.0
+    # green hydrogen (the renewable plant uses the PV and wind costs above)
+    h2_electrolyser_capex_eur_per_kw: float = 1800.0
+    h2_reference_price_eur_per_kg: float = 3.5      # hydrogen from natural gas
+    h2_reference_kg_co2_per_kg: float = 9.0
 
 
 @dataclass(frozen=True)
 class ComparisonInputs:
-    """Same site and demand for both technologies (demand and coverage live in ``wind``)."""
+    """Same site and demand for all technologies (demand and coverage live in ``wind``)."""
 
     annual_irradiation_kwh_m2: float
     performance_ratio: float
     wind: WindInputs
     costs: CostAssumptions = field(default_factory=CostAssumptions)
+    techs: tuple[str, ...] = ("pv", "wind")
+    latitude_deg: float = 45.0
+    biomass: BiomassInputs = field(default_factory=lambda: BiomassInputs(pathway="biogas"))
+    h2_use_pv: bool = True
+    h2_use_wind: bool = False
 
     @property
     def annual_demand_kwh(self) -> float:
@@ -66,77 +104,195 @@ class TechResult:
     npv_eur: float
     co2_avoided_t_per_year: float
     co2_avoided_lifetime_t: float
+    key: str = ""
+    product: str = "electricity"           # "electricity" or "hydrogen"
+    reference_price_eur_per_kwh: float = 0.0
+    co2_reference_kg_per_kwh: float = 0.0   # what the product replaces
+    co2_own_kg_per_kwh: float = 0.0         # life cycle of this plant
 
 
 @dataclass(frozen=True)
 class ComparisonResult:
-    pv: TechResult
-    wind: TechResult
-    wind_design: WindDesign
+    techs: tuple[TechResult, ...]
     lowest_lcoe: str
     fastest_payback: str
     highest_npv: str
     most_co2: str
+    wind_design: WindDesign | None = None
+    biomass_design: BiomassDesign | None = None
+    hydrogen_design: HydrogenDesign | None = None
+
+    def get(self, key: str) -> TechResult | None:
+        return next((t for t in self.techs if t.key == key), None)
+
+    @property
+    def pv(self) -> TechResult | None:
+        return self.get("pv")
+
+    @property
+    def wind(self) -> TechResult | None:
+        return self.get("wind")
+
+    @property
+    def biomass(self) -> TechResult | None:
+        return self.get("biomass")
+
+    @property
+    def hydrogen(self) -> TechResult | None:
+        return self.get("hydrogen")
 
 
-def _tech(name: str, kw: float, energy: float, demand: float, capex_per_kw: float,
-          om_per_kw: float, life: float, lifecycle_g: float, c: CostAssumptions) -> TechResult:
-    capex = kw * capex_per_kw
-    om = kw * om_per_kw
-    savings = eco.annual_savings(energy, demand, c.retail_price_eur_per_kwh,
-                                 c.export_price_eur_per_kwh)
+def _tech(key: str, kw: float, energy: float, demand: float, capex: float, om: float,
+          life: float, own_ef: float, c: CostAssumptions, *, product: str = "electricity",
+          ref_price: float | None = None, export_price: float | None = None,
+          ref_ef: float | None = None, lcoe: float | None = None) -> TechResult:
+    ref_price = c.retail_price_eur_per_kwh if ref_price is None else ref_price
+    export_price = c.export_price_eur_per_kwh if export_price is None else export_price
+    ref_ef = c.grid_kg_co2_per_kwh if ref_ef is None else ref_ef
+    savings = eco.annual_savings(energy, demand, ref_price, export_price)
     net = savings - om
-    co2 = eco.co2_avoided_kg_per_year(energy, c.grid_kg_co2_per_kwh, lifecycle_g) / 1000.0
+    co2 = energy * (ref_ef - own_ef) / 1000.0
     return TechResult(
-        name=name, installed_kw=kw, energy_kwh=energy, coverage=energy / demand,
+        name=TECH_NAMES[key], installed_kw=kw, energy_kwh=energy, coverage=energy / demand,
         full_load_hours=energy / kw, capex_eur=capex, om_eur_per_year=om, lifetime_years=life,
-        lcoe_eur_per_kwh=eco.lcoe(capex, om, energy, c.discount_rate, life),
+        lcoe_eur_per_kwh=(eco.lcoe(capex, om, energy, c.discount_rate, life)
+                          if lcoe is None else lcoe),
         savings_eur_per_year=savings, net_benefit_eur_per_year=net,
         payback_years=eco.simple_payback_years(capex, net),
         discounted_payback_years=eco.discounted_payback_years(capex, net, c.discount_rate),
         npv_eur=eco.npv(capex, net, c.discount_rate, life),
         co2_avoided_t_per_year=co2, co2_avoided_lifetime_t=co2 * life,
+        key=key, product=product, reference_price_eur_per_kwh=ref_price,
+        co2_reference_kg_per_kwh=ref_ef, co2_own_kg_per_kwh=own_ef,
     )
 
 
-def _best(a: TechResult, b: TechResult, value, lowest: bool = True) -> str:
-    va, vb = value(a), value(b)
-    if math.isclose(va, vb, rel_tol=1e-9) or (math.isinf(va) and math.isinf(vb)):
-        return "tie"
-    return (a if (va < vb) == lowest else b).name
+def _best(techs: tuple[TechResult, ...], value, lowest: bool = True) -> str:
+    ranked = sorted(techs, key=value, reverse=not lowest)
+    first = value(ranked[0])
+    if len(ranked) > 1:
+        second = value(ranked[1])
+        if math.isclose(first, second, rel_tol=1e-9) or (math.isinf(first) and math.isinf(second)):
+            return "tie"
+    return ranked[0].name
 
 
-def compare_technologies(inp: ComparisonInputs) -> ComparisonResult:
-    """Size both plants for the same demand and compute LCOE, payback, NPV and CO2.
-
-    The PV array is sized exactly on the target (no inverter or string limits: use the PV
-    module for that); the wind plant uses a whole number of turbines, so it can overshoot.
-    """
+def _check_inputs(inp: ComparisonInputs) -> None:
     c = inp.costs
     if not 0 <= c.discount_rate < 1:
         raise ValueError("discount rate must be in [0, 1)")
-    for label, value in (("PV CAPEX", c.pv_capex_eur_per_kwp), ("wind CAPEX",
-                         c.wind_capex_eur_per_kw), ("retail price", c.retail_price_eur_per_kwh)):
+    if len(inp.techs) < 2:
+        raise ValueError("choose at least two technologies to compare")
+    if any(t not in TECHS for t in inp.techs) or len(set(inp.techs)) != len(inp.techs):
+        raise ValueError("unknown or repeated technology")
+    needs = {
+        "pv": ("PV CAPEX", c.pv_capex_eur_per_kwp), "wind": ("wind CAPEX", c.wind_capex_eur_per_kw),
+        "biomass": ("biomass CAPEX", c.bio_capex_eur_per_kwe),
+        "hydrogen": ("electrolyser CAPEX", c.h2_electrolyser_capex_eur_per_kw),
+    }
+    for key in inp.techs:
+        label, value = needs[key]
         if value <= 0:
             raise ValueError(f"{label} must be > 0")
+    if c.retail_price_eur_per_kwh <= 0:
+        raise ValueError("retail price must be > 0")
     if inp.annual_irradiation_kwh_m2 <= 0 or not 0 < inp.performance_ratio <= 1:
         raise ValueError("irradiation must be > 0 and performance ratio in (0, 1]")
+    if "hydrogen" in inp.techs:
+        if not (inp.h2_use_pv or inp.h2_use_wind):
+            raise ValueError("choose PV, wind or both as the electricity source of the hydrogen")
+        if c.h2_reference_price_eur_per_kg <= 0:
+            raise ValueError("the reference hydrogen price must be > 0")
 
-    kwp = pv.required_peak_power_kwp(inp.annual_demand_kwh, inp.annual_irradiation_kwh_m2,
-                                     inp.performance_ratio, inp.coverage)
-    pv_energy = kwp * inp.annual_irradiation_kwh_m2 * inp.performance_ratio
-    wd = size_wind_plant(inp.wind)
 
-    pv_res = _tech("Photovoltaic", kwp, pv_energy, inp.annual_demand_kwh,
-                   c.pv_capex_eur_per_kwp, c.pv_om_eur_per_kwp_year, c.pv_lifetime_years,
-                   c.pv_lifecycle_g_per_kwh, c)
-    wind_res = _tech("Wind", wd.installed_power_kw, wd.annual_energy_kwh, inp.annual_demand_kwh,
-                     c.wind_capex_eur_per_kw, c.wind_om_eur_per_kw_year, c.wind_lifetime_years,
-                     c.wind_lifecycle_g_per_kwh, c)
+def _size_hydrogen(inp: ComparisonInputs, target_kwh: float) -> tuple[HydrogenDesign, HydrogenInputs]:
+    c, w = inp.costs, inp.wind
+    hin = HydrogenInputs(
+        mode="demand", use_pv=inp.h2_use_pv, use_wind=inp.h2_use_wind, use_grid=False,
+        h2_demand_kg_per_year=target_kwh / h2.H2_LHV_KWH_PER_KG,
+        electrolyser_capex_per_kw=c.h2_electrolyser_capex_eur_per_kw,
+        pv_capex_per_kwp=c.pv_capex_eur_per_kwp, pv_om_per_kwp=c.pv_om_eur_per_kwp_year,
+        wind_capex_per_kw=c.wind_capex_eur_per_kw, wind_om_per_kw=c.wind_om_eur_per_kw_year,
+        res_life_years=c.pv_lifetime_years, discount_rate=c.discount_rate,
+        pv_ef=c.pv_lifecycle_g_per_kwh / 1000.0, wind_ef=c.wind_lifecycle_g_per_kwh / 1000.0,
+        grid_ef=c.grid_kg_co2_per_kwh, grey_h2_kg_co2_per_kg=c.h2_reference_kg_co2_per_kg)
+    pv_unit = wind_unit = None
+    if inp.h2_use_pv:
+        pv_unit = prof.synthetic_pv_profile(
+            inp.latitude_deg, inp.annual_irradiation_kwh_m2 * inp.performance_ratio)
+    if inp.h2_use_wind:
+        v50 = wind.shear_power_law(w.mean_speed_ref_ms, w.ref_height_m, 50.0, w.shear_alpha)
+        rho = wind.air_density(w.elevation_m, w.temperature_c)
+        wind_unit = prof.turbine_unit_profile(
+            prof.synthetic_wind_series(v50, w.weibull_k), v50, w.turbine.hub_height_m,
+            w.shear_alpha, w.turbine, rho, w.availability * (1.0 - w.other_losses))
+    design = size_hydrogen_plant(hin, HydrogenProfiles(pv_unit, wind_unit, "synthetic"))
+    return design, hin
+
+
+def compare_technologies(inp: ComparisonInputs) -> ComparisonResult:
+    """Size the selected plants for the same energy target; LCOE, payback, NPV and CO2.
+
+    The PV array is sized exactly on the target (no inverter or string limits); the wind plant
+    uses a whole number of turbines, so it can overshoot; biogas and hydrogen are sized by
+    their own modules. Biogas heat is not credited (conservative).
+    """
+    _check_inputs(inp)
+    c = inp.costs
+    demand = inp.annual_demand_kwh
+    target = demand * inp.coverage
+    results: list[TechResult] = []
+    wd = bd = hd = None
+
+    if "pv" in inp.techs:
+        kwp = pv.required_peak_power_kwp(demand, inp.annual_irradiation_kwh_m2,
+                                         inp.performance_ratio, inp.coverage)
+        energy = kwp * inp.annual_irradiation_kwh_m2 * inp.performance_ratio
+        results.append(_tech("pv", kwp, energy, demand, kwp * c.pv_capex_eur_per_kwp,
+                             kwp * c.pv_om_eur_per_kwp_year, c.pv_lifetime_years,
+                             c.pv_lifecycle_g_per_kwh / 1000.0, c))
+    if "wind" in inp.techs:
+        wd = size_wind_plant(inp.wind)
+        kw = wd.installed_power_kw
+        results.append(_tech("wind", kw, wd.annual_energy_kwh, demand,
+                             kw * c.wind_capex_eur_per_kw, kw * c.wind_om_eur_per_kw_year,
+                             c.wind_lifetime_years, c.wind_lifecycle_g_per_kwh / 1000.0, c))
+    if "biomass" in inp.techs:
+        th, el = default_efficiencies("biogas")
+        b = inp.biomass
+        bin_ = replace(b, pathway="biogas", eta_th=th, eta_el=el,
+                       annual_electricity_demand_kwh=demand, coverage=inp.coverage)
+        bd = size_biomass_plant(bin_)
+        kwe = bd.electric_power_kw
+        om = kwe * c.bio_om_eur_per_kwe_year + (
+            bd.substrate_mass_a_t + bd.substrate_mass_b_t) * c.bio_feedstock_eur_per_t
+        results.append(_tech("biomass", kwe, bd.electricity_net_kwh, demand,
+                             kwe * c.bio_capex_eur_per_kwe, om, c.bio_lifetime_years,
+                             c.bio_lifecycle_g_per_kwh / 1000.0, c))
+    if "hydrogen" in inp.techs:
+        hd, hin = _size_hydrogen(inp, target)
+        energy = hd.hydrogen_kg * h2.H2_LHV_KWH_PER_KG
+        el_capex = hd.electrolyser_kw * hin.electrolyser_capex_per_kw
+        capex = (el_capex + hd.storage_kg * hin.storage_capex_per_kg
+                 + hd.pv_kwp * hin.pv_capex_per_kwp + hd.wind_kw * hin.wind_capex_per_kw)
+        running = (el_capex * hin.electrolyser_om_fraction + hd.cost_stack + hd.cost_water
+                   + hd.pv_kwp * hin.pv_om_per_kwp + hd.wind_kw * hin.wind_om_per_kw)
+        ref_price = c.h2_reference_price_eur_per_kg / h2.H2_LHV_KWH_PER_KG
+        results.append(_tech(
+            "hydrogen", hd.electrolyser_kw, energy, energy, capex, running, c.pv_lifetime_years,
+            hd.co2_kg_per_kg / h2.H2_LHV_KWH_PER_KG, c, product="hydrogen",
+            ref_price=ref_price, export_price=ref_price,
+            ref_ef=c.h2_reference_kg_co2_per_kg / h2.H2_LHV_KWH_PER_KG,
+            lcoe=hd.lcoh / h2.H2_LHV_KWH_PER_KG))
+        results[-1] = replace(results[-1], coverage=energy / demand)
+
+    techs = tuple(results)
     return ComparisonResult(
-        pv=pv_res, wind=wind_res, wind_design=wd,
-        lowest_lcoe=_best(pv_res, wind_res, lambda r: r.lcoe_eur_per_kwh),
-        fastest_payback=_best(pv_res, wind_res, lambda r: r.payback_years),
-        highest_npv=_best(pv_res, wind_res, lambda r: r.npv_eur, lowest=False),
-        most_co2=_best(pv_res, wind_res, lambda r: r.co2_avoided_t_per_year, lowest=False),
+        techs=techs,
+        lowest_lcoe=_best(techs, lambda t: t.lcoe_eur_per_kwh),
+        fastest_payback=_best(techs, lambda t: t.payback_years),
+        highest_npv=_best(techs, lambda t: t.npv_eur, lowest=False),
+        most_co2=_best(techs, lambda t: t.co2_avoided_t_per_year, lowest=False),
+        wind_design=wd, biomass_design=bd, hydrogen_design=hd,
     )
+

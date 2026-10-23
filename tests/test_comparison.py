@@ -100,3 +100,79 @@ def test_oversized_wind_and_expensive_energy_are_flagged():
     assert "wind_oversized" in codes
     inp2, r2 = case(costs=CostAssumptions(retail_price_eur_per_kwh=0.03))
     assert "lcoe_above_price" in {f.code for f in check_comparison(inp2, r2)}
+
+
+# ---- four technologies -------------------------------------------------------------------
+
+from resize_energy.gui.zone_physics import ICON_SIZE, advance  # noqa: E402
+
+
+def many(techs, **kw):
+    wind = WindInputs(annual_demand_kwh=10_000_000, mean_speed_ref_ms=6.5)
+    inp = ComparisonInputs(1500, 0.8, wind, techs=tuple(techs), **kw)
+    return inp, compare_technologies(inp)
+
+
+def test_all_four_technologies():
+    inp, r = many(("pv", "wind", "biomass", "hydrogen"))
+    assert [t.key for t in r.techs] == ["pv", "wind", "biomass", "hydrogen"]
+    for t in r.techs:
+        assert t.energy_kwh > 0 and t.lcoe_eur_per_kwh > 0 and t.capex_eur > 0
+    # every plant is sized on the same 10 GWh target
+    assert r.pv.energy_kwh == pytest.approx(1e7)
+    assert r.biomass.energy_kwh == pytest.approx(1e7, rel=1e-6)
+    assert r.hydrogen.energy_kwh == pytest.approx(1e7, rel=1e-6)
+    assert r.hydrogen.product == "hydrogen" and r.biomass.product == "electricity"
+    # hydrogen costs more per kWh than the electricity that feeds it
+    assert r.hydrogen.lcoe_eur_per_kwh > 2 * r.pv.lcoe_eur_per_kwh
+    # co2: energy x (reference - own)
+    t = r.hydrogen
+    assert t.co2_avoided_t_per_year == pytest.approx(
+        t.energy_kwh * (t.co2_reference_kg_per_kwh - t.co2_own_kg_per_kwh) / 1000)
+    assert r.lowest_lcoe in {t.name for t in r.techs}
+    assert r.hydrogen_design is not None and r.biomass_design is not None
+
+
+@pytest.mark.parametrize("techs", [("biomass", "hydrogen"), ("pv", "hydrogen"),
+                                   ("wind", "biomass"), ("wind", "hydrogen")])
+def test_pairs_and_report(techs):
+    kw = {"h2_use_pv": "wind" not in techs or "pv" in techs,
+          "h2_use_wind": "wind" in techs}
+    inp, r = many(techs, **kw)
+    assert len(r.techs) == 2
+    findings = check_comparison(inp, r)
+    for theme in ("light", "screen"):
+        html = build_comparison_report(inp, r, findings, theme=theme)
+        assert all(t.name in html for t in r.techs)
+    for key in COMPARE_TOPIC_ORDER:
+        assert compare_worked_example(key, inp, r)
+    text = build_compare_context(inp, r, findings)
+    assert all(t.name in text for t in r.techs)
+    if "hydrogen" in techs:
+        assert "mixed_products" in {f.code for f in findings}
+    if "biomass" in techs:
+        assert "heat_not_credited" in {f.code for f in findings}
+
+
+def test_selection_is_validated():
+    with pytest.raises(ValueError):
+        many(("pv",))
+    with pytest.raises(ValueError):
+        many(("pv", "pv"))
+    with pytest.raises(ValueError):
+        many(("pv", "geothermal"))
+    with pytest.raises(ValueError):
+        many(("pv", "hydrogen"), h2_use_pv=False, h2_use_wind=False)
+
+
+def test_icons_stay_inside_and_bounce():
+    items = {"pv": [10.0, 10.0, -3.0, -2.0], "wind": [200.0, 100.0, 4.0, 3.0]}
+    for _ in range(2000):
+        advance(items, 300.0, 140.0)
+        for x, y, _vx, _vy in items.values():
+            assert -1e-9 <= x <= 300 - ICON_SIZE + 1e-9
+            assert -1e-9 <= y <= 140 - ICON_SIZE + 1e-9
+    # two icons on top of each other do not stick: they exchange velocity and move apart
+    items = {"a": [50.0, 50.0, 1.0, 0.0], "b": [60.0, 50.0, -1.0, 0.0]}
+    advance(items, 300.0, 140.0)
+    assert items["a"][2] < 0 < items["b"][2]

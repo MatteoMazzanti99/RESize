@@ -5,14 +5,16 @@ from __future__ import annotations
 COMPARE_EXPLANATIONS: dict[str, dict[str, str]] = {
     "econ.same_demand": {
         "title": "Comparing on the same demand",
-        "formula": "PV: P = c * E / (H * PR)      Wind: N = ceil(c * E / E_turbine)",
+        "formula": "PV: P = c * E / (H * PR)   Wind: N = ceil(c * E / E_turbine)   H2: kg = c * E / 33.33",
         "why": (
-            "A fair comparison sizes both plants for the same job: the same yearly demand E and "
+            "A fair comparison sizes every plant for the same job: the same yearly demand E and "
             "the same share c to cover. The photovoltaic array can be sized to the exact target, "
             "while turbines come in whole units, so the wind plant usually produces a bit more "
             "than needed (a lot more when one turbine is large compared with the demand). That "
             "extra energy is sold at the export price, so it helps the wind balance less than "
-            "the energy that replaces purchases."
+            "the energy that replaces purchases. Biogas and hydrogen come from their own "
+            "modules; hydrogen is counted as the energy of the molecule (33.33 kWh per kg) and "
+            "compared with hydrogen from natural gas, not with the grid."
         ),
         "assumptions": (
             "Annual energy balance only. Wind and sun are not available at the same hours of "
@@ -32,7 +34,7 @@ COMPARE_EXPLANATIONS: dict[str, dict[str, str]] = {
             "capital-intensive technologies more."
         ),
         "assumptions": (
-            "One discount rate for both technologies, constant prices (real terms), no taxes and "
+            "One discount rate for all technologies, constant prices (real terms), no taxes and "
             "no financing structure. In practice the rate depends on the risk of the project."
         ),
         "reference": "Short and Packey, A Manual for the Economic Evaluation of Energy "
@@ -58,7 +60,7 @@ COMPARE_EXPLANATIONS: dict[str, dict[str, str]] = {
     },
     "econ.savings": {
         "title": "Value of the energy: avoided purchases and exports",
-        "formula": "S = min(E, D) * p_retail + max(0, E - D) * p_export",
+        "formula": "S = min(E, D) * p_retail + max(0, E - D) * p_export   (hydrogen: E * p_reference)",
         "why": (
             "Energy that replaces what you would buy from the grid is worth the retail price. "
             "Energy beyond your demand is sold at the export price, usually much lower. The "

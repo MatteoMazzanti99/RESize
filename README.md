@@ -83,12 +83,16 @@ factors are round placeholders to replace with quotes.
 
 ## Technology comparison
 
-The **Compare technologies** button on the home screen sizes a photovoltaic and a wind plant
-for the same site and demand and puts them side by side: cost of energy (LCOE), simple and
-discounted payback, net present value and avoided CO2, with **Why?** panels for every
-formula and a PDF report. Prices, lifetimes and emission factors are round placeholders to
-replace with local quotes; the model is an annual balance (no hourly match, no storage,
-no incentives or taxes).
+On the home screen, click a technology card to start its project, or **drag two or more cards
+into the Compare zone** (they appear as little floating icons) and press **Compare**. Photovoltaic,
+wind, biogas CHP and green hydrogen are sized for the same yearly energy and put side by side:
+cost of energy (LCOE), simple and discounted payback, net present value and avoided CO2, with
+**Why?** panels for every formula and a PDF report. Electricity technologies are compared with
+the grid; hydrogen is compared, on its heating value, with hydrogen made from natural gas. Prices,
+lifetimes and emission factors are round placeholders to replace with local quotes; the model is
+an annual balance (no hourly match for the electricity, no incentives or taxes), biogas heat is
+not credited and the hydrogen plant runs on an invented hourly year (use the hydrogen flow for
+real hourly data).
 
 ## Quick start
 

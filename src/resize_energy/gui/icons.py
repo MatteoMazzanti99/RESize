@@ -21,27 +21,31 @@ class IconTile(QWidget):
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setPen(QPen(Qt.PenStyle.NoPen))
-        painter.setBrush(QBrush(QColor(COLORS["accent_tint"])))
-        s = float(self._size)
-        painter.drawRoundedRect(QRectF(0, 0, s, s), s * 0.25, s * 0.25)
-
-        accent = QColor(COLORS["accent"])
-        pen = QPen(accent, STROKE * (s * 0.62) / GRID)
-        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-        scale = s * 0.62 / GRID
-        offset = s * 0.19
-        for points, closed, filled in ICONS.get(self.kind, []):
-            path = QPainterPath()
-            first = points[0]
-            path.moveTo(QPointF(offset + first[0] * scale, offset + first[1] * scale))
-            for x, y in points[1:]:
-                path.lineTo(QPointF(offset + x * scale, offset + y * scale))
-            if closed:
-                path.closeSubpath()
-            painter.setPen(pen)
-            painter.setBrush(QBrush(accent) if filled else QBrush(Qt.BrushStyle.NoBrush))
-            painter.drawPath(path)
+        paint_icon_tile(painter, self.kind, float(self._size))
         painter.end()
+
+
+def paint_icon_tile(painter: QPainter, kind: str, s: float) -> None:
+    """Draw the tile and the icon of ``kind`` in a square of side ``s`` at the origin."""
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setPen(QPen(Qt.PenStyle.NoPen))
+    painter.setBrush(QBrush(QColor(COLORS["accent_tint"])))
+    painter.drawRoundedRect(QRectF(0, 0, s, s), s * 0.25, s * 0.25)
+
+    accent = QColor(COLORS["accent"])
+    pen = QPen(accent, STROKE * (s * 0.62) / GRID)
+    pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+    pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+    scale = s * 0.62 / GRID
+    offset = s * 0.19
+    for points, closed, filled in ICONS.get(kind, []):
+        path = QPainterPath()
+        first = points[0]
+        path.moveTo(QPointF(offset + first[0] * scale, offset + first[1] * scale))
+        for x, y in points[1:]:
+            path.lineTo(QPointF(offset + x * scale, offset + y * scale))
+        if closed:
+            path.closeSubpath()
+        painter.setPen(pen)
+        painter.setBrush(QBrush(accent) if filled else QBrush(Qt.BrushStyle.NoBrush))
+        painter.drawPath(path)

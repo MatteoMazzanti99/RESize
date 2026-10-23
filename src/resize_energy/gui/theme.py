@@ -80,6 +80,8 @@ QFrame#card { background-color: {surface}; border: 1px solid {surface2}; border-
 QFrame#card:hover { border: 1px solid {border}; }
 QFrame#cardActive { background-color: {surface}; border: 1px solid {border}; border-radius: 16px; }
 QFrame#cardActive:hover { background-color: {accent_tint}; border: 1px solid {accent}; }
+QFrame#dropZone { background-color: {surface}; border: 2px dashed {border}; border-radius: 18px; }
+QFrame#dropZone[dragOver="true"] { background-color: {accent_tint}; border: 2px dashed {accent}; }
 QFrame#cardDim { background-color: {bg}; border: 1px dashed {border}; border-radius: 16px; }
 QFrame#cardDim QLabel#cardTitle { color: {text}; }
 QLabel#cardTitle { font-size: 12pt; font-weight: 700; }

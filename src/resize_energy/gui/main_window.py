@@ -1,6 +1,6 @@
 """Main window: left navigation, page header, the current step and the Back / Next buttons.
 
-It hosts one flow of steps per technology (photovoltaic, wind, comparison); the home page starts one.
+It hosts one flow of steps per technology (photovoltaic, wind, biomass, hydrogen, comparison); the home page starts one.
 """
 
 from __future__ import annotations
@@ -30,6 +30,7 @@ from resize_energy.gui.compare_wizard import (
     CompareCostPage,
     ComparePlantPage,
     CompareResultsPage,
+    CompareSelection,
     CompareSitePage,
 )
 from resize_energy.gui.home import HomePage
@@ -65,7 +66,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1040, 700)
         self.resize(1240, 820)
 
-        self.home = HomePage(self._start)
+        self.home = HomePage(self._start, self._start_compare)
         self.site = SitePage()
         self.load = LoadPage(self.site)
         self.comp = ComponentsPage()
@@ -85,10 +86,12 @@ class MainWindow(QMainWindow):
         self.h2_costs = HydrogenCostPage()
         self.h2_results = HydrogenResultsPage(self.h2_goal, self.h2_site, self.h2_plant,
                                               self.h2_costs)
-        self.cmp_site = CompareSitePage()
-        self.cmp_plant = ComparePlantPage(self.cmp_site)
-        self.cmp_costs = CompareCostPage()
-        self.cmp_results = CompareResultsPage(self.cmp_site, self.cmp_plant, self.cmp_costs)
+        self.cmp_selection = CompareSelection()
+        self.cmp_site = CompareSitePage(self.cmp_selection)
+        self.cmp_plant = ComparePlantPage(self.cmp_site, self.cmp_selection)
+        self.cmp_costs = CompareCostPage(self.cmp_selection)
+        self.cmp_results = CompareResultsPage(self.cmp_site, self.cmp_plant, self.cmp_costs,
+                                              self.cmp_selection)
 
         self.flows: dict[str, tuple[list[str], list[StepPage]]] = {
             "pv": (STEP_NAMES, [self.site, self.load, self.comp, self.results]),
@@ -166,6 +169,11 @@ class MainWindow(QMainWindow):
         self.pages = [self.home, *pages]
         self.sidebar.set_steps(names)
         self._go(1)
+
+    def _start_compare(self, techs: list[str]) -> None:
+        """Open the comparison of the technologies dropped in the Compare zone."""
+        self.cmp_selection.techs = tuple(techs)
+        self._start("compare")
 
     def _back(self) -> None:
         self._go(self.index - 1)

@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QVBoxLayout
 
+from resize_energy.gui.compare_zone import CompareZone, TechCard
 from resize_energy.gui.hero import HeroArt
 from resize_energy.gui.icons import IconTile
 from resize_energy.gui.widgets import StepPage, make_card, make_label, make_pill
@@ -33,11 +34,13 @@ TECHNOLOGIES: list[tuple[str, str, str, bool]] = [
 
 
 class HomePage(StepPage):
-    """Landing page. ``on_start("pv" | "wind" | "biomass" | "hydrogen" | "compare")`` is called when the user starts a project."""
+    """Landing page. Click a technology card to start its project (``on_start(key)``) or drag
+    cards into the Compare zone and press Compare (``on_compare([keys])``)."""
 
     show_header = False
 
-    def __init__(self, on_start: Callable[[str], None]) -> None:
+    def __init__(self, on_start: Callable[[str], None],
+                 on_compare: Callable[[list[str]], None]) -> None:
         super().__init__()
         self.setTitle("Home")
         root = QVBoxLayout(self)
@@ -57,41 +60,8 @@ class HomePage(StepPage):
             "the formula, the assumptions and your own numbers.", "lead"))
         text.addSpacing(16)
 
-        start = QPushButton("Start a photovoltaic project  →")
-        start.setProperty("variant", "primary")
-        start.setCursor(Qt.CursorShape.PointingHandCursor)
-        start.clicked.connect(lambda *_: on_start("pv"))
-        start_wind = QPushButton("Start a wind project  →")
-        start_wind.setCursor(Qt.CursorShape.PointingHandCursor)
-        start_wind.clicked.connect(lambda *_: on_start("wind"))
-        start_h2 = QPushButton("Start a green hydrogen project  →")
-        start_h2.setCursor(Qt.CursorShape.PointingHandCursor)
-        start_h2.clicked.connect(lambda *_: on_start("hydrogen"))
-        start_bio = QPushButton("Start a biomass project  →")
-        start_bio.setCursor(Qt.CursorShape.PointingHandCursor)
-        start_bio.clicked.connect(lambda *_: on_start("biomass"))
-        compare = QPushButton("Compare technologies  →")
-        compare.setToolTip("Photovoltaic and wind side by side: cost of energy, payback, CO2")
-        compare.setCursor(Qt.CursorShape.PointingHandCursor)
-        compare.clicked.connect(lambda *_: on_start("compare"))
-        row = QHBoxLayout()
-        row.setSpacing(12)
-        row.addWidget(start)
-        row.addWidget(start_wind)
-        row.addStretch(1)
-        text.addLayout(row)
-        text.addSpacing(10)
-        row2 = QHBoxLayout()
-        row2.setSpacing(12)
-        row2.addWidget(start_bio)
-        row2.addWidget(start_h2)
-        row2.addStretch(1)
-        text.addLayout(row2)
-        text.addSpacing(10)
-        row3 = QHBoxLayout()
-        row3.addWidget(compare)
-        row3.addStretch(1)
-        text.addLayout(row3)
+        self.zone = CompareZone(tuple(t[0] for t in TECHNOLOGIES), on_compare)
+        text.addWidget(self.zone)
 
         top = QHBoxLayout()
         top.setSpacing(28)
@@ -100,6 +70,28 @@ class HomePage(StepPage):
         root.addLayout(top)
         root.addSpacing(26)
 
+        root.addWidget(make_label("What you can size  ·  click to start, drag to compare",
+                                  "sectionTitle", wrap=False))
+        root.addSpacing(10)
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(14)
+        grid.setVerticalSpacing(14)
+        for i, (key, title, text, available) in enumerate(TECHNOLOGIES):
+            frame, layout = make_card(
+                "cardActive" if available else "cardDim",
+                TechCard(key, on_start, draggable=available))
+            frame.setToolTip("Click to start a project, or drag into Compare")
+            top = QHBoxLayout()
+            top.addWidget(IconTile(key))
+            top.addStretch(1)
+            top.addWidget(make_pill("Available" if available else "Planned", available))
+            layout.addLayout(top)
+            layout.addWidget(make_label(title, "cardTitle"))
+            layout.addWidget(make_label(text, "cardText"))
+            layout.addStretch(1)
+            grid.addWidget(frame, i // 2, i % 2)
+        root.addLayout(grid)
+        root.addSpacing(26)
         benefits = QHBoxLayout()
         benefits.setSpacing(14)
         for icon, title, text in BENEFITS:
@@ -110,25 +102,6 @@ class HomePage(StepPage):
             layout.addStretch(1)
             benefits.addWidget(frame, 1)
         root.addLayout(benefits)
-        root.addSpacing(26)
-
-        root.addWidget(make_label("What you can size", "sectionTitle", wrap=False))
-        root.addSpacing(10)
-        grid = QGridLayout()
-        grid.setHorizontalSpacing(14)
-        grid.setVerticalSpacing(14)
-        for i, (icon, title, text, available) in enumerate(TECHNOLOGIES):
-            frame, layout = make_card("cardActive" if available else "cardDim")
-            top = QHBoxLayout()
-            top.addWidget(IconTile(icon))
-            top.addStretch(1)
-            top.addWidget(make_pill("Available" if available else "Planned", available))
-            layout.addLayout(top)
-            layout.addWidget(make_label(title, "cardTitle"))
-            layout.addWidget(make_label(text, "cardText"))
-            layout.addStretch(1)
-            grid.addWidget(frame, i // 2, i % 2)
-        root.addLayout(grid)
         root.addSpacing(18)
         root.addWidget(make_label(
             "For preliminary and educational use. Results are not a substitute for detailed "

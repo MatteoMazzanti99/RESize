@@ -7,6 +7,7 @@ from dataclasses import replace
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QFormLayout,
     QGroupBox,
@@ -17,11 +18,15 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from resize_energy.core.biomass_design import BiomassInputs
 from resize_energy.core.comparison import (
+    TECH_NAMES,
+    TECHS,
     ComparisonInputs,
     CostAssumptions,
     compare_technologies,
 )
+from resize_energy.core.fuel_library import SUBSTRATES
 from resize_energy.core.nasa_power import NasaPowerError, fetch_wind_climate
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.core.turbine_library import load_library
@@ -39,6 +44,35 @@ COMPARE_STEP_NAMES = ["Site and demand", "Plant assumptions", "Costs and prices"
                       "Comparison"]
 
 
+class CompareSelection:
+    """The technologies chosen on the home page (always in the canonical order)."""
+
+    def __init__(self, techs: tuple[str, ...] = ("pv", "wind")) -> None:
+        self.techs = techs
+
+    def has(self, key: str) -> bool:
+        return key in self.techs
+
+    @property
+    def techs(self) -> tuple[str, ...]:
+        return self._techs
+
+    @techs.setter
+    def techs(self, value: tuple[str, ...]) -> None:
+        self._techs = tuple(t for t in TECHS if t in value)
+
+    def names(self) -> str:
+        names = [TECH_NAMES[t] for t in self._techs]
+        return ", ".join(names[:-1]) + " and " + names[-1] if len(names) > 1 else "".join(names)
+
+    # the resource groups are needed by a technology or by the hydrogen plant
+    def needs_sun(self) -> bool:
+        return self.has("pv") or self.has("hydrogen")
+
+    def needs_wind(self) -> bool:
+        return self.has("wind") or self.has("hydrogen")
+
+
 def _warn(page: StepPage, items: list[tuple[str, NumberField]]) -> bool:
     error = first_error(items)
     if error:
@@ -48,10 +82,11 @@ def _warn(page: StepPage, items: list[tuple[str, NumberField]]) -> bool:
 
 
 class CompareSitePage(StepPage):
-    def __init__(self) -> None:
+    def __init__(self, selection: CompareSelection | None = None) -> None:
         super().__init__()
+        self.selection = selection or CompareSelection()
         self.setTitle("1. Site and demand")
-        self.setSubTitle("One site and one demand: both technologies are sized for the same job.")
+        self.setSubTitle("One site and one demand: every technology is sized for the same job.")
         self._implied_pr: float | None = None
 
         self.lat = NumberField(45.07, -90, 90, 4, "deg N")
@@ -82,13 +117,13 @@ class CompareSitePage(StepPage):
         pf.addRow("Longitude (east positive)", self.lon)
         pf.addRow("Tilt of the PV modules", self.tilt)
         pf.addRow("Azimuth (0 = south)", self.azimuth)
-        pf.addRow("Annual electricity demand", self.demand)
+        pf.addRow("Annual energy demand (kWh of electricity)", self.demand)
         pf.addRow("Share of the demand to cover", self.coverage)
 
-        sun = QGroupBox("Solar resource")
+        self.sun_box = sun = QGroupBox("Solar resource")
         sf = QFormLayout(sun)
         sf.addRow("Annual in-plane irradiation H", self.irr)
-        wind = QGroupBox("Wind resource")
+        self.wind_box = wind = QGroupBox("Wind resource")
         wf = QFormLayout(wind)
         wf.addRow("Mean wind speed", self.speed)
         wf.addRow("... measured at height", self.ref_height)
@@ -112,16 +147,26 @@ class CompareSitePage(StepPage):
         layout.addLayout(row)
         layout.addStretch(1)
 
+    def initializePage(self) -> None:
+        sel = self.selection
+        self.sun_box.setVisible(sel.needs_sun())
+        self.wind_box.setVisible(sel.needs_wind())
+        self.setSubTitle(f"One site and one demand: {sel.names()} are sized for the same job.")
+
     def implied_pr(self) -> float | None:
         return self._implied_pr
 
     def _items(self) -> list[tuple[str, NumberField]]:
-        return [("Latitude", self.lat), ("Longitude", self.lon), ("Tilt", self.tilt),
-                ("Azimuth", self.azimuth), ("Annual demand", self.demand),
-                ("Coverage", self.coverage), ("Irradiation", self.irr),
-                ("Mean wind speed", self.speed), ("Reference height", self.ref_height),
-                ("Weibull k", self.k), ("Shear exponent", self.alpha),
-                ("Elevation", self.elevation), ("Temperature", self.temperature)]
+        items = [("Latitude", self.lat), ("Longitude", self.lon), ("Tilt", self.tilt),
+                 ("Azimuth", self.azimuth), ("Annual demand", self.demand),
+                 ("Coverage", self.coverage)]
+        if self.selection.needs_sun():
+            items.append(("Irradiation", self.irr))
+        if self.selection.needs_wind():
+            items += [("Mean wind speed", self.speed), ("Reference height", self.ref_height),
+                      ("Weibull k", self.k), ("Shear exponent", self.alpha),
+                      ("Elevation", self.elevation), ("Temperature", self.temperature)]
+        return items
 
     def _fetch(self) -> None:
         error = first_error([("Latitude", self.lat), ("Longitude", self.lon),
@@ -163,11 +208,13 @@ class CompareSitePage(StepPage):
 class ComparePlantPage(StepPage):
     GENERIC = "Generic 2 MW turbine"
 
-    def __init__(self, site: CompareSitePage) -> None:
+    def __init__(self, site: CompareSitePage, selection: CompareSelection | None = None) -> None:
         super().__init__()
         self.site = site
+        self.selection = selection or CompareSelection()
         self.setTitle("2. Plant assumptions")
-        self.setSubTitle("Performance of the PV plant and the turbine used for the comparison.")
+        self.setSubTitle("Performance of the PV plant, the turbine, the biogas feed and the "
+                         "hydrogen source.")
         self.library = load_library()
 
         self.pr = NumberField(0.80, 0.5, 0.95, 2, "", "pv.performance_ratio")
@@ -180,20 +227,46 @@ class ComparePlantPage(StepPage):
         for turbine in self.library:
             self.picker.addItem(turbine.label)
 
-        pv_box = QGroupBox("Photovoltaic")
-        pf = QFormLayout(pv_box)
+        names = [s.name for s in SUBSTRATES]
+        self.sub_a = QComboBox()
+        self.sub_b = QComboBox()
+        for name in names:
+            self.sub_a.addItem(name)
+            self.sub_b.addItem(name)
+        self.sub_a.setCurrentIndex(2 if len(names) > 2 else 0)
+        self.share_b = NumberField(50, 0, 100, 0, "% of the feed (mass)", "biomass.biogas_yield")
+        self.hrt = NumberField(BiomassInputs().hrt_days, 10, 120, 0, "days", "biomass.digester")
+        self.h2_pv = QCheckBox("Photovoltaic")
+        self.h2_pv.setChecked(True)
+        self.h2_wind = QCheckBox("Wind")
+
+        self.pv_box = QGroupBox("Photovoltaic")
+        pf = QFormLayout(self.pv_box)
         pf.addRow("Performance ratio (PR)", self.pr)
-        wind_box = QGroupBox("Wind")
-        wf = QFormLayout(wind_box)
+        self.wind_box = QGroupBox("Wind")
+        wf = QFormLayout(self.wind_box)
         wf.addRow("Turbine model", self.picker)
         wf.addRow("Hub height", self.hub)
         wf.addRow("Turbine availability", self.availability)
         wf.addRow("Other losses (wake, electrical, ...)", self.losses)
+        self.bio_box = QGroupBox("Biomass: biogas CHP (electricity-led)")
+        bf = QFormLayout(self.bio_box)
+        bf.addRow("Substrate A", self.sub_a)
+        bf.addRow("Substrate B", self.sub_b)
+        bf.addRow("Share of substrate B", self.share_b)
+        bf.addRow("Retention time in the digester", self.hrt)
+        self.h2_box = QGroupBox("Green hydrogen: where the electricity comes from")
+        hl = QHBoxLayout(self.h2_box)
+        hl.addWidget(self.h2_pv)
+        hl.addWidget(self.h2_wind)
+        hl.addStretch(1)
 
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
-        layout.addWidget(pv_box)
-        layout.addWidget(wind_box)
+        layout.addWidget(self.pv_box)
+        layout.addWidget(self.wind_box)
+        layout.addWidget(self.bio_box)
+        layout.addWidget(self.h2_box)
         layout.addWidget(_hint(
             "The PV array is sized exactly on the target. The wind plant uses a whole number "
             "of the chosen turbines, so a large turbine on a small demand overshoots: pick a "
@@ -205,6 +278,17 @@ class ComparePlantPage(StepPage):
         implied = self.site.implied_pr()
         if implied and 0.5 <= implied <= 0.95:
             self.pr.set_value(round(implied, 2))
+        sel = self.selection
+        self.pv_box.setVisible(sel.needs_sun())
+        self.wind_box.setVisible(sel.needs_wind())
+        self.bio_box.setVisible(sel.has("biomass"))
+        self.h2_box.setVisible(sel.has("hydrogen"))
+
+    def biomass(self) -> BiomassInputs:
+        return BiomassInputs(
+            pathway="biogas", substrate_a=SUBSTRATES[self.sub_a.currentIndex()],
+            substrate_b=SUBSTRATES[self.sub_b.currentIndex()],
+            share_b=self.share_b.value() / 100.0, hrt_days=self.hrt.value())
 
     def turbine(self) -> TurbineSpec:
         hub = self.hub.value()
@@ -214,45 +298,80 @@ class ComparePlantPage(StepPage):
         return replace(self.library[index - 1].to_spec(), hub_height_m=hub)
 
     def validatePage(self) -> bool:
-        return _warn(self, [("Performance ratio", self.pr), ("Hub height", self.hub),
-                            ("Availability", self.availability), ("Other losses", self.losses)])
+        sel = self.selection
+        items: list[tuple[str, NumberField]] = []
+        if sel.needs_sun():
+            items.append(("Performance ratio", self.pr))
+        if sel.needs_wind():
+            items += [("Hub height", self.hub), ("Availability", self.availability),
+                      ("Other losses", self.losses)]
+        if sel.has("biomass"):
+            items += [("Share of substrate B", self.share_b), ("Retention time", self.hrt)]
+        if not _warn(self, items):
+            return False
+        if sel.has("hydrogen") and not (self.h2_pv.isChecked() or self.h2_wind.isChecked()):
+            QMessageBox.warning(self, "Check the value",
+                                "Choose PV, wind or both as the electricity of the hydrogen.")
+            return False
+        return True
 
 
 class CompareCostPage(StepPage):
-    def __init__(self) -> None:
+    def __init__(self, selection: CompareSelection | None = None) -> None:
         super().__init__()
+        self.selection = selection or CompareSelection()
         c = CostAssumptions()
         self.setTitle("3. Costs and prices")
         self.setSubTitle("Round placeholder values: replace them with local quotes and tariffs.")
 
-        self.pv_capex = NumberField(c.pv_capex_eur_per_kwp, 1, 20000, 0, "euro/kWp", "econ.lcoe")
-        self.pv_om = NumberField(c.pv_om_eur_per_kwp_year, 0, 1000, 1, "euro/kWp per year",
-                                 "econ.lcoe")
-        self.pv_life = NumberField(c.pv_lifetime_years, 1, 60, 0, "years", "econ.crf")
-        self.pv_co2 = NumberField(c.pv_lifecycle_g_per_kwh, 0, 500, 0, "g CO2/kWh", "econ.co2")
-        self.w_capex = NumberField(c.wind_capex_eur_per_kw, 1, 20000, 0, "euro/kW", "econ.lcoe")
-        self.w_om = NumberField(c.wind_om_eur_per_kw_year, 0, 1000, 1, "euro/kW per year",
-                                "econ.lcoe")
-        self.w_life = NumberField(c.wind_lifetime_years, 1, 60, 0, "years", "econ.crf")
-        self.w_co2 = NumberField(c.wind_lifecycle_g_per_kwh, 0, 500, 0, "g CO2/kWh", "econ.co2")
-        self.rate = NumberField(c.discount_rate * 100, 0, 30, 1, "%", "econ.crf")
-        self.retail = NumberField(c.retail_price_eur_per_kwh, 0.001, 5, 3, "euro/kWh",
-                                  "econ.savings")
-        self.export = NumberField(c.export_price_eur_per_kwh, 0, 5, 3, "euro/kWh", "econ.savings")
-        self.grid = NumberField(c.grid_kg_co2_per_kwh, 0, 2, 3, "kg CO2/kWh", "econ.co2")
+        def nf(value, lo, hi, dec, unit, why="econ.lcoe") -> NumberField:
+            return NumberField(value, lo, hi, dec, unit, why)
 
-        pv_box = QGroupBox("Photovoltaic")
-        pf = QFormLayout(pv_box)
+        self.pv_capex = nf(c.pv_capex_eur_per_kwp, 1, 20000, 0, "euro/kWp")
+        self.pv_om = nf(c.pv_om_eur_per_kwp_year, 0, 1000, 1, "euro/kWp per year")
+        self.pv_life = nf(c.pv_lifetime_years, 1, 60, 0, "years", "econ.crf")
+        self.pv_co2 = nf(c.pv_lifecycle_g_per_kwh, 0, 500, 0, "g CO2/kWh", "econ.co2")
+        self.w_capex = nf(c.wind_capex_eur_per_kw, 1, 20000, 0, "euro/kW")
+        self.w_om = nf(c.wind_om_eur_per_kw_year, 0, 1000, 1, "euro/kW per year")
+        self.w_life = nf(c.wind_lifetime_years, 1, 60, 0, "years", "econ.crf")
+        self.w_co2 = nf(c.wind_lifecycle_g_per_kwh, 0, 500, 0, "g CO2/kWh", "econ.co2")
+        self.b_capex = nf(c.bio_capex_eur_per_kwe, 1, 30000, 0, "euro/kWe")
+        self.b_om = nf(c.bio_om_eur_per_kwe_year, 0, 3000, 0, "euro/kWe per year")
+        self.b_feed = nf(c.bio_feedstock_eur_per_t, 0, 500, 0, "euro per tonne of substrate")
+        self.b_life = nf(c.bio_lifetime_years, 1, 60, 0, "years", "econ.crf")
+        self.b_co2 = nf(c.bio_lifecycle_g_per_kwh, 0, 1000, 0, "g CO2/kWh", "econ.co2")
+        self.h_capex = nf(c.h2_electrolyser_capex_eur_per_kw, 100, 10000, 0, "euro/kW")
+        self.h_price = nf(c.h2_reference_price_eur_per_kg, 0.1, 30, 2, "euro/kg", "econ.savings")
+        self.h_ref_co2 = nf(c.h2_reference_kg_co2_per_kg, 0.5, 30, 1, "kg CO2/kg", "econ.co2")
+        self.rate = nf(c.discount_rate * 100, 0, 30, 1, "%", "econ.crf")
+        self.retail = nf(c.retail_price_eur_per_kwh, 0.001, 5, 3, "euro/kWh", "econ.savings")
+        self.export = nf(c.export_price_eur_per_kwh, 0, 5, 3, "euro/kWh", "econ.savings")
+        self.grid = nf(c.grid_kg_co2_per_kwh, 0, 2, 3, "kg CO2/kWh", "econ.co2")
+
+        self.pv_box = QGroupBox("Photovoltaic (also feeds the hydrogen)")
+        pf = QFormLayout(self.pv_box)
         pf.addRow("Investment (CAPEX)", self.pv_capex)
         pf.addRow("Operation and maintenance", self.pv_om)
         pf.addRow("Lifetime", self.pv_life)
         pf.addRow("Life-cycle emissions", self.pv_co2)
-        wind_box = QGroupBox("Wind")
-        wf = QFormLayout(wind_box)
+        self.wind_box = QGroupBox("Wind (also feeds the hydrogen)")
+        wf = QFormLayout(self.wind_box)
         wf.addRow("Investment (CAPEX)", self.w_capex)
         wf.addRow("Operation and maintenance", self.w_om)
         wf.addRow("Lifetime", self.w_life)
         wf.addRow("Life-cycle emissions", self.w_co2)
+        self.bio_box = QGroupBox("Biomass: biogas CHP with digester")
+        bf = QFormLayout(self.bio_box)
+        bf.addRow("Investment (CAPEX)", self.b_capex)
+        bf.addRow("Operation and maintenance", self.b_om)
+        bf.addRow("Substrate cost", self.b_feed)
+        bf.addRow("Lifetime", self.b_life)
+        bf.addRow("Life-cycle emissions", self.b_co2)
+        self.h2_box = QGroupBox("Green hydrogen")
+        hf = QFormLayout(self.h2_box)
+        hf.addRow("Electrolyser CAPEX", self.h_capex)
+        hf.addRow("Hydrogen from natural gas: price", self.h_price)
+        hf.addRow("Hydrogen from natural gas: emissions", self.h_ref_co2)
         common = QGroupBox("Prices and rates")
         cf = QFormLayout(common)
         cf.addRow("Discount rate", self.rate)
@@ -260,27 +379,30 @@ class CompareCostPage(StepPage):
         cf.addRow("Price for exported energy", self.export)
         cf.addRow("Grid emission factor", self.grid)
 
-        self._items = [
-            ("PV CAPEX", self.pv_capex), ("PV O&M", self.pv_om), ("PV lifetime", self.pv_life),
-            ("PV life-cycle emissions", self.pv_co2), ("Wind CAPEX", self.w_capex),
-            ("Wind O&M", self.w_om), ("Wind lifetime", self.w_life),
-            ("Wind life-cycle emissions", self.w_co2), ("Discount rate", self.rate),
-            ("Retail price", self.retail), ("Export price", self.export),
-            ("Grid emission factor", self.grid)]
-
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
-        row = QHBoxLayout()
-        row.addWidget(pv_box)
-        row.addWidget(wind_box)
-        layout.addLayout(row)
+        row1 = QHBoxLayout()
+        row1.addWidget(self.pv_box)
+        row1.addWidget(self.wind_box)
+        row2 = QHBoxLayout()
+        row2.addWidget(self.bio_box)
+        row2.addWidget(self.h2_box)
+        layout.addLayout(row1)
+        layout.addLayout(row2)
         layout.addWidget(common)
         layout.addWidget(_hint(
             "Defaults are round, typical orders of magnitude for utility and commercial plants "
-            "in Europe, not quotes. Life-cycle emissions are typical literature values (tens "
-            "of g/kWh for PV, about 10 for onshore wind). Include grid connection and permits "
-            "in the CAPEX if they matter. No incentives or taxes are modelled."))
+            "in Europe, not quotes. Include grid connection and permits in the CAPEX if they "
+            "matter. The hydrogen plant also uses the PV and wind costs and the other electrolyser "
+            "values of the hydrogen flow (stack, storage, water). No incentives or taxes."))
         layout.addStretch(1)
+
+    def initializePage(self) -> None:
+        sel = self.selection
+        self.pv_box.setVisible(sel.needs_sun())
+        self.wind_box.setVisible(sel.needs_wind())
+        self.bio_box.setVisible(sel.has("biomass"))
+        self.h2_box.setVisible(sel.has("hydrogen"))
 
     def costs(self) -> CostAssumptions:
         return CostAssumptions(
@@ -296,10 +418,34 @@ class CompareCostPage(StepPage):
             retail_price_eur_per_kwh=self.retail.value(),
             export_price_eur_per_kwh=self.export.value(),
             grid_kg_co2_per_kwh=self.grid.value(),
+            bio_capex_eur_per_kwe=self.b_capex.value(),
+            bio_om_eur_per_kwe_year=self.b_om.value(),
+            bio_feedstock_eur_per_t=self.b_feed.value(),
+            bio_lifetime_years=self.b_life.value(),
+            bio_lifecycle_g_per_kwh=self.b_co2.value(),
+            h2_electrolyser_capex_eur_per_kw=self.h_capex.value(),
+            h2_reference_price_eur_per_kg=self.h_price.value(),
+            h2_reference_kg_co2_per_kg=self.h_ref_co2.value(),
         )
 
     def validatePage(self) -> bool:
-        return _warn(self, self._items)
+        sel = self.selection
+        items = [("Discount rate", self.rate), ("Retail price", self.retail),
+                 ("Export price", self.export), ("Grid emission factor", self.grid)]
+        if sel.needs_sun():
+            items += [("PV CAPEX", self.pv_capex), ("PV O&M", self.pv_om),
+                      ("PV lifetime", self.pv_life), ("PV life-cycle emissions", self.pv_co2)]
+        if sel.needs_wind():
+            items += [("Wind CAPEX", self.w_capex), ("Wind O&M", self.w_om),
+                      ("Wind lifetime", self.w_life), ("Wind life-cycle emissions", self.w_co2)]
+        if sel.has("biomass"):
+            items += [("Biogas CAPEX", self.b_capex), ("Biogas O&M", self.b_om),
+                      ("Substrate cost", self.b_feed), ("Biogas lifetime", self.b_life),
+                      ("Biogas life-cycle emissions", self.b_co2)]
+        if sel.has("hydrogen"):
+            items += [("Electrolyser CAPEX", self.h_capex), ("Reference hydrogen price", self.h_price),
+                      ("Reference hydrogen emissions", self.h_ref_co2)]
+        return _warn(self, items)
 
 
 class CompareResultsPage(BaseResultsPage):
@@ -309,11 +455,12 @@ class CompareResultsPage(BaseResultsPage):
     pdf_name = "RESize_comparison_report.pdf"
 
     def __init__(self, site: CompareSitePage, plant: ComparePlantPage,
-                 costs: CompareCostPage) -> None:
+                 costs: CompareCostPage, selection: CompareSelection | None = None) -> None:
         self.site, self.plant, self.costs_page = site, plant, costs
+        self.selection = selection or CompareSelection()
         super().__init__()
         self.setTitle("4. Comparison")
-        self.setSubTitle("Photovoltaic and wind side by side. Pick a step on the right for the why.")
+        self.setSubTitle("Side by side. Pick a step on the right for the why.")
 
     def _compute(self) -> tuple[object, object, list[Finding], str, str]:
         s, p = self.site, self.plant
@@ -335,6 +482,11 @@ class CompareResultsPage(BaseResultsPage):
             performance_ratio=p.pr.value(),
             wind=wind,
             costs=self.costs_page.costs(),
+            techs=self.selection.techs,
+            latitude_deg=s.lat.value(),
+            biomass=p.biomass(),
+            h2_use_pv=p.h2_pv.isChecked(),
+            h2_use_wind=p.h2_wind.isChecked(),
         )
         result = compare_technologies(inputs)
         findings = check_comparison(inputs, result)
@@ -342,6 +494,11 @@ class CompareResultsPage(BaseResultsPage):
         light = build_comparison_report(inputs, result, findings, site_note=note, theme="light")
         dark = build_comparison_report(inputs, result, findings, site_note=note, theme="screen")
         return inputs, result, findings, light, dark
+
+    def initializePage(self) -> None:
+        self.setSubTitle(f"{self.selection.names()} side by side. Pick a step on the right "
+                         "for the why.")
+        super().initializePage()
 
     def _worked(self, key: str) -> str | None:
         return compare_worked_example(key, self._inputs, self._design)

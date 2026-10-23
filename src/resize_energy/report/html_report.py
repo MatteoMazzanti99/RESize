@@ -226,11 +226,15 @@ def _bar_rows(label: str, items: list[tuple[str, float, str]]) -> str:
     return "".join(out)
 
 
+_TECH_COLORS = {"pv": "#0A7452", "wind": "#1F5FBF", "biomass": "#8F5600", "hydrogen": "#7B3FB8"}
+_TECH_SHORT = {"pv": "PV", "wind": "Wind", "biomass": "Biomass", "hydrogen": "Hydrogen"}
+
+
 def build_comparison_report(
     inp: ComparisonInputs,
     r: ComparisonResult,
     findings: list[Finding],
-    title: str = "Technology comparison: photovoltaic vs wind",
+    title: str = "",
     site_note: str = "",
     theme: str = "light",
 ) -> str:
@@ -238,62 +242,86 @@ def build_comparison_report(
     look = _THEMES.get(theme, _THEMES["light"])
     colors = look["colors"]
     c = inp.costs
-    a, b = r.pv, r.wind
+    techs = r.techs
+    title = title or "Technology comparison: " + " vs ".join(_TECH_SHORT[t.key] for t in techs)
 
-    def two(label: str, fa: str, fb: str) -> str:
-        return (f"<tr><td>{escape(label)}</td><td align=\"right\"><b>{escape(fa)}</b></td>"
-                f"<td align=\"right\"><b>{escape(fb)}</b></td></tr>")
+    def line(label: str, values: list[str]) -> str:
+        cells = "".join(f'<td align="right"><b>{escape(v)}</b></td>' for v in values)
+        return f"<tr><td>{escape(label)}</td>{cells}</tr>"
 
+    def unit(t) -> str:
+        return "kWh (H2, LHV)" if t.product == "hydrogen" else "kWh"
+
+    head = "".join(f'<td align="right"><b>{escape(t.name)}</b></td>' for t in techs)
     table = "".join([
-        two("Installed power", f"{a.installed_kw:,.0f} kW(p)", f"{b.installed_kw:,.0f} kW"),
-        two("Energy per year", f"{a.energy_kwh:,.0f} kWh", f"{b.energy_kwh:,.0f} kWh"),
-        two("Demand covered", f"{a.coverage:.0%}", f"{b.coverage:.0%}"),
-        two("Full-load hours", f"{a.full_load_hours:,.0f} h", f"{b.full_load_hours:,.0f} h"),
-        two("Investment (CAPEX)", f"{a.capex_eur:,.0f} euro", f"{b.capex_eur:,.0f} euro"),
-        two("O&M per year", f"{a.om_eur_per_year:,.0f} euro", f"{b.om_eur_per_year:,.0f} euro"),
-        two("LCOE", f"{a.lcoe_eur_per_kwh:.3f} euro/kWh", f"{b.lcoe_eur_per_kwh:.3f} euro/kWh"),
-        two("Savings per year", f"{a.savings_eur_per_year:,.0f} euro",
-            f"{b.savings_eur_per_year:,.0f} euro"),
-        two("Simple payback", f"{_years(a.payback_years)} years", f"{_years(b.payback_years)} years"),
-        two("Discounted payback", f"{_years(a.discounted_payback_years)} years",
-            f"{_years(b.discounted_payback_years)} years"),
-        two("Net present value", f"{a.npv_eur:,.0f} euro", f"{b.npv_eur:,.0f} euro"),
-        two("CO2 avoided per year", f"{a.co2_avoided_t_per_year:,.0f} t",
-            f"{b.co2_avoided_t_per_year:,.0f} t"),
-        two("CO2 avoided over the lifetime", f"{a.co2_avoided_lifetime_t:,.0f} t",
-            f"{b.co2_avoided_lifetime_t:,.0f} t"),
+        line("Installed power", [f"{t.installed_kw:,.0f} kW" for t in techs]),
+        line("Energy per year", [f"{t.energy_kwh:,.0f} {unit(t)}" for t in techs]),
+        line("Demand covered", [f"{t.coverage:.0%}" for t in techs]),
+        line("Full-load hours", [f"{t.full_load_hours:,.0f} h" for t in techs]),
+        line("Investment (CAPEX)", [f"{t.capex_eur:,.0f} euro" for t in techs]),
+        line("Running costs per year", [f"{t.om_eur_per_year:,.0f} euro" for t in techs]),
+        line("Cost of energy (LCOE)", [f"{t.lcoe_eur_per_kwh:.3f} euro/kWh" for t in techs]),
+        line("Savings per year", [f"{t.savings_eur_per_year:,.0f} euro" for t in techs]),
+        line("Simple payback", [f"{_years(t.payback_years)} years" for t in techs]),
+        line("Discounted payback", [f"{_years(t.discounted_payback_years)} years"
+                                    for t in techs]),
+        line("Net present value", [f"{t.npv_eur:,.0f} euro" for t in techs]),
+        line("CO2 per kWh (life cycle)", [f"{t.co2_own_kg_per_kwh * 1000:,.0f} g" for t in techs]),
+        line("CO2 avoided per year", [f"{t.co2_avoided_t_per_year:,.0f} t" for t in techs]),
+        line("CO2 avoided over the lifetime", [f"{t.co2_avoided_lifetime_t:,.0f} t"
+                                               for t in techs]),
     ])
-    pv_color, wind_color = ("#0A7452", "#1F5FBF")
-
     bars = "".join([
         _bar_rows("Cost of energy, euro/kWh (lower is better)", [
-            (f"PV {a.lcoe_eur_per_kwh:.3f}", a.lcoe_eur_per_kwh, pv_color),
-            (f"Wind {b.lcoe_eur_per_kwh:.3f}", b.lcoe_eur_per_kwh, wind_color)]),
+            (f"{_TECH_SHORT[t.key]} {t.lcoe_eur_per_kwh:.3f}", t.lcoe_eur_per_kwh,
+             _TECH_COLORS[t.key]) for t in techs]),
         _bar_rows("Simple payback, years (lower is better)", [
-            (f"PV {_years(a.payback_years)}", a.payback_years, pv_color),
-            (f"Wind {_years(b.payback_years)}", b.payback_years, wind_color)]),
+            (f"{_TECH_SHORT[t.key]} {_years(t.payback_years)}", t.payback_years,
+             _TECH_COLORS[t.key]) for t in techs]),
         _bar_rows("CO2 avoided per year, tonnes (higher is better)", [
-            (f"PV {a.co2_avoided_t_per_year:,.0f}", a.co2_avoided_t_per_year, pv_color),
-            (f"Wind {b.co2_avoided_t_per_year:,.0f}", b.co2_avoided_t_per_year, wind_color)]),
+            (f"{_TECH_SHORT[t.key]} {t.co2_avoided_t_per_year:,.0f}",
+             max(0.0, t.co2_avoided_t_per_year), _TECH_COLORS[t.key]) for t in techs]),
     ])
-    inputs_rows = "".join([
-        _row("Annual electricity demand / coverage",
+    rows = [
+        _row("Annual energy demand / coverage",
              f"{inp.annual_demand_kwh:,.0f} kWh / {inp.coverage:.0%}"),
-        _row("Irradiation / performance ratio",
-             f"{inp.annual_irradiation_kwh_m2:,.0f} kWh/m2 / {inp.performance_ratio:.2f}"),
-        _row("Wind speed / turbine",
-             f"{inp.wind.mean_speed_ref_ms:.2f} m/s at {inp.wind.ref_height_m:.0f} m / "
-             f"{inp.wind.turbine.name} ({inp.wind.turbine.rated_power_kw:,.0f} kW)"),
-        _row("PV cost", f"{c.pv_capex_eur_per_kwp:,.0f} euro/kWp + {c.pv_om_eur_per_kwp_year:,.0f}"
-             f" euro/kWp/year, {c.pv_lifetime_years:.0f} years, {c.pv_lifecycle_g_per_kwh:.0f} g/kWh"),
-        _row("Wind cost", f"{c.wind_capex_eur_per_kw:,.0f} euro/kW + {c.wind_om_eur_per_kw_year:,.0f}"
-             f" euro/kW/year, {c.wind_lifetime_years:.0f} years, "
-             f"{c.wind_lifecycle_g_per_kwh:.0f} g/kWh"),
         _row("Discount rate", f"{c.discount_rate:.1%}"),
         _row("Retail / export price",
              f"{c.retail_price_eur_per_kwh:.3f} / {c.export_price_eur_per_kwh:.3f} euro/kWh"),
         _row("Grid emission factor", f"{c.grid_kg_co2_per_kwh:.3f} kg CO2/kWh"),
-    ])
+    ]
+    keys = [t.key for t in techs]
+    if "pv" in keys or ("hydrogen" in keys and inp.h2_use_pv):
+        rows.append(_row("Irradiation / performance ratio",
+                         f"{inp.annual_irradiation_kwh_m2:,.0f} kWh/m2 / "
+                         f"{inp.performance_ratio:.2f}"))
+    if "wind" in keys or ("hydrogen" in keys and inp.h2_use_wind):
+        rows.append(_row("Wind speed / turbine",
+                         f"{inp.wind.mean_speed_ref_ms:.2f} m/s at {inp.wind.ref_height_m:.0f} m"
+                         f" / {inp.wind.turbine.name} ({inp.wind.turbine.rated_power_kw:,.0f} kW)"))
+    if "pv" in keys:
+        rows.append(_row("PV cost", f"{c.pv_capex_eur_per_kwp:,.0f} euro/kWp + "
+                         f"{c.pv_om_eur_per_kwp_year:,.0f} euro/kWp/year, "
+                         f"{c.pv_lifetime_years:.0f} years, {c.pv_lifecycle_g_per_kwh:.0f} g/kWh"))
+    if "wind" in keys:
+        rows.append(_row("Wind cost", f"{c.wind_capex_eur_per_kw:,.0f} euro/kW + "
+                         f"{c.wind_om_eur_per_kw_year:,.0f} euro/kW/year, "
+                         f"{c.wind_lifetime_years:.0f} years, {c.wind_lifecycle_g_per_kwh:.0f} g/kWh"))
+    if "biomass" in keys:
+        b = inp.biomass
+        rows.append(_row("Biogas CHP", f"{c.bio_capex_eur_per_kwe:,.0f} euro/kWe + "
+                         f"{c.bio_om_eur_per_kwe_year:,.0f} euro/kWe/year + feedstock "
+                         f"{c.bio_feedstock_eur_per_t:,.0f} euro/t, {c.bio_lifetime_years:.0f} years, "
+                         f"{c.bio_lifecycle_g_per_kwh:.0f} g/kWh; {1 - b.share_b:.0%} "
+                         f"{b.substrate_a.name} + {b.share_b:.0%} {b.substrate_b.name}"))
+    if "hydrogen" in keys:
+        src = " + ".join(n for n, on in (("PV", inp.h2_use_pv), ("wind", inp.h2_use_wind)) if on)
+        rows.append(_row("Green hydrogen",
+                         f"{c.h2_electrolyser_capex_eur_per_kw:,.0f} euro/kW electrolyser, fed by "
+                         f"{src} (invented hourly year); reference: natural gas hydrogen "
+                         f"{c.h2_reference_price_eur_per_kg:.2f} euro/kg, "
+                         f"{c.h2_reference_kg_co2_per_kg:.1f} kg CO2/kg"))
+    inputs_rows = "".join(rows)
     verdict = (
         f"<ul><li>Lowest cost of energy (LCOE): <b>{escape(r.lowest_lcoe)}</b></li>"
         f"<li>Fastest simple payback: <b>{escape(r.fastest_payback)}</b></li>"
@@ -316,8 +344,7 @@ def build_comparison_report(
 </style></head><body>
 <h1>{escape(title)}</h1>{note}
 <h2>1. Comparison</h2>
-<table cellpadding="3"><tr><td></td><td align="right"><b>Photovoltaic</b></td>
-<td align="right"><b>Wind</b></td></tr>{table}</table>
+<table cellpadding="3"><tr><td></td>{head}</tr>{table}</table>
 <h2>2. Which is better, and for what?</h2>{verdict}
 <table>{bars}</table>
 <h2>3. Inputs and assumptions</h2><table>{inputs_rows}</table>
