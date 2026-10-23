@@ -79,10 +79,12 @@ WIND_EXPLANATIONS: dict[str, dict[str, str]] = {
             "gives very different energy with different curves."
         ),
         "assumptions": (
-            "A smooth generic curve. For a real turbine, use the manufacturer's measured "
-            "curve (IEC 61400-12-1): the shape near rated speed is rounded in reality."
+            "Either a smooth generic curve or, if you pick a turbine from the library, its "
+            "tabulated curve (read by linear interpolation). Library curves are mostly "
+            "theoretical; a measured curve (IEC 61400-12-1) is better, and the curve is "
+            "corrected for air density in the same simple way in both cases."
         ),
-        "reference": "IEC 61400-12-1; manufacturer datasheet.",
+        "reference": "IEC 61400-12-1; NREL turbine-models (power curve archive); manufacturer datasheet.",
     },
     "wind.cp_betz": {
         "title": "Power coefficient and the Betz limit",

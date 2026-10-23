@@ -40,12 +40,17 @@ def wind_worked_example(key: str, inp: WindInputs, d: WindDesign) -> str | None:
         )
     if key == "wind.power_curve":
         v_mid = 0.5 * (t.cut_in_ms + t.rated_speed_ms)
-        p_mid = wind.generic_power_kw(v_mid, t.rated_power_kw, t.cut_in_ms, t.rated_speed_ms,
-                                      t.cut_out_ms, d.air_density)
+        if t.power_curve:
+            p_mid = wind.curve_power_kw(v_mid, t.power_curve, t.cut_out_ms, d.air_density)
+            kind = f"tabulated curve of {t.name} ({len(t.power_curve)} points, {t.curve_source})"
+        else:
+            p_mid = wind.generic_power_kw(v_mid, t.rated_power_kw, t.cut_in_ms, t.rated_speed_ms,
+                                          t.cut_out_ms, d.air_density)
+            kind = "generic curve"
         return (
             f"Cut-in {t.cut_in_ms:.1f} m/s, rated {t.rated_speed_ms:.1f} m/s "
-            f"({t.rated_power_kw:,.0f} kW), cut-out {t.cut_out_ms:.1f} m/s\n"
-            f"Example: at {v_mid:.1f} m/s the turbine gives {p_mid:,.0f} kW at your density"
+            f"({t.rated_power_kw:,.1f} kW), cut-out {t.cut_out_ms:.1f} m/s; {kind}\n"
+            f"Example: at {v_mid:.1f} m/s the turbine gives {p_mid:,.1f} kW at your density"
         )
     if key == "wind.cp_betz":
         return (

@@ -39,18 +39,73 @@ Generic power curve of the default turbine at standard density; tolerance 0.3 %.
 | 9.0 | 2.0 | 7943.9 | 7944.6 | -0.009 | 45.3% | yes |
 | 9.0 | 2.5 | 8218.6 | 8218.4 | +0.003 | 46.9% | yes |
 
-## C. NASA POWER (live data)
+## C. Turbine library vs the generic curve
 
-| Site | Mean speed at 50 m (m/s) | Mean temperature (C) | Elevation (m) | Plausible |
-|---|---|---|---|---|
-| Torino | 2.88 | 11.2 | 706 | yes |
-| Foggia | 5.56 | 16.8 | 128 | yes |
-| Cagliari | 6.26 | 18.2 | 55 | yes |
-| Hamburg | 6.90 | 9.2 | 30 | yes |
+Every turbine of the library, Rayleigh wind (k = 2) with 7 m/s at hub height, standard density. *Capacity factor* uses the tabulated curve; *ratio* is its energy divided by the energy of the generic curve built from the same cut-in / rated / cut-out speeds (it shows how far the generic curve is from published ones).
 
-(Run on GitHub, *PV validation* workflow, 23 Oct 2026. Note Torino: the 50 km grid cell mixes
-the plain with the Alps, hence 706 m and a low speed: a good example of why a smooth
-reanalysis is only a first estimate.)
+| Turbine | Group | Rated kW | D m | Capacity factor | Library / generic |
+|---|---|---|---|---|---|
+| 2023NREL Bespoke 8.3MW 196 | onshore | 8300 | 196 | 41.7% | 1.27 |
+| 2020 ATB NREL Reference 7 MW | onshore | 7000 | 200 | 43.2% | 1.04 |
+| BAR LowSP 6.5MW | onshore | 6500 | 234 | 51.5% | 1.06 |
+| 2023NREL Bespoke 6MW 170 | onshore | 6000 | 170 | 42.6% | 1.24 |
+| 2023NREL Bespoke 6MW 196 | onshore | 6000 | 196 | 48.6% | 1.26 |
+| 2020 ATB NREL Reference 5.5 MW | onshore | 5500 | 175 | 42.6% | 1.06 |
+| BAR BAUa 5MW | onshore | 5000 | 167.4 | 43.1% | 1.07 |
+| BAR HighSP 5MW | onshore | 5000 | 135 | 33.9% | 1.07 |
+| BAR LowSP 4.5MW | onshore | 4500 | 194 | 51.4% | 1.06 |
+| 2020 ATB NREL Reference 4 MW | onshore | 4000 | 150 | 42.9% | 1.03 |
+| IEA Reference 3.4MW 130 | onshore | 3370 | 130 | 43.0% | 1.07 |
+| 2023NREL Bespoke 3.3MW 148 | onshore | 3300 | 148 | 49.4% | 1.28 |
+| BAR LBNL-IEA 3.3 MW | onshore | 3300 | 156 | 48.8% | 1.08 |
+| BAR BAU LowSP 3.25MW | onshore | 3250 | 166 | 51.7% | 1.07 |
+| 2023NREL Bespoke 3MW 127.5 | onshore | 3000 | 127.5 | 45.1% | 1.27 |
+| 2019COE Market Average 2.6MW 121 | onshore | 2550 | 121.2 | 43.4% | 1.03 |
+| 2018 COE Market Average | onshore | 2400 | 116 | 43.0% | 1.02 |
+| 2017 COE Market Average | onshore | 2300 | 113 | 42.8% | 1.02 |
+| Vestas V82 | onshore | 1650 | 82 | 36.8% | 1.53 |
+| DOE GE 1.5 MW | onshore | 1500 | 77 | 38.1% | 2.03 |
+| Vestas V47 | onshore | 660 | 47 | 33.2% | 1.97 |
+| EWT DW54X 1MW 54.1 | distributed | 1000 | 54.1 | 30.9% | 1.48 |
+| EWT DW58 1MW 58 | distributed | 1000 | 58 | 33.7% | 1.62 |
+| EWT DW61 1MW 60.9 | distributed | 1000 | 60.9 | 35.9% | 1.45 |
+| EWT DW52 900kW 51.5 | distributed | 900 | 51.5 | 31.4% | 1.51 |
+| EWT DW54 900kW 54 | distributed | 900 | 54 | 33.4% | 1.45 |
+| V27 | distributed | 225 | 27 | 32.7% | 2.03 |
+| V29 | distributed | 225 | 29 | 35.0% | 1.75 |
+| 2019 COE DW 100 | distributed | 100 | 27.6 | 48.3% | 1.40 |
+| NPS 100c-21 | distributed | 100 | 20.7 | 34.2% | 1.95 |
+| NPS100B-21 100kW 20.7 | distributed | 100 | 20.7 | 34.2% | 1.79 |
+| NPS 100C-24 | distributed | 95 | 24.4 | 43.7% | 1.49 |
+| NPS100B-24 95kW 23.6 | distributed | 95 | 23.6 | 39.4% | 1.89 |
+| NPS 100C-28 | distributed | 90 | 28 | 50.5% | 1.71 |
+| NPS100C-27 90kW 27.4 | distributed | 90 | 27.4 | 49.0% | 1.41 |
+| NPS100C-28 90kW 27.6 | distributed | 90 | 27.6 | 50.0% | 1.47 |
+| FD21-50 | distributed | 61.2 | 21.5 | 45.1% | 1.29 |
+| NPS 60C-24 | distributed | 60 | 24.4 | 53.4% | 1.55 |
+| Entegrity EW50 | distributed | 50 | 14.9 | 31.2% | 0.99 |
+| Bestwind 30 | distributed | 27.2 | 13.1 | 43.1% | 1.27 |
+| 2019 COE DW 20 | distributed | 20 | 12.4 | 49.2% | 1.43 |
+| CF20 | distributed | 20 | 13.1 | 40.8% | 0.88 |
+| Bergey Excel 15 | distributed | 15.6 | 9.6 | 42.4% | 1.26 |
+| CF15 | distributed | 15 | 11.15 | 40.1% | 1.18 |
+| Jacobs 31-20 | distributed | 12 | 9.4 | 39.5% | 1.17 |
+| CF11 | distributed | 11 | 9.36 | 43.3% | 0.92 |
+| CF11A 11kW 11.15 | distributed | 11 | 11.15 | 47.2% | 1.02 |
+| CF10A 10kW 11.15 | distributed | 10 | 11.15 | 49.1% | 1.06 |
+| Bergey Excel 10 | distributed | 8.9 | 7 | 40.2% | 1.15 |
+| SD6 | distributed | 5.2 | 5.5 | 39.2% | 1.18 |
+| Fortis Montana | distributed | 3.31 | 5.04 | 42.5% | 1.22 |
+| Kestrel e400nb | distributed | 2.5 | 4 | 39.5% | 1.20 |
+| Skystream 3.7 | distributed | 2.1 | 3.7 | 39.8% | 1.15 |
+| Pika T701 | distributed | 1.5 | 3 | 38.7% | 1.13 |
+| SWIFT | distributed | 1 | 2.1 | 30.5% | 0.90 |
+
+Ratio library / generic: median 1.24, min 0.88, max 2.03 over 55 turbines.
+
+## D. NASA POWER (live data)
+
+Not run: run with internet access (without --offline).
 
 ## Limits of this validation
 

@@ -101,6 +101,36 @@ def generic_power_kw(
     return rated_power_kw * (v_eq**3 - cut_in_ms**3) / (rated_speed_ms**3 - cut_in_ms**3)
 
 
+def curve_power_kw(
+    v_ms: float,
+    points: tuple[tuple[float, float], ...],
+    cut_out_ms: float,
+    rho: float = RHO_STANDARD,
+) -> float:
+    """Power from a tabulated curve ``((v, P_kW), ...)`` by linear interpolation.
+
+    Same density correction as :func:`generic_power_kw` (the curve is read at the
+    density-equivalent speed). Below the first point and from ``cut_out_ms`` upwards the
+    power is zero; between the last point and the cut-out it stays at the last value.
+    """
+    if v_ms >= cut_out_ms or v_ms < 0 or not points:
+        return 0.0
+    v_eq = v_ms * (rho / RHO_STANDARD) ** (1.0 / 3.0)
+    if v_eq < points[0][0]:
+        return 0.0
+    if v_eq >= points[-1][0]:
+        return points[-1][1]
+    lo, hi = 0, len(points) - 1
+    while hi - lo > 1:  # binary search for the surrounding points
+        mid = (lo + hi) // 2
+        if points[mid][0] <= v_eq:
+            lo = mid
+        else:
+            hi = mid
+    (v0, p0), (v1, p1) = points[lo], points[hi]
+    return p0 + (p1 - p0) * (v_eq - v0) / (v1 - v0)
+
+
 def annual_energy_kwh(
     power_kw: Callable[[float], float], k: float, scale: float, step_ms: float = 0.1,
     v_max_ms: float = 40.0,

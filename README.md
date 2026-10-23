@@ -41,8 +41,14 @@ Start it from the home screen (**Start a wind project**). Steps: site and wind r
 (NASA POWER or your own data, Weibull distribution, shear, air density), demand and losses,
 turbine and layout, results. You get the capacity factor, the energy of one turbine, the number
 of turbines to cover the demand, land use, design checks, **Why?** panels with your numbers and
-a PDF report, like the photovoltaic flow. The default power curve is generic: for a real
-project use the manufacturer's curve and a measured wind resource.
+a PDF report, like the photovoltaic flow.
+
+The turbine step offers a **library of 55 real turbines** (onshore utility scale and small
+distributed machines) with tabulated power curves, taken from the open
+[NREL turbine-models](https://github.com/NREL/turbine-models) repository (BSD-3-Clause, see
+`THIRD_PARTY_NOTICES.md`). Many of those curves are reference or theoretical designs, not
+manufacturer-certified data: for a real project use the manufacturer's curve and a measured
+wind resource. Editing a value switches back to the generic curve.
 
 ## Quick start
 

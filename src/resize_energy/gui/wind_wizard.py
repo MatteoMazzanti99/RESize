@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -15,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from resize_energy.core.nasa_power import NasaPowerError, fetch_wind_climate
+from resize_energy.core.turbine_library import SOURCE, load_library
 from resize_energy.core.wind_design import TurbineSpec, WindInputs, size_wind_plant
 from resize_energy.gui.widgets import StepPage
 from resize_energy.gui.wizard import BaseResultsPage, NumberField, _hint, first_error
@@ -152,21 +156,43 @@ class WindLoadPage(StepPage):
 
 
 class WindTurbinePage(StepPage):
+    GENERIC = "Generic turbine (type the datasheet values)"
+
     def __init__(self) -> None:
         super().__init__()
         self.setTitle("3. Turbine and layout")
-        self.setSubTitle("Enter the datasheet values (defaults are a generic 2 MW machine).")
+        self.setSubTitle("Pick a turbine from the library or type the datasheet values.")
         t = TurbineSpec()
-        self.power = NumberField(t.rated_power_kw, 1, 20000, 0, "kW")
-        self.rotor = NumberField(t.rotor_diameter_m, 1, 250, 0, "m", "wind.cp_betz")
+        self.library = load_library()
+        self._selected = None  # LibraryTurbine in use, or None for the generic curve
+
+        self.picker = QComboBox()
+        self.picker.setMaxVisibleItems(20)
+        self.picker.addItem(self.GENERIC)
+        for turbine in self.library:
+            self.picker.addItem(turbine.label)
+        self.picker.currentIndexChanged.connect(self._picked)
+        self.curve_note = QLabel("")
+        self.curve_note.setWordWrap(True)
+        self.curve_note.setObjectName("hint")
+
+        self.power = NumberField(t.rated_power_kw, 0.5, 20000, 1, "kW")
+        self.rotor = NumberField(t.rotor_diameter_m, 1, 250, 1, "m", "wind.cp_betz")
         self.hub = NumberField(t.hub_height_m, 5, 300, 0, "m", "wind.shear")
         self.cut_in = NumberField(t.cut_in_ms, 0.5, 8, 1, "m/s", "wind.power_curve")
         self.rated = NumberField(t.rated_speed_ms, 4, 25, 1, "m/s", "wind.power_curve")
         self.cut_out = NumberField(t.cut_out_ms, 10, 40, 1, "m/s", "wind.power_curve")
         self.crosswind = NumberField(5, 1, 20, 1, "D", "wind.spacing")
         self.downwind = NumberField(7, 1, 30, 1, "D", "wind.spacing")
+        for field in (self.power, self.rotor, self.cut_in, self.rated, self.cut_out):
+            field.edit.textEdited.connect(self._edited)  # typing means: not the library curve
 
-        box = QGroupBox("Turbine")
+        pick_box = QGroupBox("Turbine model")
+        pf = QVBoxLayout(pick_box)
+        pf.addWidget(self.picker)
+        pf.addWidget(self.curve_note)
+
+        box = QGroupBox("Datasheet values")
         form = QFormLayout(box)
         form.addRow("Rated power", self.power)
         form.addRow("Rotor diameter D", self.rotor)
@@ -184,17 +210,52 @@ class WindTurbinePage(StepPage):
                        ("Spacing across", self.crosswind), ("Spacing along", self.downwind)]
 
         layout = QVBoxLayout(self)
+        layout.addWidget(pick_box)
         layout.addWidget(box)
         layout.addWidget(lay)
         layout.addWidget(_hint(
-            "The datasheet gives these values. Spacing is in rotor diameters D: 3-5 D across "
-            "and 5-9 D along the prevailing wind is a usual compromise."))
+            "Library curves come from " + SOURCE + "; most are theoretical, not measured on "
+            "site. With the generic option the power rises with the cube of the speed between "
+            "cut-in and rated. Spacing is in rotor diameters D: 3-5 D across and 5-9 D along "
+            "the prevailing wind is a usual compromise."))
         layout.addStretch(1)
+        self._picked(0)
+
+    def _picked(self, index: int) -> None:
+        if index <= 0:
+            self._selected = None
+            self.curve_note.setText("The generic curve built from the speeds below is used.")
+            return
+        turbine = self.library[index - 1]
+        self._selected = turbine
+        self.power.set_value(turbine.rated_power_kw)
+        self.rotor.set_value(turbine.rotor_diameter_m)
+        if turbine.hub_height_m:
+            self.hub.set_value(turbine.hub_height_m)
+        self.cut_in.set_value(turbine.cut_in_ms)
+        self.rated.set_value(turbine.rated_speed_ms)
+        self.cut_out.set_value(turbine.cut_out_ms)
+        self.curve_note.setText(
+            f"The tabulated power curve of this turbine ({len(turbine.curve)} points) is used. "
+            "Hub height and spacing can be changed freely; editing the other values switches "
+            "back to the generic curve."
+        )
+
+    def _edited(self, *_args) -> None:
+        if self._selected is not None:
+            self.picker.blockSignals(True)
+            self.picker.setCurrentIndex(0)
+            self.picker.blockSignals(False)
+            self._selected = None
+            self.curve_note.setText("Values edited: the generic curve built from them is used.")
 
     def spec(self) -> TurbineSpec:
+        hub = self.hub.value()
+        if self._selected is not None:
+            return replace(self._selected.to_spec(), hub_height_m=hub)
         return TurbineSpec(
             name="User turbine", rated_power_kw=self.power.value(),
-            rotor_diameter_m=self.rotor.value(), hub_height_m=self.hub.value(),
+            rotor_diameter_m=self.rotor.value(), hub_height_m=hub,
             cut_in_ms=self.cut_in.value(), rated_speed_ms=self.rated.value(),
             cut_out_ms=self.cut_out.value(),
         )

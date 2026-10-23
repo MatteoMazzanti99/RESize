@@ -19,6 +19,10 @@ class TurbineSpec:
     cut_in_ms: float = 3.0
     rated_speed_ms: float = 12.0
     cut_out_ms: float = 25.0
+    # Optional tabulated power curve ((speed m/s, power kW), ...), e.g. from the library.
+    # When empty, a generic cubic curve built from the speeds above is used.
+    power_curve: tuple[tuple[float, float], ...] = ()
+    curve_source: str = ""
 
 
 @dataclass(frozen=True)
@@ -82,6 +86,8 @@ def size_wind_plant(inp: WindInputs) -> WindDesign:
     area = wind.swept_area_m2(t.rotor_diameter_m)
 
     def curve(v: float) -> float:
+        if t.power_curve:
+            return wind.curve_power_kw(v, t.power_curve, t.cut_out_ms, rho)
         return wind.generic_power_kw(v, t.rated_power_kw, t.cut_in_ms, t.rated_speed_ms,
                                      t.cut_out_ms, rho)
 

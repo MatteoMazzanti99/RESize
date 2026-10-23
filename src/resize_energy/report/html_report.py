@@ -147,6 +147,9 @@ def build_wind_report(
         _row("Rotor diameter / hub height", f"{t.rotor_diameter_m:.0f} m / {t.hub_height_m:.0f} m"),
         _row("Cut-in / rated / cut-out speed",
              f"{t.cut_in_ms:.1f} / {t.rated_speed_ms:.1f} / {t.cut_out_ms:.1f} m/s"),
+        _row("Power curve",
+             f"tabulated, {len(t.power_curve)} points ({t.curve_source})" if t.power_curve
+             else "generic (cubic between cut-in and rated)"),
         _row("Availability / other losses", f"{inp.availability:.0%} / {inp.other_losses:.0%}"),
         _row("Spacing (across x along the wind)",
              f"{inp.crosswind_spacing_d:.0f} D x {inp.downwind_spacing_d:.0f} D"),

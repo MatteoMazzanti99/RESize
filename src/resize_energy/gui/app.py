@@ -7,6 +7,11 @@ import sys
 
 def _walk_through(window, app) -> int:
     """Run every technology flow with its default values, up to the results page."""
+    from resize_energy.core.turbine_library import load_library
+
+    if len(load_library()) < 10:
+        print("self-test: the turbine library is missing from the build", flush=True)
+        return 1
     for tech in ("pv", "wind"):
         window._start(tech)
         for _ in range(3):

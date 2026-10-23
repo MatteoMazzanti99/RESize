@@ -22,6 +22,8 @@ def build_wind_context(inp: WindInputs, d: WindDesign, findings: list[Finding]) 
         f"- Turbine: {t.rated_power_kw:,.0f} kW, rotor {t.rotor_diameter_m:.0f} m, hub "
         f"{t.hub_height_m:.0f} m, cut-in {t.cut_in_ms:.1f}, rated {t.rated_speed_ms:.1f}, "
         f"cut-out {t.cut_out_ms:.1f} m/s",
+        "- Power curve: " + (f"tabulated, {len(t.power_curve)} points, source {t.curve_source}"
+                            if t.power_curve else "generic (cubic between cut-in and rated)"),
         f"- Availability {inp.availability:.0%}; other losses {inp.other_losses:.0%}; spacing "
         f"{inp.crosswind_spacing_d:.0f} D x {inp.downwind_spacing_d:.0f} D",
         "",

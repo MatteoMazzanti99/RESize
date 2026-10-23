@@ -108,3 +108,42 @@ def test_inconsistent_turbine_speeds_are_rejected():
         size_wind_plant(base(turbine=TurbineSpec(cut_in_ms=13, rated_speed_ms=12)))
     with pytest.raises(ValueError):
         size_wind_plant(base(annual_demand_kwh=0))
+
+
+# --- tabulated curves and the turbine library -------------------------------------------
+from resize_energy.core import turbine_library as lib  # noqa: E402
+
+
+def test_library_loads_and_has_known_entries():
+    turbines = lib.load_library()
+    assert len(turbines) >= 40
+    v82 = lib.get_turbine("VestasV82_1.65MW_82")
+    assert (v82.rated_power_kw, v82.rotor_diameter_m) == (1650.0, 82.0)
+    assert dict(v82.curve)[7.0] == 511.0
+    assert any(t.group == "distributed" for t in turbines) and any(t.group == "onshore" for t in turbines)
+    assert all(t.cut_in_ms < t.rated_speed_ms < t.cut_out_ms for t in turbines)
+    assert all(len(t.curve) >= 5 and max(p for _, p in t.curve) > 0 for t in turbines)
+
+
+def test_curve_interpolation_and_cut_out():
+    pts = ((3.0, 0.0), (5.0, 100.0), (10.0, 600.0))
+    assert wind.curve_power_kw(4.0, pts, 25) == pytest.approx(50.0)     # halfway 3-5
+    assert wind.curve_power_kw(7.5, pts, 25) == pytest.approx(350.0)    # halfway 5-10
+    assert wind.curve_power_kw(2.0, pts, 25) == 0.0                      # below first point
+    assert wind.curve_power_kw(15.0, pts, 25) == 600.0                   # plateau after last
+    assert wind.curve_power_kw(25.0, pts, 25) == 0.0                     # cut-out
+    assert wind.curve_power_kw(7.5, pts, 25, rho=1.0) < 350.0            # thinner air
+
+
+def test_design_with_a_library_turbine_uses_its_curve():
+    t = lib.get_turbine("IEA_Reference_3.4MW_130").to_spec()
+    assert t.power_curve and t.curve_source
+    d = size_wind_plant(base(turbine=t, mean_speed_ref_ms=7.0))
+    assert 0.25 < d.capacity_factor_net < 0.60
+    generic = size_wind_plant(base(turbine=TurbineSpec(
+        rated_power_kw=t.rated_power_kw, rotor_diameter_m=t.rotor_diameter_m,
+        hub_height_m=t.hub_height_m, cut_in_ms=t.cut_in_ms, rated_speed_ms=t.rated_speed_ms,
+        cut_out_ms=t.cut_out_ms), mean_speed_ref_ms=7.0))
+    # a real curve is close to, but not the same as, the generic one built from its speeds
+    assert d.gross_energy_per_turbine_kwh != pytest.approx(generic.gross_energy_per_turbine_kwh, rel=1e-3)
+    assert d.gross_energy_per_turbine_kwh == pytest.approx(generic.gross_energy_per_turbine_kwh, rel=0.35)
