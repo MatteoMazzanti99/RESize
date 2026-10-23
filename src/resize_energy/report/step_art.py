@@ -71,31 +71,59 @@ def modules(phase: float) -> str:
 
 
 def coins(phase: float) -> str:
+    """A calculator with a euro on its display and a coin dropping in."""
     t = _t()
-    stack = "".join(
-        f'<ellipse cx="62" cy="{88 - 11 * k}" rx="30" ry="8" fill="{t["sun"]}" stroke="{t["orange"]}" stroke-width="2"/>'
-        for k in range(4))
-    bounce = 5 * math.sin(2 * math.pi * phase)
-    top = (f'<ellipse cx="62" cy="{44 + bounce:.1f}" rx="30" ry="8" fill="{t["sun"]}" stroke="{t["orange"]}" stroke-width="2"/>'
-           f'<text x="62" y="{48 + bounce:.1f}" text-anchor="middle" font-size="12" font-weight="700" fill="{t["orange"]}">€</text>')
-    arrow = (f'<path d="M120,86 L146,60 L162,72 L198,30" fill="none" stroke="{t["green"]}" stroke-width="4" '
-             f'stroke-linecap="round" stroke-linejoin="round"/>'
-             f'<path d="M186,30 h14 v14" fill="none" stroke="{t["green"]}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>')
-    return _wrap(stack + top + arrow)
+    keys = "".join(
+        f'<rect x="{62 + 18 * c}" y="{58 + 14 * r}" width="14" height="10" rx="2.5" fill="{t["grey"]}" opacity="0.7"/>'
+        for r in range(3) for c in range(4))
+    drop = (phase * 2) % 1.0
+    y = 6 + 40 * drop
+    fade = 1.0 if drop < 0.8 else (1 - drop) * 5
+    coin = (f'<g opacity="{fade:.2f}"><circle cx="160" cy="{y:.1f}" r="10" fill="{t["sun"]}" stroke="{t["orange"]}" stroke-width="2"/>'
+            f'<text x="160" y="{y + 4:.1f}" text-anchor="middle" font-size="12" font-weight="700" fill="{t["orange"]}">€</text></g>')
+    blink = "" if phase % 0.5 > 0.4 else f'<rect x="125" y="28" width="2" height="12" fill="{t["green"]}"/>'
+    return _wrap(
+        f'<rect x="54" y="10" width="84" height="96" rx="9" fill="{t["panel"]}" stroke="{t["muted"]}" stroke-width="2.5"/>'
+        f'<rect x="62" y="20" width="68" height="26" rx="4" fill="{t["bg"]}" stroke="{t["muted"]}" stroke-width="1.5"/>'
+        f'<text x="122" y="40" text-anchor="end" font-size="15" font-weight="700" fill="{t["green"]}">1 250 €</text>'
+        f'{blink}{keys}{coin}')
 
 
-def wind(phase: float) -> str:
+def _rotor(x: float, y: float, scale: float, angle: float) -> str:
     t = _t()
-    angle = 360 * phase
     blades = "".join(
         f'<path d="M0,0 L-4,-34 L4,-34 Z" fill="{t["blue"]}" transform="rotate({angle + a:.1f})"/>'
         for a in (0, 120, 240))
-    streaks = "".join(
-        f'<path d="M{12 + dx},{y} h{50 - dx}" stroke="{t["muted"]}" stroke-width="2.2" stroke-linecap="round" opacity="0.5"/>'
-        for y, dx in ((30, 10), (48, 0), (66, 14)))
-    return _wrap(streaks +
-                 f'<path d="M132,38 L127,100 L137,100 Z" fill="{t["grey"]}"/>'
-                 f'<g transform="translate(132,38)">{blades}<circle r="5" fill="{t["text"]}"/></g>')
+    return (f'<g transform="translate({x},{y}) scale({scale})">'
+            f'<path d="M-3,0 L-6,{(100 - y) / scale:.1f} L6,{(100 - y) / scale:.1f} L3,0 Z" fill="{t["grey"]}"/>'
+            f'{blades}<circle r="5" fill="{t["text"]}"/></g>')
+
+
+def wind(phase: float) -> str:
+    """Wind blowing through mountains, turning a turbine on the ridge."""
+    t = _t()
+    far = f'<path d="M0,86 L34,48 L58,70 L92,34 L128,72 L158,52 L220,88 V110 H0 Z" fill="{t["grey"]}" opacity="0.28"/>'
+    near = (f'<path d="M0,100 L46,66 L74,86 L112,56 L150,90 L186,68 L220,96 V110 H0 Z" fill="{t["green"]}" opacity="0.35"/>'
+            f'<path d="M92,34 l-9,10 l6,-2 l3,5 l3,-5 l6,2 Z" fill="{t["panel"]}"/>')
+    streaks = []
+    for k, (y, length) in enumerate(((20, 46), (36, 62), (52, 40), (68, 54))):
+        u = (phase + k * 0.27) % 1.0
+        x = -80 + u * 320
+        streaks.append(f'<path d="M{x:.1f},{y} h{length} q10,0 10,-8 q0,-7 -9,-6" fill="none" stroke="{t["blue"]}" '
+                       f'stroke-width="2.6" stroke-linecap="round" opacity="0.55"/>')
+    return _wrap(far + "".join(streaks) + near + _rotor(112, 30, 0.8, 720 * phase))
+
+
+def sun_wind(phase: float) -> str:
+    """Sun and wind: the two renewable sources used together."""
+    t = _t()
+    rays = "".join(
+        f'<line x1="{58 + 20 * math.cos(k * math.pi / 4 + phase * math.pi / 2):.1f}" y1="{40 + 20 * math.sin(k * math.pi / 4 + phase * math.pi / 2):.1f}" '
+        f'x2="{58 + 30 * math.cos(k * math.pi / 4 + phase * math.pi / 2):.1f}" y2="{40 + 30 * math.sin(k * math.pi / 4 + phase * math.pi / 2):.1f}" '
+        f'stroke="{t["sun"]}" stroke-width="3" stroke-linecap="round"/>' for k in range(8))
+    return _wrap(f'<circle cx="58" cy="40" r="14" fill="{t["sun"]}"/>{rays}'
+                 + _rotor(150, 42, 1.0, 720 * phase)
+                 + f'<line x1="14" y1="100" x2="206" y2="100" stroke="{t["grey"]}" stroke-width="2.5" stroke-linecap="round"/>')
 
 
 def weibull(phase: float) -> str:
@@ -217,7 +245,7 @@ def leaf(phase: float) -> str:
                  f'<text x="150" y="86" font-size="14" font-weight="700" fill="{t["muted"]}">CO2</text>')
 
 
-ARTS = {"sun_path": sun_path, "load_profile": load_profile, "modules": modules, "coins": coins,
+ARTS = {"sun_path": sun_path, "load_profile": load_profile, "modules": modules, "coins": coins, "sun_wind": sun_wind,
         "wind": wind, "weibull": weibull, "turbine_curve": turbine_curve, "battery": battery,
         "electrolyser": electrolyser, "flame": flame, "collector": collector, "tap": tap,
         "target": target, "leaf": leaf}

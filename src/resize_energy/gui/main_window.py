@@ -154,10 +154,12 @@ class MainWindow(QMainWindow):
                                              self.cmp_results]),
         }
         for key, page in {
-                "sun_path": [self.site, self.wind_site, self.h2_site, self.bat_site, self.sol_site],
+                "sun_path": [self.site, self.sol_site], "wind": [self.wind_site],
+                "sun_wind": [self.h2_site, self.bat_site],
                 "load_profile": [self.load, self.wind_load, self.bat_goal, self.bio_demand],
-                "modules": [self.comp], "coins": [self.pv_costs, self.wind_costs, self.h2_costs,
-                                                  self.bat_costs, self.sol_costs],
+                "modules": [self.comp],
+                "coins": [self.pv_costs, self.wind_costs, self.h2_costs, self.bat_costs,
+                          self.sol_costs],
                 "turbine_curve": [self.wind_turbine], "flame": [self.bio_fuel],
                 "leaf": [self.bio_plant], "target": [self.h2_goal],
                 "electrolyser": [self.h2_plant], "battery": [self.bat_battery],
