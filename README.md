@@ -34,9 +34,16 @@ Prefer Python? See *Quick start* below.
 Validation against PVGIS, independent integrations and hand calculations:
 [docs/validation](docs/validation/README.md).
 
+## Results at a glance
+
+Every result page (and the PDF) starts with **In short**: the key numbers and a one-sentence
+verdict. Then come the charts (energy balance, wind distribution and power curve, heat load
+curve, cost build-up, hydrogen per month, comparison of cost, payback, cash flow and CO2), the
+design checks sorted by importance, and finally the detailed tables and the formulas.
+
 ## Wind module
 
-Start it from the home screen (**Start a wind project**). Steps: site and wind resource
+Start it from the home screen (click the **Wind** card). Steps: site and wind resource
 (NASA POWER or your own data, Weibull distribution, shear, air density), demand and losses,
 turbine and layout, results. You get the capacity factor, the energy of one turbine, the number
 of turbines to cover the demand, land use, design checks, **Why?** panels with your numbers and
@@ -52,7 +59,7 @@ wind resource. Editing a value switches back to the generic curve.
 
 ## Biomass module
 
-Start it from the home screen (**Start a biomass project**) and pick the pathway:
+Start it from the home screen (click the **Biomass** card) and pick the pathway:
 
 - **Solid biomass boiler** (heat only) and **ORC cogeneration** (heat and power), sized on the
   heat demand with a load duration curve: plant power for the share of heat you want to cover,
@@ -67,7 +74,7 @@ or a laboratory methane potential test.
 
 ## Green hydrogen module
 
-Start it from the home screen (**Start a green hydrogen project**). Two ways in: from a
+Start it from the home screen (click the **Green hydrogen** card). Two ways in: from a
 **hydrogen demand** (electrolyser and renewable plants are sized for it) or from a
 **renewable plant you already have** (how much hydrogen it can make). The electricity can come
 from PV, wind, the grid or any combination.
