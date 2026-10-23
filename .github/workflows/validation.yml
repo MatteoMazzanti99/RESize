@@ -35,6 +35,17 @@ jobs:
           body=$(python -c "import urllib.parse;print(urllib.parse.quote(open('wind.txt').read()[-3500:],safe=' |/:.,()-+=*#'))")
           echo "::notice title=Wind validation report::${body}"
           exit $code
+      - name: Cross-checks of all technologies (pvlib, PyWake)
+        shell: bash
+        run: |
+          set +e
+          pip install pvlib py_wake > pip.txt 2>&1 || tail -5 pip.txt
+          python validation/validate_cross.py --out cross-report.md > cross.txt 2>&1
+          code=$?
+          cat cross.txt >> "$GITHUB_STEP_SUMMARY"
+          body=$(python -c "import urllib.parse;print(urllib.parse.quote(open('cross.txt').read()[-3500:],safe=' |/:.,()-+=*#'))")
+          echo "::notice title=Cross-check report::${body}"
+          exit $code
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -42,3 +53,4 @@ jobs:
           path: |
             pv-report.md
             wind-report.md
+            cross-report.md
