@@ -77,11 +77,11 @@ def coins(phase: float) -> str:
     heights = (20, 34, 48, 64)
     bars = []
     for k, h in enumerate(heights):
-        u = min(1.0, max(0.0, phase * 1.6 - k * 0.25))
+        u = min(1.0, max(0.0, phase * 2.6 - k * 0.3))
         grown = h * (1 - (1 - u) ** 3)
         colour = t["green"] if k == len(heights) - 1 else t["blue"]
         bars.append(f'<rect x="{46 + 36 * k}" y="{base - grown:.1f}" width="26" height="{grown:.1f}" rx="3" fill="{colour}" opacity="0.9"/>')
-    top = base - heights[-1] * (1 - (1 - min(1.0, max(0.0, phase * 1.6 - 0.75))) ** 3)
+    top = base - heights[-1] * (1 - (1 - min(1.0, max(0.0, phase * 2.6 - 0.9))) ** 3)
     bob = 2.5 * math.sin(2 * math.pi * phase)
     coin = (f'<circle cx="167" cy="{top - 14 + bob:.1f}" r="11" fill="{t["sun"]}" stroke="{t["orange"]}" stroke-width="2"/>'
             f'<text x="167" y="{top - 9.5 + bob:.1f}" text-anchor="middle" font-size="13" font-weight="700" fill="{t["orange"]}">€</text>')
