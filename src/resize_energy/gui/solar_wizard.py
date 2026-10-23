@@ -147,7 +147,7 @@ class SolarSitePage(StepPage):
             return
         finally:
             QApplication.restoreOverrideCursor()
-        self.irr.set_value(result.annual_irradiation_kwh_m2)
+        self.irr.set_value(result.annual_irradiation_kwh_m2, "PVGIS")
         self.status.setText(f"PVGIS: {result.annual_irradiation_kwh_m2:,.0f} kWh/m2 per year on "
                             "the collector plane.")
 

@@ -31,6 +31,7 @@ from resize_energy.core.pv_extra import shading_loss
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.gui.chart_render import render_chart
 from resize_energy.gui.numparse import format_number, parse_in_range
+from resize_energy.gui.provenance import add_to_report
 from resize_energy.gui.theme import COLORS, SCREEN_DOC_CSS
 from resize_energy.gui.tutor_panel import TutorDialog
 from resize_energy.gui.why import WhyButton
@@ -82,10 +83,13 @@ class NumberField(QWidget):
     ):
         super().__init__()
         self.lo, self.hi, self.decimals = lo, hi, decimals
+        self.default = value          # what the program proposes
+        self.source: str | None = None  # "PVGIS", "NASA POWER"... when fetched, None otherwise
         self.edit = QLineEdit(format_number(value, decimals))
         self.edit.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.edit.setMaximumWidth(130)
         self.edit.editingFinished.connect(self._mark)
+        self.edit.textEdited.connect(self._typed)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.edit)
@@ -99,9 +103,23 @@ class NumberField(QWidget):
         """Current value; raises ValueError (readable message) if invalid or out of range."""
         return parse_in_range(self.edit.text(), self.lo, self.hi)
 
-    def set_value(self, value: float) -> None:
+    def set_value(self, value: float, source: str | None = None) -> None:
         self.edit.setText(format_number(value, self.decimals))
+        self.source = source
         self._mark()
+
+    def _typed(self, _text: str) -> None:
+        self.source = None            # the user has taken over
+
+    def provenance(self) -> str:
+        """"source" name if fetched, "default" if untouched, else "changed"."""
+        if self.source:
+            return self.source
+        try:
+            same = abs(self.value() - self.default) <= 10 ** -(self.decimals + 1)
+        except ValueError:
+            return "changed"
+        return "default" if same else "changed"
 
     def _mark(self) -> None:
         try:
@@ -197,7 +215,7 @@ class SitePage(StepPage):
             return
         finally:
             QApplication.restoreOverrideCursor()
-        self.irr.set_value(result.annual_irradiation_kwh_m2)
+        self.irr.set_value(result.annual_irradiation_kwh_m2, "PVGIS")
         self._implied_pr = result.implied_performance_ratio
         self.status.setText(
             f"PVGIS: H = {result.annual_irradiation_kwh_m2:,.0f} kWh/m2 per year, "
@@ -494,6 +512,7 @@ class BaseResultsPage(StepPage):
             self.browser.setHtml(f"<p><b>Cannot compute the design:</b> {exc}</p>")
             return
         self._inputs, self._design, self._findings = inputs, design, findings
+        light, dark = add_to_report(light, self), add_to_report(dark, self)
         self.html, self.html_screen = light, dark
         self._draw_charts()
         self.browser.setHtml(self.html_screen)

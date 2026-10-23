@@ -192,20 +192,20 @@ class CompareSitePage(StepPage):
             try:
                 sun = fetch_pvcalc(self.lat.value(), self.lon.value(), self.tilt.value(),
                                    self.azimuth.value(), 14)
-                self.irr.set_value(sun.annual_irradiation_kwh_m2)
+                self.irr.set_value(sun.annual_irradiation_kwh_m2, "PVGIS")
                 self._implied_pr = sun.implied_performance_ratio
                 lines.append(f"PVGIS: H = {sun.annual_irradiation_kwh_m2:,.0f} kWh/m2 per year.")
             except (PVGISError, ValueError) as exc:
                 lines.append(f"PVGIS not available ({exc}): type H by hand.")
             try:
                 climate = fetch_wind_climate(self.lat.value(), self.lon.value())
-                self.speed.set_value(round(climate.mean_speed_50m_ms, 2))
-                self.ref_height.set_value(50)
+                self.speed.set_value(round(climate.mean_speed_50m_ms, 2), "NASA POWER")
+                self.ref_height.set_value(50, "NASA POWER")
                 text = f"NASA POWER: {climate.mean_speed_50m_ms:.2f} m/s at 50 m"
                 if climate.mean_temperature_c is not None:
-                    self.temperature.set_value(round(climate.mean_temperature_c))
+                    self.temperature.set_value(round(climate.mean_temperature_c), "NASA POWER")
                 if climate.elevation_m is not None:
-                    self.elevation.set_value(round(climate.elevation_m))
+                    self.elevation.set_value(round(climate.elevation_m), "NASA POWER")
                 lines.append(text + ".")
             except (NasaPowerError, ValueError) as exc:
                 lines.append(f"NASA POWER not available ({exc}): type the wind values by hand.")

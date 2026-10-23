@@ -20,6 +20,8 @@ def capture(page: Any) -> dict[str, Any]:
     for name, obj in vars(page).items():
         if isinstance(obj, NumberField):
             state[name] = {"num": obj.edit.text()}
+            if obj.source:
+                state[name]["src"] = obj.source
         elif isinstance(obj, QComboBox):
             state[name] = {"idx": obj.currentIndex(), "text": obj.currentText()}
         elif isinstance(obj, QCheckBox):
@@ -64,6 +66,7 @@ def restore(page: Any, state: dict[str, Any], weather: prof.HourlyWeather | None
             if isinstance(obj, NumberField) and "num" in saved:
                 obj.edit.setText(str(saved["num"]))
                 obj._mark()
+                obj.source = saved.get("src")
             elif name == "_implied_pr" and "num" in saved:
                 page._implied_pr = float(saved["num"])
         except (TypeError, ValueError, KeyError):

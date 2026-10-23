@@ -114,14 +114,14 @@ class WindSitePage(StepPage):
             return
         finally:
             QApplication.restoreOverrideCursor()
-        self.speed.set_value(round(climate.mean_speed_50m_ms, 2))
-        self.ref_height.set_value(50)
+        self.speed.set_value(round(climate.mean_speed_50m_ms, 2), "NASA POWER")
+        self.ref_height.set_value(50, "NASA POWER")
         text = f"NASA POWER: mean wind speed {climate.mean_speed_50m_ms:.2f} m/s at 50 m"
         if climate.mean_temperature_c is not None:
-            self.temperature.set_value(round(climate.mean_temperature_c))
+            self.temperature.set_value(round(climate.mean_temperature_c), "NASA POWER")
             text += f", mean temperature {climate.mean_temperature_c:.1f} degC"
         if climate.elevation_m is not None:
-            self.elevation.set_value(round(climate.elevation_m))
+            self.elevation.set_value(round(climate.elevation_m), "NASA POWER")
             text += f", elevation {climate.elevation_m:.0f} m"
         self.status.setText(text + ".")
 
