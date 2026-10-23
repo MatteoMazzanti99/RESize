@@ -356,7 +356,7 @@ class BaseResultsPage(StepPage):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setMinimumHeight(560)
+        self.setMinimumHeight(640)
         self.setTitle("4. Results and design checks")
         self.setSubTitle("Your results first, then charts and checks. Use the list on the right to see why each number is what it is.")
         self.browser = ReportBrowser()
@@ -406,8 +406,8 @@ class BaseResultsPage(StepPage):
         layout = QVBoxLayout(self)
         layout.addWidget(make_label(
             "Left: your results, the charts and the design checks (start from 'In short'). "
-            "Right: pick a step to see its formula with your own numbers.", "hint"))
-        layout.addWidget(splitter)
+            "Right: pick a step to see its formula with your own numbers.", "hint"), 0)
+        layout.addWidget(splitter, 1)  # the report takes all the spare height
         layout.addLayout(buttons)
 
     # --- hooks for each technology ----------------------------------------------------
