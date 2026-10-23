@@ -304,6 +304,7 @@ class BiomassResultsPage(BaseResultsPage):
 
     topic_order = BIOMASS_TOPIC_ORDER
     pdf_name = "RESize_biomass_report.pdf"
+    has_excel = True
 
     def __init__(self, demand: BiomassDemandPage, fuel: BiomassFuelPage,
                  plant: BiomassPlantPage) -> None:
@@ -353,6 +354,11 @@ class BiomassResultsPage(BaseResultsPage):
         light = build_biomass_report(inputs, design, findings, theme="light")
         screen = build_biomass_report(inputs, design, findings, theme="screen")
         return inputs, design, findings, light, screen
+
+    def _workbook(self):
+        from resize_energy.report.excel_more import build_biomass_workbook
+
+        return build_biomass_workbook(self._inputs, self._design)
 
     def _worked(self, key: str) -> str | None:
         return biomass_worked_example(key, self._inputs, self._design)

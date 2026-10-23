@@ -229,6 +229,8 @@ class BatteryCostPage(StepPage):
 class BatteryResultsPage(BaseResultsPage):
     topic_order = BATTERY_TOPIC_ORDER
     pdf_name = "RESize_battery_report.pdf"
+    has_excel = True
+    _profiles = None
 
     def __init__(self, goal: BatteryGoalPage, site: BatterySitePage, battery: BatteryPage,
                  costs: BatteryCostPage) -> None:
@@ -252,6 +254,7 @@ class BatteryResultsPage(BaseResultsPage):
             discount_rate=c.rate.value() / 100.0, grid_ef=c.ef.value(),
         )
         profiles = self.site.battery_profiles()
+        self._profiles = profiles
         design = size_battery(inputs, profiles)
         design = replace(design, sensitivity=battery_sensitivity(inputs, profiles,
                                                                  design.capacity_kwh))
@@ -260,6 +263,11 @@ class BatteryResultsPage(BaseResultsPage):
         light = build_battery_report(inputs, design, findings, site_note=note, theme="light")
         screen = build_battery_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, screen
+
+    def _workbook(self):
+        from resize_energy.report.excel_more import build_battery_workbook
+
+        return build_battery_workbook(self._inputs, self._profiles, self._design)
 
     def _worked(self, key: str) -> str | None:
         return battery_worked_example(key, self._inputs, self._design)

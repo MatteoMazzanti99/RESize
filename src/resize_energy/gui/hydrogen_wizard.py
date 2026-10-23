@@ -460,6 +460,8 @@ class HydrogenCostPage(StepPage):
 class HydrogenResultsPage(BaseResultsPage):
     topic_order = HYDROGEN_TOPIC_ORDER
     pdf_name = "RESize_hydrogen_report.pdf"
+    has_excel = True
+    _profiles = None
 
     def __init__(self, goal: HydrogenGoalPage, site: HydrogenSitePage,
                  plant: HydrogenPlantPage, costs: HydrogenCostPage) -> None:
@@ -496,6 +498,7 @@ class HydrogenResultsPage(BaseResultsPage):
         profiles = self.site.profiles()
         if inputs.use_grid and inputs.cheapest_hours_first:
             profiles = replace(profiles, prices=h2.synthetic_price_profile(inputs.grid_price_per_kwh))
+        self._profiles = profiles
         design = replace(size_hydrogen_plant(inputs, profiles),
                          sensitivity=hydrogen_sensitivity(inputs, profiles))
         findings = check_hydrogen_design(inputs, design)
@@ -503,6 +506,11 @@ class HydrogenResultsPage(BaseResultsPage):
         light = build_hydrogen_report(inputs, design, findings, site_note=note, theme="light")
         screen = build_hydrogen_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, screen
+
+    def _workbook(self):
+        from resize_energy.report.excel_more import build_hydrogen_workbook
+
+        return build_hydrogen_workbook(self._inputs, self._profiles, self._design)
 
     def _worked(self, key: str) -> str | None:
         return hydrogen_worked_example(key, self._inputs, self._design)

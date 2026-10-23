@@ -369,6 +369,7 @@ class SolarCostPage(StepPage):
 class SolarResultsPage(BaseResultsPage):
     topic_order = SOLAR_TOPIC_ORDER
     pdf_name = "RESize_solar_thermal_report.pdf"
+    has_excel = True
 
     def __init__(self, load: SolarLoadPage, site: SolarSitePage, coll: SolarCollectorPage,
                  costs: SolarCostPage) -> None:
@@ -405,6 +406,11 @@ class SolarResultsPage(BaseResultsPage):
         light = build_solar_report(inputs, design, findings, site_note=note, theme="light")
         dark = build_solar_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, dark
+
+    def _workbook(self):
+        from resize_energy.report.excel_more import build_solar_workbook
+
+        return build_solar_workbook(self._inputs, self._design)
 
     def _worked(self, key: str) -> str | None:
         return solar_worked_example(key, self._inputs, self._design)

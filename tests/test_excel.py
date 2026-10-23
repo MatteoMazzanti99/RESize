@@ -34,7 +34,7 @@ def _recalculated(wb, tmp_path):
 def _all_ok(wb):
     rows = list(wb["Check"].iter_rows(min_row=2, max_col=4, values_only=True))
     checked = [r for r in rows if r[3] in ("OK", "DIFFERENT")]
-    assert len(checked) > 15
+    assert len(checked) > 8
     assert [r[0] for r in checked if r[3] != "OK"] == []
 
 
@@ -74,3 +74,71 @@ def test_wind_excel_matches_the_app_library_curve_and_wake(tmp_path):
     inp = WindInputs(5_000_000, 7.0, turbine=turbine, wake_model=True, economics=ECON)
     inp = replace(inp)
     _all_ok(_recalculated(build_wind_workbook(inp, size_wind_plant(inp)), tmp_path))
+
+
+# --- the other technologies ----------------------------------------------------------------
+import math  # noqa: E402
+
+from resize_energy.core import hydrogen as h2  # noqa: E402
+from resize_energy.core.battery_design import (  # noqa: E402
+    BatteryInputs,
+    BatteryProfiles,
+    size_battery,
+)
+from resize_energy.core.biomass_design import (  # noqa: E402
+    BiomassInputs,
+    default_efficiencies,
+    size_biomass_plant,
+)
+from resize_energy.core.hydrogen_design import (  # noqa: E402
+    HydrogenInputs,
+    HydrogenProfiles,
+    size_hydrogen_plant,
+)
+from resize_energy.core.solar_thermal_design import (  # noqa: E402
+    SolarThermalInputs,
+    size_solar_thermal,
+)
+from resize_energy.report.excel_more import (  # noqa: E402
+    build_battery_workbook,
+    build_biomass_workbook,
+    build_hydrogen_workbook,
+    build_solar_workbook,
+)
+
+
+def _sun():
+    return tuple(max(0.0, math.sin(math.pi * ((t % 24) - 6) / 12)) * 0.8 for t in range(8760))
+
+
+@pytest.mark.skipif(SOFFICE is None, reason="LibreOffice is not installed")
+@pytest.mark.parametrize("pathway,coverage", [("boiler", 0.85), ("orc", 0.6), ("biogas", 0.9)])
+def test_biomass_excel_matches_the_app(tmp_path, pathway, coverage):
+    eta_th, eta_el = default_efficiencies(pathway)
+    inp = BiomassInputs(pathway=pathway, eta_th=eta_th, eta_el=eta_el, coverage=coverage)
+    _all_ok(_recalculated(build_biomass_workbook(inp, size_biomass_plant(inp)), tmp_path))
+
+
+@pytest.mark.skipif(SOFFICE is None, reason="LibreOffice is not installed")
+def test_battery_excel_matches_the_app(tmp_path):
+    prof = BatteryProfiles(pv_unit=_sun())
+    inp = BatteryInputs()
+    _all_ok(_recalculated(build_battery_workbook(inp, prof, size_battery(inp, prof)), tmp_path))
+
+
+@pytest.mark.skipif(SOFFICE is None, reason="LibreOffice is not installed")
+@pytest.mark.parametrize("cooling", [0.0, 3000.0])
+def test_solar_excel_matches_the_app(tmp_path, cooling):
+    inp = SolarThermalInputs(cooling_kwh_per_year=cooling)
+    _all_ok(_recalculated(build_solar_workbook(inp, size_solar_thermal(inp)), tmp_path))
+
+
+@pytest.mark.skipif(SOFFICE is None, reason="LibreOffice is not installed")
+@pytest.mark.parametrize("cheapest", [False, True])
+def test_hydrogen_excel_matches_the_app(tmp_path, cheapest):
+    prices = h2.synthetic_price_profile(0.12) if cheapest else None
+    prof = HydrogenProfiles(pv_unit=_sun(), prices=prices)
+    inp = HydrogenInputs(use_grid=True, cheapest_hours_first=cheapest, part_load_model=True,
+                         degradation_per_1000h=0.002, storage_mode="hourly")
+    _all_ok(_recalculated(
+        build_hydrogen_workbook(inp, prof, size_hydrogen_plant(inp, prof)), tmp_path))

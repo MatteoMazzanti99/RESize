@@ -59,13 +59,23 @@ for that input.
 **Save the report as PDF** writes the page you see, in a light version, with the charts and
 the formulas used.
 
-**Export to Excel (live formulas)** — photovoltaic and wind — writes a workbook where every
-step is a spreadsheet formula with named inputs, so a formula reads like the textbook one
-(`=coverage*demand_kwh/(irradiation*pr_effective)`). Change a yellow input cell and the
-results follow. The sheets are: About, Inputs, Calculation, Layout (PV string lengths) or
-Energy (wind speed bins x power curve), Economics, Cash flow, and Check, which compares every
-key result with the value RESize computed. Not reproduced: the monthly profile (PV) and the
-wake model (wind; its result is kept as a fixed input).
+**Export to Excel (live formulas)** — available for every technology except the comparison —
+writes a workbook where every step is a spreadsheet formula with named inputs, so a formula
+reads like the textbook one (`=coverage*demand_kwh/(irradiation*pr_effective)`). Change a
+yellow input cell and the results follow. A **Check** sheet compares every key result with the
+value RESize computed.
+
+| Technology | What is rebuilt as formulas | What stays a value |
+|---|---|---|
+| Photovoltaic | target power, string limits and layout table, yield, economics, cash flow | monthly profile |
+| Wind | hub-height speed, Weibull x power-curve table, turbines, economics | wake model result |
+| Biomass | the whole calculation, including the load-duration coverage (bisection table) | - |
+| Hydrogen | the hourly dispatch (renewable power, grid top-up, minimum load, part load, tank swing), stack ageing, costs, LCOH, carbon | renewable profiles; hours chosen by the cheapest-hours option |
+| Battery | the 8760-hour model (charge, discharge, import, export), cycles, life, economics | hourly load and production |
+| Solar thermal | the 8760-hour collector, store, hot-water and chiller model, economics | hourly irradiance and air temperature |
+
+The values that stay fixed come from generators that use random numbers (or from your own
+data); paste measured data over them to see your case.
 
 ## Projects
 

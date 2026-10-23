@@ -28,7 +28,7 @@ def _walk_through(window, app) -> int:
         if tech in ("pv", "wind") and "Net present value" not in results.html:
             print(f"self-test: the {tech} results lack the economics", flush=True)
             return 1
-        if tech in ("pv", "wind"):
+        if tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar"):
             try:
                 wb = results._workbook()
             except ImportError:
