@@ -44,7 +44,38 @@ def _walk_through(window, app) -> int:
         print("self-test: the comparison charts were not drawn", flush=True)
         return 1
     window._restart()
+    code = _versions_check(window, app)
+    if code:
+        return code
     return _project_roundtrip(window, app)
+
+
+def _versions_check(window, app) -> int:
+    """Keep a PV version, change the demand, come back: the report compares and explains."""
+    from resize_energy.gui import versions_ui
+
+    window._start("pv")
+    for _ in range(len(window.pages) - 2):
+        window._next()
+        app.processEvents()
+    results = window.results
+    if not versions_ui.keep(results):
+        print("self-test: could not keep a version", flush=True)
+        return 1
+    window.load.demand.set_value(9000)
+    results.initializePage()
+    if "Compared with version A" not in results.html:
+        print("self-test: the comparison with version A is missing", flush=True)
+        return 1
+    results._explained = versions_ui.explain(results)
+    results._compose()
+    ok = ("Why did it change?" in results.html and window.load.demand.value() == 9000
+          and "Annual electricity demand" in results.html)
+    window._restart()
+    if not ok:
+        print("self-test: the explanation of the changes failed", flush=True)
+        return 1
+    return 0
 
 
 def _project_roundtrip(window, app) -> int:

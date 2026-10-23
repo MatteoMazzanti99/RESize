@@ -227,6 +227,9 @@ class MainWindow(QMainWindow):
             tech = "pv"
         self.tech = tech
         names, pages = self.flows[tech]
+        for page in pages:
+            if hasattr(page, "_version_a"):
+                page._version_a = None      # a new project: no kept version
         self.pages = [self.home, *pages]
         self.sidebar.set_steps(names)
         self._go(1)

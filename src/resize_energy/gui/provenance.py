@@ -83,12 +83,15 @@ def section_html(rows: list[Row]) -> str:
     return "".join(parts)
 
 
-def add_to_report(html: str, owner: object) -> str:
-    """Insert the section before the formulas; the report itself when nothing can be said."""
-    try:
-        section = section_html(collect(ordered_pages(owner)))
-    except Exception:  # noqa: BLE001 - a report must never fail because of this extra
-        return html
+def insert_before_formulas(html: str, section: str) -> str:
+    """Put ``section`` before the formulas; the report itself when it cannot be placed."""
     if not section or MARKER not in html:
         return html
     return html.replace(MARKER, section + MARKER, 1)
+
+
+def provenance_section(owner: object) -> str:
+    try:
+        return section_html(collect(ordered_pages(owner)))
+    except Exception:  # noqa: BLE001 - a report must never fail because of this extra
+        return ""

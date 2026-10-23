@@ -31,7 +31,7 @@ from resize_energy.core.pv_extra import shading_loss
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.gui.chart_render import render_chart
 from resize_energy.gui.numparse import format_number, parse_in_range
-from resize_energy.gui.provenance import add_to_report
+from resize_energy.gui.provenance import insert_before_formulas, provenance_section
 from resize_energy.gui.theme import COLORS, SCREEN_DOC_CSS
 from resize_energy.gui.tutor_panel import TutorDialog
 from resize_energy.gui.why import WhyButton
@@ -407,6 +407,9 @@ class BaseResultsPage(StepPage):
         self._design: object | None = None
         self._findings: list[Finding] = []
         self._tutor: TutorDialog | None = None
+        self._base: tuple[str, str] = ("", "")   # report without the extra sections
+        self._version_a: dict | None = None        # kept version: states and key results
+        self._explained = ("", "")                 # 'Why did it change?' for this version
 
         self.topics = QListWidget()
         for key in self.topic_order:
@@ -439,7 +442,18 @@ class BaseResultsPage(StepPage):
         ask = QPushButton("Ask the AI tutor...")
         ask.setToolTip("Chat about your design (optional: needs an API key or a local model)")
         ask.clicked.connect(self._open_tutor)
+        keep = QPushButton("Keep this version as A")
+        keep.setToolTip("Remember these results. Change something in an earlier step, come "
+                        "back, and the report compares the two versions.")
+        keep.clicked.connect(self._keep_version)
+        self.explain_button = QPushButton("Why did it change?")
+        self.explain_button.setToolTip("Apply each difference to version A, one at a time, to "
+                                       "see what each input did to the results.")
+        self.explain_button.clicked.connect(self._explain_version)
+        self.explain_button.setEnabled(False)
         buttons = QHBoxLayout()
+        buttons.addWidget(keep)
+        buttons.addWidget(self.explain_button)
         buttons.addStretch(1)
         buttons.addWidget(ask)
         buttons.addWidget(export)
@@ -512,13 +526,51 @@ class BaseResultsPage(StepPage):
             self.browser.setHtml(f"<p><b>Cannot compute the design:</b> {exc}</p>")
             return
         self._inputs, self._design, self._findings = inputs, design, findings
-        light, dark = add_to_report(light, self), add_to_report(dark, self)
-        self.html, self.html_screen = light, dark
+        self._base = (light, dark)
+        self._explained = ("", "")
         self._draw_charts()
-        self.browser.setHtml(self.html_screen)
+        self._compose()
         row = self.topics.currentRow()
         if row >= 0:
             self._show_topic(row)  # refresh the open topic with the new numbers
+
+    # --- extra sections: values to check, comparison with version A -----------------------
+    def _compose(self) -> None:
+        """Report = the technology's report + provenance + comparison with version A."""
+        from resize_energy.gui import versions_ui  # here: it imports this module's fields
+
+        extra = provenance_section(self)
+        compare = versions_ui.compare_sections(self)
+        light, dark = self._base
+        self.html = insert_before_formulas(light, extra + compare[0] + self._explained[0])
+        self.html_screen = insert_before_formulas(dark, extra + compare[1] + self._explained[1])
+        self.explain_button.setEnabled(self._version_a is not None and bool(compare[0]))
+        self.browser.setHtml(self.html_screen)
+
+    def _keep_version(self) -> None:
+        from resize_energy.gui import versions_ui
+
+        if self._design is None:
+            QMessageBox.information(self, "RESize", "There are no results to keep yet.")
+            return
+        if not versions_ui.keep(self):
+            QMessageBox.information(self, "RESize",
+                                    "Comparing versions is not available for this technology.")
+            return
+        QMessageBox.information(
+            self, "RESize", "Version A kept. Go back, change something, and return here: the "
+            "report will compare the two versions.")
+        self._compose()
+
+    def _explain_version(self) -> None:
+        from resize_energy.gui import versions_ui
+
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            self._explained = versions_ui.explain(self)
+        finally:
+            QApplication.restoreOverrideCursor()
+        self._compose()
 
     def _export_pdf(self) -> None:
         if not self.html:
