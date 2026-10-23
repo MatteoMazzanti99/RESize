@@ -70,4 +70,13 @@ def battery_worked_example(key: str, inp: BatteryInputs, d: BatteryDesign) -> st
             f"({d.import_without_kwh:,.0f} - {d.import_kwh:,.0f}) kWh x {inp.grid_ef} kg/kWh = "
             f"{d.co2_avoided_t_per_year * 1000:,.0f} kg CO2 per year"
         )
+    if key == "battery.sensitivity":
+        sn = d.sensitivity
+        if sn is None or not sn.curves:
+            return f"Not computed: the net present value is {d.npv:,.0f} euro."
+        top = sn.curves[0]
+        return (f"Base NPV {sn.base:,.0f} euro. Most influential: '{top.label}': "
+                f"{top.values[0]:,.0f} at -20 %, {top.values[-1]:,.0f} at +20 % euro. "
+                f"{sum(1 for c in sn.curves if min(c.values) < 0 < max(c.values))} of "
+                f"{len(sn.curves)} inputs change the sign of the NPV within +/- 20 %.")
     return None

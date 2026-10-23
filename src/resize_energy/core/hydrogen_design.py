@@ -12,6 +12,7 @@ from typing import Literal
 
 from resize_energy.core import economics as eco
 from resize_energy.core import hydrogen as h2
+from resize_energy.core.sensitivity import Sensitivity
 
 Mode = Literal["demand", "plant"]
 MODES: dict[str, str] = {
@@ -125,6 +126,7 @@ class HydrogenDesign:
     storage_mode: str = "days"
     mean_grid_price: float = 0.0                # euro/kWh actually paid
     flat_grid_price: float = 0.0                # what the same energy would cost at the mean price
+    sensitivity: Sensitivity | None = None
 
 
 def _check(inp: HydrogenInputs, prof: HydrogenProfiles) -> None:
@@ -253,3 +255,37 @@ def size_hydrogen_plant(inp: HydrogenInputs, prof: HydrogenProfiles) -> Hydrogen
         flat_grid_price=(sum(prof.prices) / len(prof.prices) if prof.prices else
                          inp.grid_price_per_kwh),
     )
+
+
+def hydrogen_sensitivity(inp: HydrogenInputs, prof: HydrogenProfiles):
+    """Cost of the hydrogen (LCOH) when each input moves by +/- 20 %."""
+    from dataclasses import replace
+
+    from resize_energy.core.sensitivity import Parameter, one_at_a_time
+
+    def evaluate(f: dict[str, float]) -> float:
+        i = replace(
+            inp,
+            electrolyser_capex_per_kw=inp.electrolyser_capex_per_kw * f.get("el", 1.0),
+            pv_capex_per_kwp=inp.pv_capex_per_kwp * f.get("pv", 1.0),
+            wind_capex_per_kw=inp.wind_capex_per_kw * f.get("wind", 1.0),
+            grid_price_per_kwh=inp.grid_price_per_kwh * f.get("grid", 1.0),
+            discount_rate=inp.discount_rate * f.get("rate", 1.0),
+            kwh_per_kg_stack=inp.kwh_per_kg_stack * f.get("kwh", 1.0),
+            stack_hours=inp.stack_hours * f.get("stack", 1.0),
+            storage_capex_per_kg=inp.storage_capex_per_kg * f.get("tank", 1.0),
+        )
+        return size_hydrogen_plant(i, prof).lcoh
+
+    params = [Parameter("el", "Electrolyser cost per kW"),
+              Parameter("rate", "Discount rate"),
+              Parameter("kwh", "Electricity per kg of hydrogen"),
+              Parameter("stack", "Stack life"),
+              Parameter("tank", "Storage cost per kg")]
+    if inp.use_pv:
+        params.append(Parameter("pv", "PV cost per kWp"))
+    if inp.use_wind:
+        params.append(Parameter("wind", "Wind cost per kW"))
+    if inp.use_grid:
+        params.append(Parameter("grid", "Grid electricity price"))
+    return one_at_a_time(evaluate, params, "Cost of hydrogen (LCOH)", "euro/kg")

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from resize_energy.core.comparison import ComparisonInputs, ComparisonResult
+from resize_energy.core.comparison import ComparisonInputs, ComparisonResult, ranking_changes
 from resize_energy.tutor.checker import Finding
 
 
@@ -66,6 +66,19 @@ def check_comparison(inp: ComparisonInputs, r: ComparisonResult) -> list[Finding
         "Annual balance only: the hour-by-hour match of production and consumption (and the "
         "effect of storage) is not modelled, so savings are an upper estimate.",
         "econ.savings"))
+    if r.sensitivity:
+        changes = ranking_changes(r.sensitivity)
+        if changes:
+            out.append(Finding(
+                "warning", "ranking_unstable",
+                "The order of the technologies by cost of energy changes if " +
+                " or ".join(changes) + " move by 20 %: the winner depends on numbers you "
+                "cannot know well. Look at the other criteria too.", "econ.sensitivity"))
+        else:
+            out.append(Finding(
+                "info", "ranking_stable",
+                "The order by cost of energy does not change when capital costs or the "
+                "discount rate move by 20 %.", "econ.sensitivity"))
     if not any(f.severity in ("warning", "error") for f in out):
         out.insert(0, Finding("ok", "economics_ok",
                               "Every technology has an LCOE below its reference price and a "

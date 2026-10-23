@@ -84,6 +84,13 @@ def check_hydrogen_design(inp: HydrogenInputs, d: HydrogenDesign) -> list[Findin
                 f"The tank holds {days:.0f} days of production: it is a seasonal store. "
                 "Consider a second source, a buffer plus a gas grid, or accepting a "
                 "variable offtake.", "hydrogen.tank"))
+    if d.sensitivity and d.sensitivity.curves:
+        top = d.sensitivity.curves[0]
+        out.append(Finding(
+            "info", "sens_top",
+            f"The input that moves the cost of the hydrogen most is '{top.label.lower()}': "
+            f"+/- 20 % changes it by about {d.sensitivity.relative_swing(top):.0%}.",
+            "hydrogen.sensitivity"))
     if not any(f.severity in ("warning", "error") for f in out):
         out.insert(0, Finding("ok", "design_ok", "No problem found with the main design rules.",
                               None))

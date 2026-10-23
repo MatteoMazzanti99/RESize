@@ -231,6 +231,21 @@ HYDROGEN_EXPLANATIONS: dict[str, dict[str, str]] = {
         ),
         "reference": "ENTSO-E Transparency Platform (day-ahead prices); Armijo and Philibert, IJHE 2020.",
     },
+    "hydrogen.sensitivity": {
+        "title": "What if my numbers are wrong? (sensitivity of the hydrogen cost)",
+        "formula": "result(input x (1 + s)) for s = -20 %, -10 %, +10 %, +20 %, one input at a time",
+        "why": (
+            "Every number you typed is an estimate. Sensitivity analysis asks: if this one is "
+            "20 % off, how much does the result change? You repeat the calculation moving "
+            "one input at a time and keep the others fixed. The inputs whose lines are "
+            "steepest are the ones to measure, quote or negotiate carefully; the flat ones "
+            "can stay approximate. In hydrogen the electricity price and the electrolyser cost usually dominate; a better efficiency or a longer stack life matter less than people expect."
+        ),
+        "assumptions": (
+            "One input at a time (no interaction between inputs), linear steps of 10 and 20 %, the same hourly profiles. Costs of the future are uncertain by more than 20 %."
+        ),
+        "reference": "Saltelli et al., Global Sensitivity Analysis: The Primer (2008); IEA, Projected Costs of Generating Electricity.",
+    },
 }
 
 HYDROGEN_TOPIC_ORDER: tuple[str, ...] = (
@@ -247,4 +262,5 @@ HYDROGEN_TOPIC_ORDER: tuple[str, ...] = (
     "hydrogen.prices",
     "hydrogen.lcoh",
     "hydrogen.co2",
+    "hydrogen.sensitivity",
 )

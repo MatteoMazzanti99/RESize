@@ -108,6 +108,25 @@ COMPARE_EXPLANATIONS: dict[str, dict[str, str]] = {
         ),
         "reference": "IPCC AR5 WGIII Annex III (life-cycle emissions of electricity supply).",
     },
+    "econ.sensitivity": {
+        "title": "Does the ranking survive? (sensitivity of the comparison)",
+        "formula": "LCOE(capital costs x (1 + s)),  LCOE(discount rate x (1 + s)),  s = -20 % ... +20 %",
+        "why": (
+            "A comparison is only useful if the winner does not change with small errors in "
+            "the inputs. Here all the capital costs are moved together, and then the discount "
+            "rate, and the cost of one kWh is recomputed for every technology. If the lines "
+            "do not cross, the ranking is robust; if two lines cross inside the range, the "
+            "choice between those two depends on numbers you cannot know well, and you "
+            "should look at other criteria (land, risk, carbon, dispatchability). "
+            "Technologies with high capital costs and no fuel (PV, wind) move more with the "
+            "discount rate than those with a large running cost (biogas)."
+        ),
+        "assumptions": (
+            "Capital costs scaled together, not independently; the discount rate scaled "
+            "(5 % to 4 % or 6 %); the sizing (number of turbines, layout) is recomputed."
+        ),
+        "reference": "IEA, Projected Costs of Generating Electricity; Saltelli et al., Global Sensitivity Analysis (2008).",
+    },
 }
 
 COMPARE_TOPIC_ORDER: tuple[str, ...] = (
@@ -117,4 +136,5 @@ COMPARE_TOPIC_ORDER: tuple[str, ...] = (
     "econ.savings",
     "econ.payback",
     "econ.co2",
+    "econ.sensitivity",
 )

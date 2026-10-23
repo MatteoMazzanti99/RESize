@@ -17,6 +17,7 @@ from resize_energy.core.comparison import ComparisonInputs, ComparisonResult
 from resize_energy.core.hydrogen_design import HydrogenDesign, HydrogenInputs
 from resize_energy.core.pv_design import PVDesign, PVInputs
 from resize_energy.core.pv_extra import battery_view
+from resize_energy.core.sensitivity import Sensitivity
 from resize_energy.core.wind_design import WindDesign, WindInputs
 
 GREEN, BLUE, AMBER, PURPLE = "#0A7452", "#1F5FBF", "#C77700", "#7B3FB8"
@@ -330,7 +331,40 @@ def hydrogen_charts(inp: HydrogenInputs, d: HydrogenDesign) -> dict[str, ChartSp
                 colors=(GREEN if d.co2_kg_per_kg <= 3.4 else RED, GREY, GREY)),),
         x_label="kg of CO2 per kg of hydrogen", decimals=1,
         caption="Below the EU limit (about 3.4) the hydrogen counts as renewable.")
-    return out
+    return out | sensitivity_charts("h2", d.sensitivity)
+
+
+# --- sensitivity ---------------------------------------------------------------------------
+_CURVE_COLORS = (BLUE, GREEN, AMBER, PURPLE, RED, TEAL, GREY, "#9C4F96")
+
+
+def sensitivity_charts(prefix: str, sens: Sensitivity | None) -> dict[str, ChartSpec]:
+    """Two pictures: which input matters most, and what happens to the result as it moves."""
+    if sens is None or not sens.curves:
+        return {}
+    top = sens.curves[:8]
+    pct = tuple(s * 100 for s in sens.steps)
+    lo, hi = pct[0], pct[-1]
+    swing = tuple(c.swing / 2.0 for c in top)
+    first = top[0]
+    return {
+        f"{prefix}_sens_swing": ChartSpec(
+            "hbars", f"What moves the result most (each input changed by +/- {hi:.0f} %)",
+            tuple(c.label for c in top),
+            (Series(f"+/- {sens.unit}", swing, colors=(GREEN,) + (LIGHT,) * (len(top) - 1)),),
+            x_label=f"Change in {sens.metric.lower()} [{sens.unit}]", decimals=sens.decimals,
+            caption=f"A +/- {hi:.0f} % change of '{first.label.lower()}' moves the result by about "
+                    f"{sens.relative_swing(first):.0%}: it is the number worth checking first."),
+        f"{prefix}_sens_spider": ChartSpec(
+            "lines", f"{sens.metric}: what if an input is {lo:.0f} % or +{hi:.0f} % off?", (),
+            tuple(Series(c.label, c.values, _CURVE_COLORS[i % len(_CURVE_COLORS)], x=pct)
+                  for i, c in enumerate(top[:6])),
+            x_label="Change of the input [%]", y_label=f"{sens.metric} [{sens.unit}]",
+            decimals=sens.decimals, height=300,
+            caption="The steeper the line, the more the result depends on that input. All lines "
+                    f"cross at 0 %, the case you chose ({sens.base:,.{sens.decimals}f} "
+                    f"{sens.unit})."),
+    }
 
 
 # --- comparison ----------------------------------------------------------------------------
@@ -376,7 +410,32 @@ def comparison_charts(inp: ComparisonInputs, r: ComparisonResult) -> dict[str, C
             "hbars", "CO2 avoided each year (higher is better)", names,
             (Series("t CO2", tuple(t.co2_avoided_t_per_year for t in techs), colors=colors),),
             x_label="tonnes of CO2 per year"),
+    } | _compare_sens_charts(techs, r.sensitivity)
+
+
+def _compare_sens_charts(techs, sens) -> dict[str, ChartSpec]:
+    if not sens:
+        return {}
+    pct = tuple(x * 100 for x in (-0.2, -0.1, 0.0, 0.1, 0.2))
+    texts = {
+        "capex": ("cmp_sens_capex", "All capital costs together",
+                  "If every technology costs 20 % more or less to build, the order of the "
+                  "lines tells you whether the winner changes."),
+        "rate": ("cmp_sens_rate", "The discount rate",
+                 "Capital-heavy technologies (those starting higher on the left) suffer most "
+                 "when money is more expensive."),
     }
+    out = {}
+    for key, (name, what, caption) in texts.items():
+        data = sens.get(key, {})
+        series = tuple(Series(t.name, data[t.key], TECH_COLORS[t.key], x=pct)
+                       for t in techs if t.key in data)
+        if series:
+            out[name] = ChartSpec(
+                "lines", f"Cost of one kWh if {what.lower()} change", (), series,
+                x_label="Change [%]", y_label="LCOE [euro/kWh]", decimals=3, height=290,
+                caption=caption)
+    return out
 
 
 def _all_finite_or_inf(spec: ChartSpec) -> bool:
@@ -440,4 +499,4 @@ def battery_charts(inp: BatteryInputs, d: BatteryDesign) -> dict[str, ChartSpec]
             decimals=1, height=290,
             caption="The battery fills when the production is above the consumption and "
                     "empties in the evening.")
-    return out
+    return out | sensitivity_charts("bat", d.sensitivity)

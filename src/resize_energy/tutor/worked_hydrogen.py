@@ -46,6 +46,15 @@ def hydrogen_worked_example(key: str, inp: HydrogenInputs, d: HydrogenDesign) ->
         return (f"Grid energy {d.grid_kwh:,.0f} kWh at an average {d.mean_grid_price:.3f} "
                 f"euro/kWh (market mean {flat:.3f}): "
                 f"{'cheapest hours first' if inp.cheapest_hours_first else 'spread evenly'}")
+    if key == "hydrogen.sensitivity":
+        sn = d.sensitivity
+        if sn is None or not sn.curves:
+            return f"Not computed: the cost of the hydrogen is {d.lcoh:.2f} euro/kg."
+        top = sn.curves[0]
+        return (f"Base {sn.base:.2f} euro/kg. Most influential: '{top.label}': "
+                f"{top.values[0]:.2f} at -20 %, {top.values[-1]:.2f} at +20 % "
+                f"(about +/- {sn.relative_swing(top):.0%}). Least: "
+                f"'{sn.curves[-1].label}' (+/- {sn.relative_swing(sn.curves[-1]):.0%}).")
     if key == "hydrogen.dispatch":
         sources = [name for name, on in (("PV", inp.use_pv), ("wind", inp.use_wind),
                                          ("grid", inp.use_grid)) if on]

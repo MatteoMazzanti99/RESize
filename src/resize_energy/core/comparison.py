@@ -122,6 +122,7 @@ class ComparisonResult:
     wind_design: WindDesign | None = None
     biomass_design: BiomassDesign | None = None
     hydrogen_design: HydrogenDesign | None = None
+    sensitivity: dict[str, dict[str, tuple[float, ...]]] | None = None
 
     def get(self, key: str) -> TechResult | None:
         return next((t for t in self.techs if t.key == key), None)
@@ -301,3 +302,45 @@ def compare_technologies(inp: ComparisonInputs) -> ComparisonResult:
         wind_design=wd, biomass_design=bd, hydrogen_design=hd,
     )
 
+
+
+def comparison_sensitivity(inp: ComparisonInputs):
+    """LCOE of every technology when ALL capital costs, or the discount rate, or the energy
+    target move by +/- 20 %: does the ranking survive?"""
+    from resize_energy.core.sensitivity import STEPS
+
+    def scaled(f_capex: float, f_rate: float) -> ComparisonInputs:
+        c = inp.costs
+        costs = replace(
+            c, pv_capex_eur_per_kwp=c.pv_capex_eur_per_kwp * f_capex,
+            wind_capex_eur_per_kw=c.wind_capex_eur_per_kw * f_capex,
+            bio_capex_eur_per_kwe=c.bio_capex_eur_per_kwe * f_capex,
+            h2_electrolyser_capex_eur_per_kw=c.h2_electrolyser_capex_eur_per_kw * f_capex,
+            discount_rate=c.discount_rate * f_rate)
+        return replace(inp, costs=costs)
+
+    out: dict[str, dict[str, tuple[float, ...]]] = {"capex": {}, "rate": {}}
+    for s in STEPS:
+        for name, args in (("capex", (1.0 + s, 1.0)), ("rate", (1.0, 1.0 + s))):
+            res = compare_technologies(scaled(*args))
+            for t in res.techs:
+                out[name].setdefault(t.key, ())
+                out[name][t.key] += (t.lcoe_eur_per_kwh,)
+    return out
+
+
+def ranking_changes(sens: dict[str, dict[str, tuple[float, ...]]]) -> list[str]:
+    """Scenarios ('capital costs', 'discount rate') in which the order by LCOE differs from
+    the base case within the +/- 20 % range."""
+    names = {"capex": "capital costs", "rate": "the discount rate"}
+    out = []
+    for key, data in sens.items():
+        if len(data) < 2:
+            continue
+        mid = len(next(iter(data.values()))) // 2
+        base = sorted(data, key=lambda t: data[t][mid])
+        for idx in (0, -1):
+            if sorted(data, key=lambda t: data[t][idx]) != base:
+                out.append(names.get(key, key))
+                break
+    return out

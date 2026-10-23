@@ -56,6 +56,14 @@ def check_battery_design(inp: BatteryInputs, d: BatteryDesign) -> list[Finding]:
             "warning", "synthetic_profile",
             "The production profile is synthetic (invented, not measured) and the load is a "
             "typical shape: results are indicative.", "battery.load"))
+    if d.sensitivity and d.sensitivity.curves:
+        flips = [c.label for c in d.sensitivity.curves if min(c.values) < 0 < max(c.values)]
+        if flips:
+            out.append(Finding(
+                "info", "sens_flips",
+                "The sign of the net present value changes within +/- 20 % of: "
+                + ", ".join(x.lower() for x in flips[:3]) + ". The verdict is fragile.",
+                "battery.sensitivity"))
     if not any(f.severity in ("warning", "error") for f in out):
         out.insert(0, Finding("ok", "design_ok", "No problem found with the main design rules.",
                               None))

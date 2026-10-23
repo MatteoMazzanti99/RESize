@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from resize_energy.core import economics as eco
-from resize_energy.core.comparison import ComparisonInputs, ComparisonResult
+from resize_energy.core.comparison import ComparisonInputs, ComparisonResult, ranking_changes
 
 
 def _years(value: float) -> str:
@@ -79,5 +79,21 @@ def compare_worked_example(key: str, inp: ComparisonInputs, r: ComparisonResult)
                 f"{t.co2_avoided_t_per_year:,.0f} t/year ({t.co2_avoided_lifetime_t:,.0f} t over "
                 f"{t.lifetime_years:.0f} years)"
             )
+        return "\n".join(out)
+    if key == "econ.sensitivity":
+        if not r.sensitivity:
+            return ("Not computed here; base cost of one kWh: " + ", ".join(
+                f"{t.name} {t.lcoe_eur_per_kwh:.3f}" for t in r.techs) + " euro/kWh.")
+        out = []
+        for name, label in (("capex", "capital costs"), ("rate", "discount rate")):
+            data = r.sensitivity.get(name, {})
+            for t in r.techs:
+                if t.key in data:
+                    v = data[t.key]
+                    out.append(f"{label}: {t.name} {v[0]:.3f} -> {v[-1]:.3f} euro/kWh "
+                               f"(-20 % to +20 %)")
+        changes = ranking_changes(r.sensitivity)
+        out.append("The ranking changes with " + " and ".join(changes) + "." if changes
+                   else "The ranking by cost does not change within +/- 20 %.")
         return "\n".join(out)
     return None

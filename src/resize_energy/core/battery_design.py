@@ -12,6 +12,7 @@ from typing import Literal
 
 from resize_energy.core import battery as bat
 from resize_energy.core import economics as eco
+from resize_energy.core.sensitivity import Sensitivity
 
 Mode = Literal["given", "target", "optimal"]
 MODES: dict[str, str] = {
@@ -107,6 +108,7 @@ class BatteryDesign:
     summer_week: tuple[tuple[float, ...], ...]   # load, generation, soc, import (168 h each)
     winter_week: tuple[tuple[float, ...], ...]
     profile_source: str
+    sensitivity: Sensitivity | None = None
 
 
 SWEEP_FACTORS = (0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0)   # x the average daily load
@@ -228,3 +230,40 @@ def size_battery(inp: BatteryInputs, prof: BatteryProfiles) -> BatteryDesign:
         summer_week=_week(run, gen, load, 172), winter_week=_week(run, gen, load, 5),
         profile_source=prof.source,
     )
+
+
+def battery_sensitivity(inp: BatteryInputs, prof: BatteryProfiles, capacity_kwh: float):
+    """Net present value of a battery of ``capacity_kwh`` when each input moves by +/- 20 %."""
+    from dataclasses import replace
+
+    from resize_energy.core.sensitivity import Parameter, one_at_a_time
+
+    load = bat.load_profile(inp.annual_demand_kwh, inp.load_kind)
+    gen = _generation(inp, prof)
+    base_run = bat.simulate_battery(gen, load, 0.0, 0.0)
+    fixed = replace(inp, mode="given", capacity_kwh=capacity_kwh)
+
+    def evaluate(f: dict[str, float]) -> float:
+        i = replace(
+            fixed,
+            capex_per_kwh=fixed.capex_per_kwh * f.get("capex", 1.0),
+            retail_price=fixed.retail_price * f.get("retail", 1.0),
+            export_price=fixed.export_price * f.get("export", 1.0),
+            discount_rate=fixed.discount_rate * f.get("rate", 1.0),
+            eta_roundtrip=min(1.0, fixed.eta_roundtrip * f.get("eta", 1.0)),
+            cycle_life=fixed.cycle_life * f.get("cycles", 1.0),
+            calendar_life_years=fixed.calendar_life_years * f.get("calendar", 1.0),
+        )
+        power = capacity_kwh * i.c_rate
+        run = bat.simulate_battery(gen, load, capacity_kwh, power, i.eta_roundtrip,
+                                   i.usable_fraction, i.health)
+        return _economics(i, capacity_kwh, power, run, base_run)[5]
+
+    params = [Parameter("capex", "Battery cost per kWh"),
+              Parameter("retail", "Price you pay for electricity"),
+              Parameter("export", "Price you are paid for the surplus"),
+              Parameter("rate", "Discount rate"),
+              Parameter("eta", "Round-trip efficiency"),
+              Parameter("calendar", "Calendar life")]
+    return one_at_a_time(evaluate, params, "Net present value of the battery", "euro",
+                         decimals=0)

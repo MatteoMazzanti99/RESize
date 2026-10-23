@@ -25,6 +25,7 @@ from resize_energy.core.hydrogen_design import (
     MODES,
     HydrogenInputs,
     HydrogenProfiles,
+    hydrogen_sensitivity,
     size_hydrogen_plant,
 )
 from resize_energy.core.nasa_power import NasaPowerError
@@ -495,7 +496,8 @@ class HydrogenResultsPage(BaseResultsPage):
         profiles = self.site.profiles()
         if inputs.use_grid and inputs.cheapest_hours_first:
             profiles = replace(profiles, prices=h2.synthetic_price_profile(inputs.grid_price_per_kwh))
-        design = size_hydrogen_plant(inputs, profiles)
+        design = replace(size_hydrogen_plant(inputs, profiles),
+                         sensitivity=hydrogen_sensitivity(inputs, profiles))
         findings = check_hydrogen_design(inputs, design)
         note = f"Site: lat {self.site.lat.value():.4f}, lon {self.site.lon.value():.4f}."
         light = build_hydrogen_report(inputs, design, findings, site_note=note, theme="light")

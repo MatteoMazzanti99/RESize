@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -17,6 +19,7 @@ from resize_energy.core.battery_design import (
     MODES,
     BatteryInputs,
     BatteryProfiles,
+    battery_sensitivity,
     size_battery,
 )
 from resize_energy.gui.biomass_wizard import _show_row
@@ -248,7 +251,10 @@ class BatteryResultsPage(BaseResultsPage):
             retail_price=c.retail.value(), export_price=c.export.value(),
             discount_rate=c.rate.value() / 100.0, grid_ef=c.ef.value(),
         )
-        design = size_battery(inputs, self.site.battery_profiles())
+        profiles = self.site.battery_profiles()
+        design = size_battery(inputs, profiles)
+        design = replace(design, sensitivity=battery_sensitivity(inputs, profiles,
+                                                                 design.capacity_kwh))
         findings = check_battery_design(inputs, design)
         note = f"Site: lat {self.site.lat.value():.4f}, lon {self.site.lon.value():.4f}."
         light = build_battery_report(inputs, design, findings, site_note=note, theme="light")

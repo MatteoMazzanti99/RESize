@@ -61,6 +61,14 @@ Wind can also use a wake model (step 3, Layout): Jensen wakes over a wind rose f
 staggered rows, giving the real wake loss, the efficiency of every turbine and of every
 wind direction, and a turbine count that accounts for it.
 
+## Sensitivity analysis
+
+Hydrogen, battery and the technology comparison end with two pictures answering "what if my
+numbers are wrong?": a ranking of which input moves the result most, and curves of the result
+when each input is 10 or 20 % off (cost of hydrogen, net present value of the battery, cost of
+a kWh for every technology when all capital costs or the discount rate move). The comparison
+also tells you whether the ranking of the technologies survives.
+
 ## Biomass module
 
 Start it from the home screen (click the **Biomass** card) and pick the pathway:

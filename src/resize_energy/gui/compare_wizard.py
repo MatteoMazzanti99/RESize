@@ -28,6 +28,7 @@ from resize_energy.core.comparison import (
     ComparisonInputs,
     CostAssumptions,
     compare_technologies,
+    comparison_sensitivity,
 )
 from resize_energy.core.fuel_library import SUBSTRATES
 from resize_energy.core.nasa_power import NasaPowerError, fetch_wind_climate
@@ -518,7 +519,8 @@ class CompareResultsPage(BaseResultsPage):
             h2_use_wind=p.h2_wind.isChecked(),
             hourly_weather=s.weather(),
         )
-        result = compare_technologies(inputs)
+        result = replace(compare_technologies(inputs),
+                         sensitivity=comparison_sensitivity(inputs))
         findings = check_comparison(inputs, result)
         note = f"Site: lat {s.lat.value():.4f}, lon {s.lon.value():.4f}."
         light = build_comparison_report(inputs, result, findings, site_note=note, theme="light")

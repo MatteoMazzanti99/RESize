@@ -142,6 +142,21 @@ BATTERY_EXPLANATIONS: dict[str, dict[str, str]] = {
         "assumptions": "Average grid factor, no embodied carbon of the battery.",
         "reference": "Peters et al., Life cycle assessment of Li-ion batteries, Renew. Sust. Energy Rev. 2017.",
     },
+    "battery.sensitivity": {
+        "title": "What if my numbers are wrong? (sensitivity of the battery's value)",
+        "formula": "result(input x (1 + s)) for s = -20 %, -10 %, +10 %, +20 %, one input at a time",
+        "why": (
+            "Every number you typed is an estimate. Sensitivity analysis asks: if this one is "
+            "20 % off, how much does the result change? You repeat the calculation moving "
+            "one input at a time and keep the others fixed. The inputs whose lines are "
+            "steepest are the ones to measure, quote or negotiate carefully; the flat ones "
+            "can stay approximate. For a battery the result is the small difference between two large numbers (savings against cost), so it is very sensitive: a change of a few cents in the tariff can turn a loss into a gain."
+        ),
+        "assumptions": (
+            "One input at a time, the battery size fixed at the chosen one, prices constant over the life."
+        ),
+        "reference": "Saltelli et al., Global Sensitivity Analysis: The Primer (2008); IEA, Projected Costs of Generating Electricity.",
+    },
 }
 
 BATTERY_TOPIC_ORDER: tuple[str, ...] = (
@@ -155,4 +170,5 @@ BATTERY_TOPIC_ORDER: tuple[str, ...] = (
     "battery.economics",
     "battery.lcos",
     "battery.co2",
+    "battery.sensitivity",
 )
