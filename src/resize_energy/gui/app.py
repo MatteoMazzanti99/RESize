@@ -91,14 +91,14 @@ def _screenshots(window, app, folder: str) -> None:
     for tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "compare"):
         window._start(tech)
         app.processEvents()
-        window.grab().save(str(out / f"{tech}_1.png"))
+        window.grab().save(str(out / f"{tech}_start.png"))
         for _ in range(len(window.pages) - 2):
             window._next()
             app.processEvents()
             if window.index == 3:
-                window.grab().save(str(out / f"{tech}_3.png"))
+                window.grab().save(str(out / f"{tech}_middle.png"))
         app.processEvents()
-        window.grab().save(str(out / f"{tech}_4.png"))
+        window.grab().save(str(out / f"{tech}_results.png"))
         window._restart()
 
 

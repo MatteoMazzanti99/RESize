@@ -6,7 +6,9 @@ RESize guides MSc students (and engineers doing a first-pass design) through the
 renewable energy plants. At every step it shows the formula, the assumptions and the
 reasoning, so you learn *why* a choice is made, not just the number that comes out.
 
-> **Status:** early release. Photovoltaic, wind, biomass and green hydrogen are available. Interfaces and results may change.
+> **Status:** early release. Photovoltaic, wind, biomass, green hydrogen, battery storage and solar thermal (with adsorption cooling) are available, plus a technology comparison. Interfaces and results may change.
+
+**User guide:** <https://matteomazzanti99.github.io/RESize/> (one page per technology, with screenshots).
 
 ![RESize home screen](docs/images/home.png)
 
@@ -198,9 +200,10 @@ or less. AI answers can be wrong: the formulas in the **Why?** panel are the ref
 | Version | Content |
 |---|---|
 | v0.1 | Guided photovoltaic wizard (resource data, strings, inverter, losses, yield) + PDF report |
-| v0.2 | "Why?" panels (done), rule-based design checker (done), optional AI tutor (done), Italian interface |
+| v0.2 | "Why?" panels (done), rule-based design checker (done), optional AI tutor (done), save and reopen projects (done) |
 | v0.3 | Wind module (done: resource, Weibull, turbine yield, layout, checks, report) + technology comparison (done: LCOE, payback, NPV, avoided CO2) |
 | v0.4 | Biomass module (done: boiler, ORC cogeneration, biogas) + green hydrogen (done: PEM electrolyser fed by PV, wind and/or grid, hourly dispatch, LCOH, carbon) |
+| v0.5 | Battery storage, solar thermal with adsorption cooling, sensitivity analysis, costs in the PV and wind flows (done); documentation site (done) |
 
 ## Design principles
 
