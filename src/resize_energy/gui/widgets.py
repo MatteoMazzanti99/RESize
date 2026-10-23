@@ -124,6 +124,7 @@ class StepPage(QWidget):
     """
 
     show_header = True
+    art_key: str | None = None   # small illustration in the header (see report/step_art.py)
 
     def __init__(self) -> None:
         super().__init__()

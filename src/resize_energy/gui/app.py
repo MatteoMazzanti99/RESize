@@ -56,7 +56,7 @@ def _walk_through(window, app) -> int:
         print("self-test: the comparison charts were not drawn", flush=True)
         return 1
     window._restart()
-    for check in (_versions_check, _solar_cooling_check, _country_check):
+    for check in (_versions_check, _solar_cooling_check, _country_check, _step_art_check):
         code = check(window, app)
         if code:
             return code
@@ -135,6 +135,19 @@ def _country_check(window, app) -> int:
     window._restart()
     if not ok:
         print("self-test: the country preset did not fill the costs", flush=True)
+        return 1
+    return 0
+
+
+def _step_art_check(window, app) -> int:
+    """The input steps show their small illustration; the home page shows none."""
+    window._start("pv")
+    shown = window.header_art.key
+    window._next()
+    second = window.header_art.key
+    window._restart()
+    if shown != "sun_path" or second != "load_profile":
+        print(f"self-test: step illustrations wrong ({shown}, {second})", flush=True)
         return 1
     return 0
 

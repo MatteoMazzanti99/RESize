@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QEasingCurve, QPropertyAnimation
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -66,6 +66,7 @@ from resize_energy.gui.solar_wizard import (
     SolarResultsPage,
     SolarSitePage,
 )
+from resize_energy.gui.step_art import StepArt
 from resize_energy.gui.widgets import Sidebar, StepPage, make_label
 from resize_energy.gui.wind_wizard import (
     WIND_STEP_NAMES,
@@ -152,6 +153,17 @@ class MainWindow(QMainWindow):
             "compare": (COMPARE_STEP_NAMES, [self.cmp_site, self.cmp_plant, self.cmp_costs,
                                              self.cmp_results]),
         }
+        for key, page in {
+                "sun_path": [self.site, self.wind_site, self.h2_site, self.bat_site, self.sol_site],
+                "load_profile": [self.load, self.wind_load, self.bat_goal, self.bio_demand],
+                "modules": [self.comp], "coins": [self.pv_costs, self.wind_costs, self.h2_costs,
+                                                  self.bat_costs, self.sol_costs],
+                "turbine_curve": [self.wind_turbine], "flame": [self.bio_fuel],
+                "leaf": [self.bio_plant], "target": [self.h2_goal],
+                "electrolyser": [self.h2_plant], "battery": [self.bat_battery],
+                "tap": [self.sol_load], "collector": [self.sol_coll]}.items():
+            for each in page:
+                each.art_key = key
         self.tech = "pv"
         self.pages: list[StepPage] = [self.home, *self.flows["pv"][1]]
         self.index = 0
@@ -160,6 +172,7 @@ class MainWindow(QMainWindow):
         self.header_step = make_label("", "overline", wrap=False)
         self.header_title = make_label("", "pageTitle", wrap=False)
         self.header_subtitle = make_label("", "pageSubtitle")
+        self.header_art = StepArt()       # small moving illustration of the step
 
         self.stack = QStackedWidget()
         self._scroll_of: dict[int, QScrollArea] = {}
@@ -203,9 +216,15 @@ class MainWindow(QMainWindow):
         column = QVBoxLayout(right)
         column.setContentsMargins(36, 28, 36, 20)
         column.setSpacing(0)
-        column.addWidget(self.header_step)
-        column.addWidget(self.header_title)
-        column.addWidget(self.header_subtitle)
+        text = QVBoxLayout()
+        text.setSpacing(0)
+        text.addWidget(self.header_step)
+        text.addWidget(self.header_title)
+        text.addWidget(self.header_subtitle)
+        header = QHBoxLayout()
+        header.addLayout(text, 1)
+        header.addWidget(self.header_art, 0, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
+        column.addLayout(header)
         column.addSpacing(16)
         column.addWidget(self.stack, 1)
         column.addSpacing(12)
@@ -284,6 +303,7 @@ class MainWindow(QMainWindow):
         self.header_step.setText(f"{TECH_LABELS.get(self.tech, '')}  ·  STEP {index} OF {total}")
         self.header_title.setText(page.title())
         self.header_subtitle.setText(page.subTitle())
+        self.header_art.set_key(page.art_key if page.show_header else None)
         last = index == len(self.pages) - 1
         home = index == 0
         self.back_button.setVisible(not home)
