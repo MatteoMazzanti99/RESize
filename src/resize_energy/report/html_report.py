@@ -606,7 +606,14 @@ def build_hydrogen_report(
         _row("Consumption (stack and auxiliaries)", f"{inp.kwh_per_kg_stack:.1f} kWh/kg"),
         _row("Minimum load", f"{inp.min_load:.0%}"),
         _row("Pressure (outlet / storage)", f"{inp.outlet_bar:.0f} / {inp.storage_bar:.0f} bar"),
-        _row("Storage autonomy", f"{inp.storage_days:.0f} days"),
+        _row("Storage", f"{inp.storage_days:.0f} days of autonomy" if inp.storage_mode == "days"
+             else "sized hour by hour from the production"),
+        _row("Part-load efficiency", f"on (auxiliaries {inp.aux_share:.0%}, stack gain "
+             f"{inp.stack_gain:.0%})" if inp.part_load_model else "off (one constant value)"),
+        _row("Stack ageing", f"{inp.degradation_per_1000h:.2%} per 1000 h"
+             if inp.degradation_per_1000h > 0 else "off"),
+        _row("Grid purchase", "cheapest hours first, hourly prices" if inp.cheapest_hours_first
+             else "spread evenly" if inp.use_grid else "not used"),
         _row("Grid limit", f"{inp.grid_hours_cap:,.0f} full-load hours" if inp.use_grid
              else "not used"),
         _row("Costs",

@@ -61,6 +61,29 @@ def check_hydrogen_design(inp: HydrogenInputs, d: HydrogenDesign) -> list[Findin
             "The hourly profiles are synthetic (invented, not measured): the hours of "
             "operation are indicative. Fetch the real hourly data in step 2 when you are online.",
             "hydrogen.dispatch"))
+    if inp.part_load_model and d.load_hist_kwh:
+        low = sum(d.load_hist_kwh[:2]) / max(sum(d.load_hist_kwh), 1e-9)
+        if low > 0.15:
+            out.append(Finding(
+                "warning", "low_load",
+                f"{low:.0%} of the electricity is used below 20 % of the nominal load, where "
+                "the auxiliaries weigh most: a smaller electrolyser, or two modules, would "
+                "waste less.", "hydrogen.partload"))
+    if inp.degradation_per_1000h > 0 and d.hydrogen_kg_year1 > 0:
+        loss = 1.0 - d.hydrogen_kg / d.hydrogen_kg_year1
+        if loss > 0.06:
+            out.append(Finding(
+                "info", "ageing_loss",
+                f"Ageing costs {loss:.0%} of the hydrogen on average over the life: plan the "
+                "stack replacement or size with margin.", "hydrogen.ageing"))
+    if d.storage_mode == "hourly" and d.hydrogen_kg_per_day > 0:
+        days = d.storage_kg / d.hydrogen_kg_per_day
+        if days > 14:
+            out.append(Finding(
+                "warning", "tank_seasonal",
+                f"The tank holds {days:.0f} days of production: it is a seasonal store. "
+                "Consider a second source, a buffer plus a gas grid, or accepting a "
+                "variable offtake.", "hydrogen.tank"))
     if not any(f.severity in ("warning", "error") for f in out):
         out.insert(0, Finding("ok", "design_ok", "No problem found with the main design rules.",
                               None))

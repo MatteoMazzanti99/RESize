@@ -88,6 +88,11 @@ gas. A button downloads one real year of hourly wind and radiation from NASA POW
 invented year with the same yearly totals is used and the report says so. Costs and emission
 factors are round placeholders to replace with quotes.
 
+The hydrogen module also has optional deeper models (step 3): efficiency that depends on the
+load (auxiliaries weigh more at part load), stack ageing over the years with replacement,
+a storage tank sized hour by hour from the production, and grid purchases in the cheapest
+hours of an hourly price profile.
+
 ## Battery storage module
 
 Click the **Battery storage** card. It stores the surplus of a PV and/or wind plant for the

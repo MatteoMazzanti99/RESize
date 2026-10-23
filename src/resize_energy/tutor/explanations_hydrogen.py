@@ -163,6 +163,74 @@ HYDROGEN_EXPLANATIONS: dict[str, dict[str, str]] = {
         ),
         "reference": "EU Delegated Regulation 2023/1184 (RFNBO); IPCC AR5 WGIII Annex III.",
     },
+    "hydrogen.partload": {
+        "title": "Efficiency at part load",
+        "formula": "f(x) = (1 - a)(1 - g(1 - x)) + a / x;   kWh/kg(x) = kWh/kg_nominal * f(x)",
+        "why": (
+            "Solar and wind rarely give exactly the nominal power, so the electrolyser spends "
+            "much of the year at part load. Two things happen. The stack is a little more "
+            "efficient at low current (g: the gain at very low load). But the auxiliaries, "
+            "pumps, cooling and power electronics, draw nearly the same power at any load "
+            "(a: about 6 % of nominal), so per kilogram they weigh 1/x more. The result is a "
+            "curve that is flat around 40-100 % and rises steeply below 20 %: running at "
+            "very low load wastes energy, which is why the minimum load matters."
+        ),
+        "assumptions": (
+            "A smooth curve with two parameters, not the polarisation curve of a real stack. "
+            "Temperature and pressure effects are ignored."
+        ),
+        "reference": "Buttler and Spliethoff, RSER 2018; Brauns and Turek, Processes 2020.",
+    },
+    "hydrogen.ageing": {
+        "title": "Stack ageing over the years",
+        "formula": "kWh/kg(age) = kWh/kg_new * (1 + d * hours / 1000)",
+        "why": (
+            "The stack voltage rises slowly with the hours of operation (typically 0.1-0.3 % "
+            "every 1000 hours for PEM), so the same electricity gives less hydrogen year after "
+            "year until the stack is replaced and the plant starts again from new. The hydrogen "
+            "you plan with is the average over the life, not the first year. A plant that "
+            "runs many hours ages faster but also makes more hydrogen in the same years."
+        ),
+        "assumptions": (
+            "Linear drift, replacement at the stack life you set, no extra wear from starts and "
+            "stops. The average is simple (not discounted)."
+        ),
+        "reference": "Frensch et al., Influence of the operation mode on PEM electrolysis degradation, IJHE 2019.",
+    },
+    "hydrogen.tank": {
+        "title": "Storage sized hour by hour",
+        "formula": "level(t) = sum of (production - offtake);  tank = max(level) - min(level)",
+        "why": (
+            "If the customer takes hydrogen at a constant rate, equal to the yearly average, "
+            "the tank must hold the difference between the variable production and that "
+            "steady offtake. Adding hour after hour, the level goes up in the sunny or windy "
+            "periods and down in the others; the tank is the distance between the highest and "
+            "the lowest point. With solar alone this is a seasonal tank, far bigger than a "
+            "few days of autonomy, which is why the choice of 'days' can be too optimistic."
+        ),
+        "assumptions": (
+            "Constant offtake all year, one year of data repeated, no losses or leaks, no "
+            "compressor limits. A real customer has its own profile."
+        ),
+        "reference": "Hydrogen Council, Path to hydrogen competitiveness (2020).",
+    },
+    "hydrogen.prices": {
+        "title": "Hourly electricity prices: when to buy from the grid",
+        "formula": "cost = sum of grid_energy(t) * price(t);  buy in the cheapest hours first",
+        "why": (
+            "An electrolyser can wait. If the grid is allowed a number of hours a year, it is "
+            "better to use them when electricity costs less: nights, windy days, sunny "
+            "middays. Buying in the cheapest hours instead of spreading the purchase evenly "
+            "lowers the average price paid for the same energy and the same carbon (if the "
+            "grid factor is constant). The gain depends on the volatility of the market."
+        ),
+        "assumptions": (
+            "An invented price year with the usual shape unless you load real prices; one year "
+            "is not the future. The grid factor is the same in every hour, although cheap hours "
+            "are often the cleanest."
+        ),
+        "reference": "ENTSO-E Transparency Platform (day-ahead prices); Armijo and Philibert, IJHE 2020.",
+    },
 }
 
 HYDROGEN_TOPIC_ORDER: tuple[str, ...] = (
@@ -173,6 +241,10 @@ HYDROGEN_TOPIC_ORDER: tuple[str, ...] = (
     "hydrogen.storage",
     "hydrogen.water",
     "hydrogen.stack",
+    "hydrogen.partload",
+    "hydrogen.ageing",
+    "hydrogen.tank",
+    "hydrogen.prices",
     "hydrogen.lcoh",
     "hydrogen.co2",
 )

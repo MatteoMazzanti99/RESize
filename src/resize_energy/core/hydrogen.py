@@ -48,6 +48,47 @@ def storage_volume_m3(mass_kg: float, pressure_bar: float) -> float:
     return mass_kg / hydrogen_density_kg_m3(pressure_bar)
 
 
+def part_load_factor(load: float, aux_share: float = 0.06, stack_gain: float = 0.12) -> float:
+    """Specific consumption at ``load`` (0-1 of nominal) relative to nominal load.
+
+    The stack is a little more efficient at part load (lower current density, gain
+    ``stack_gain`` when the load goes to zero) but the auxiliaries (pumps, cooling, power
+    electronics) draw a fixed power ``aux_share`` of nominal, so per kilogram they weigh 1/load.
+    The factor is 1 at nominal load.
+    """
+    if load <= 0:
+        raise ValueError("load must be > 0")
+    x = min(load, 1.0)
+    return (1.0 - aux_share) * (1.0 - stack_gain * (1.0 - x)) + aux_share / x
+
+
+def ageing_factor(operating_hours: float, degradation_per_1000h: float) -> float:
+    """Specific consumption of an aged stack relative to a new one (linear voltage drift)."""
+    return 1.0 + degradation_per_1000h * operating_hours / 1000.0
+
+
+def synthetic_price_profile(mean_eur_per_kwh: float, seed: int = 5) -> tuple[float, ...]:
+    """An invented hourly electricity price with the typical shape, mean = ``mean``.
+
+    Evening peak, cheap nights, a dip at midday in summer (solar), dearer winters and noise.
+    """
+    import random
+
+    rng = random.Random(seed)
+    raw: list[float] = []
+    for day in range(365):
+        winter = 1.0 + 0.25 * math.cos(2.0 * math.pi * (day - 15) / 365.0)
+        summer = 1.0 - winter + 1.0   # 0.75 .. 1.25 mirror of winter, 1 + 0.25 cos shifted
+        weekend = 0.88 if day % 7 in (5, 6) else 1.0
+        for hour in range(24):
+            shape = (0.85 + 0.35 * math.exp(-((hour - 19.5) / 2.0) ** 2)
+                     + 0.18 * math.exp(-((hour - 8.0) / 1.8) ** 2)
+                     - 0.30 * summer * math.exp(-((hour - 13.0) / 2.5) ** 2) * 0.8)
+            raw.append(max(0.05, shape * winter * weekend * (1.0 + rng.gauss(0.0, 0.08))))
+    avg = sum(raw) / len(raw)
+    return tuple(mean_eur_per_kwh * v / avg for v in raw)
+
+
 @dataclass(frozen=True)
 class DispatchResult:
     res_available_kwh: float     # renewable energy that the plant could produce
@@ -60,6 +101,11 @@ class DispatchResult:
     wind_used_kwh: float
     monthly_res_kwh: tuple[float, ...] = ()    # renewable energy used, per month
     monthly_grid_kwh: tuple[float, ...] = ()   # grid energy used, per month
+    hydrogen_kg_year1: float = 0.0             # first year, new stack
+    kg_by_year: tuple[float, ...] = ()         # every year of the electrolyser life (ageing)
+    hourly_kg: tuple[float, ...] = ()          # hydrogen made in each hour of year 1
+    grid_cost_eur: float = 0.0                 # with hourly prices when given, else 0
+    load_hist_kwh: tuple[float, ...] = ()      # electricity used by load class (10 classes)
 
 
 _MONTH_START_H = tuple(d * 24 for d in (0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334))
@@ -87,6 +133,16 @@ def simulate_dispatch(
     kwh_per_kg: float,
     use_grid: bool,
     grid_hours_cap: float,
+    *,
+    compression_kwh_per_kg: float = 0.0,
+    part_load: bool = False,
+    aux_share: float = 0.06,
+    stack_gain: float = 0.12,
+    degradation_per_1000h: float = 0.0,
+    stack_hours: float = 60_000.0,
+    life_years: float = 1.0,
+    grid_prices: Sequence[float] | None = None,
+    cheapest_hours_first: bool = False,
 ) -> DispatchResult:
     """Run the electrolyser for a year, hour by hour.
 
@@ -106,32 +162,74 @@ def simulate_dispatch(
     p_min = min_load * p_el_kw
     res = [a + b for a, b in zip(pv_w, wd_w, strict=True)]
     used = [min(r, p_el_kw) for r in res]
+    if grid_prices is not None and len(grid_prices) != HOURS:
+        raise ValueError("hourly prices need 8760 values")
     gap = [p_el_kw - u for u in used] if use_grid else [0.0] * HOURS
     potential = sum(gap)
-    scale = min(1.0, grid_hours_cap * p_el_kw / potential) if potential > 0 else 0.0
+    budget = grid_hours_cap * p_el_kw
+    grid_hour = [0.0] * HOURS
+    if potential > 0:
+        if cheapest_hours_first and grid_prices is not None:
+            left = budget
+            for t in sorted(range(HOURS), key=lambda i: grid_prices[i]):
+                take = min(gap[t], left)
+                if take <= 0:
+                    if left <= 0:
+                        break
+                    continue
+                grid_hour[t] = take
+                left -= take
+        else:
+            scale = min(1.0, budget / potential)
+            grid_hour = [scale * g for g in gap]
     res_used = grid = 0.0
     pv_used = wind_used = 0.0
     hours_on = 0
     m_res = [0.0] * 12
     m_grid = [0.0] * 12
+    hourly_kg = [0.0] * HOURS
+    hist = [0.0] * 10
+    grid_cost = 0.0
+    stack_kwh = max(kwh_per_kg - compression_kwh_per_kg, 1e-9)
     for t in range(HOURS):
-        g = scale * gap[t]
+        g = grid_hour[t]
         total = used[t] + g
         if total < p_min or total <= 0:
             continue
         hours_on += 1
         res_used += used[t]
         grid += g
+        if grid_prices is not None:
+            grid_cost += g * grid_prices[t]
         m_res[_MONTH_OF[t]] += used[t]
         m_grid[_MONTH_OF[t]] += g
+        x = total / p_el_kw
+        hist[min(9, int(x * 10))] += total
+        if part_load:
+            hourly_kg[t] = total / (stack_kwh * part_load_factor(x, aux_share, stack_gain)
+                                    + compression_kwh_per_kg)
+        else:
+            hourly_kg[t] = total / kwh_per_kg
         if res[t] > 0:
             share = used[t] / res[t]
             pv_used += pv_w[t] * share
             wind_used += wd_w[t] * share
     electricity = res_used + grid
+    kg1 = sum(hourly_kg)
+    # ageing: the stack drifts with the hours it has run; a new one is fitted after stack_hours
+    years = max(1, round(life_years))
+    stack_frac = stack_kwh / kwh_per_kg
+    by_year: list[float] = []
+    for y in range(years):
+        age = (y + 0.5) * hours_on
+        age = age % stack_hours if stack_hours > 0 else age
+        by_year.append(kg1 / (1.0 + degradation_per_1000h * age / 1000.0 * stack_frac))
+    kg_avg = sum(by_year) / len(by_year)
     return DispatchResult(
         res_available_kwh=sum(res), res_used_kwh=res_used, grid_kwh=grid,
-        electricity_kwh=electricity, hydrogen_kg=electricity / kwh_per_kg, hours_on=hours_on,
+        electricity_kwh=electricity, hydrogen_kg=kg_avg, hours_on=hours_on,
         pv_used_kwh=pv_used, wind_used_kwh=wind_used,
         monthly_res_kwh=tuple(m_res), monthly_grid_kwh=tuple(m_grid),
+        hydrogen_kg_year1=kg1, kg_by_year=tuple(by_year), hourly_kg=tuple(hourly_kg),
+        grid_cost_eur=grid_cost, load_hist_kwh=tuple(hist),
     )

@@ -27,6 +27,7 @@ class HydrogenProfiles:
     pv_unit: tuple[float, ...] | None = None
     wind_unit: tuple[float, ...] | None = None
     source: str = "synthetic"
+    prices: tuple[float, ...] | None = None    # euro/kWh, 8760 values (hourly grid price)
 
 
 @dataclass(frozen=True)
@@ -51,6 +52,13 @@ class HydrogenInputs:
     storage_days: float = 3.0
     water_l_per_kg: float = 10.0
     grid_hours_cap: float = 4000.0         # max grid energy, in full-load hours of the electrolyser
+    # --- deeper models (all off by default: the simple model of the first version) ---
+    part_load_model: bool = False          # efficiency depends on the load
+    aux_share: float = 0.06                # auxiliaries, fraction of nominal power
+    stack_gain: float = 0.12               # stack efficiency gain at very low load
+    degradation_per_1000h: float = 0.0     # extra consumption per 1000 operating hours (0.002 = 0.2 %)
+    storage_mode: str = "days"             # "days" of autonomy, or "hourly" from the production
+    cheapest_hours_first: bool = False     # buy grid electricity in the cheapest hours
     # --- costs (euro) ---
     electrolyser_capex_per_kw: float = 1800.0
     electrolyser_om_fraction: float = 0.03   # of CAPEX per year
@@ -109,6 +117,14 @@ class HydrogenDesign:
     profile_source: str
     monthly_res_kwh: tuple[float, ...] = ()
     monthly_grid_kwh: tuple[float, ...] = ()
+    hydrogen_kg_year1: float = 0.0
+    kg_by_year: tuple[float, ...] = ()
+    nominal_kwh_per_kg_total: float = 0.0       # at nominal load, new stack
+    load_hist_kwh: tuple[float, ...] = ()
+    tank_level_kg: tuple[float, ...] = ()       # daily level of the hourly storage (365 values)
+    storage_mode: str = "days"
+    mean_grid_price: float = 0.0                # euro/kWh actually paid
+    flat_grid_price: float = 0.0                # what the same energy would cost at the mean price
 
 
 def _check(inp: HydrogenInputs, prof: HydrogenProfiles) -> None:
@@ -133,6 +149,14 @@ def _check(inp: HydrogenInputs, prof: HydrogenProfiles) -> None:
         raise ValueError("the grid limit must be > 0 hours when the grid is a source")
     if not 0 <= inp.discount_rate < 1:
         raise ValueError("discount rate must be in [0, 1)")
+    if inp.storage_mode not in ("days", "hourly"):
+        raise ValueError("storage_mode must be 'days' or 'hourly'")
+    if not 0 <= inp.aux_share < 0.5 or not 0 <= inp.stack_gain < 0.5:
+        raise ValueError("auxiliary share and stack gain must be between 0 and 50 %")
+    if inp.degradation_per_1000h < 0 or inp.degradation_per_1000h > 0.02:
+        raise ValueError("degradation must be between 0 and 2 % per 1000 hours")
+    if prof.prices is not None and len(prof.prices) != h2.HOURS:
+        raise ValueError("hourly prices need 8760 values")
     if inp.mode == "demand" and inp.use_pv and inp.pv_kwp_per_kw_el <= 0:
         raise ValueError("PV per kW of electrolyser must be > 0")
     if inp.mode == "demand" and inp.use_wind and inp.wind_kw_per_kw_el <= 0:
@@ -148,7 +172,12 @@ def size_hydrogen_plant(inp: HydrogenInputs, prof: HydrogenProfiles) -> Hydrogen
     def run(p_el: float, p_pv: float, p_wind: float) -> h2.DispatchResult:
         return h2.simulate_dispatch(
             prof.pv_unit if inp.use_pv else None, prof.wind_unit if inp.use_wind else None,
-            p_pv, p_wind, p_el, inp.min_load, kwh_total, inp.use_grid, inp.grid_hours_cap)
+            p_pv, p_wind, p_el, inp.min_load, kwh_total, inp.use_grid, inp.grid_hours_cap,
+            compression_kwh_per_kg=compression, part_load=inp.part_load_model,
+            aux_share=inp.aux_share, stack_gain=inp.stack_gain,
+            degradation_per_1000h=inp.degradation_per_1000h, stack_hours=inp.stack_hours,
+            life_years=inp.electrolyser_life_years, grid_prices=prof.prices,
+            cheapest_hours_first=inp.cheapest_hours_first)
 
     if inp.mode == "demand":
         # The dispatch is linear in size: simulate 1 kW of electrolyser, then scale.
@@ -170,7 +199,21 @@ def size_hydrogen_plant(inp: HydrogenInputs, prof: HydrogenProfiles) -> Hydrogen
 
     flh = r.electricity_kwh / p_el
     per_day = kg / 365.0
-    storage_kg = per_day * inp.storage_days
+    tank_level: tuple[float, ...] = ()
+    if inp.storage_mode == "hourly":
+        # constant offtake equal to the mean production; the tank is the swing of the balance
+        mean = sum(r.hourly_kg) / len(r.hourly_kg)
+        level, lo, hi = 0.0, 0.0, 0.0
+        cum: list[float] = []
+        for made in r.hourly_kg:
+            level += made - mean
+            cum.append(level)
+            lo, hi = min(lo, level), max(hi, level)
+        storage_kg = hi - lo
+        daily = [cum[min(len(cum) - 1, d * 24 + 23)] - lo for d in range(365)]
+        tank_level = tuple(daily)
+    else:
+        storage_kg = per_day * inp.storage_days
     rate = inp.discount_rate
     crf_el = eco.capital_recovery_factor(rate, inp.electrolyser_life_years)
     crf_res = eco.capital_recovery_factor(rate, inp.res_life_years)
@@ -180,7 +223,7 @@ def size_hydrogen_plant(inp: HydrogenInputs, prof: HydrogenProfiles) -> Hydrogen
     cost_storage = storage_kg * inp.storage_capex_per_kg * crf_el
     cost_res = (p_pv * (inp.pv_capex_per_kwp * crf_res + inp.pv_om_per_kwp)
                 + p_wind * (inp.wind_capex_per_kw * crf_res + inp.wind_om_per_kw))
-    cost_grid = r.grid_kwh * inp.grid_price_per_kwh
+    cost_grid = r.grid_cost_eur if prof.prices is not None else r.grid_kwh * inp.grid_price_per_kwh
     water_m3 = kg * inp.water_l_per_kg / 1000.0
     cost_water = water_m3 * inp.water_price_per_m3
     total = cost_el + cost_stack + cost_storage + cost_res + cost_grid + cost_water
@@ -194,8 +237,8 @@ def size_hydrogen_plant(inp: HydrogenInputs, prof: HydrogenProfiles) -> Hydrogen
         res_utilisation=(r.res_used_kwh / r.res_available_kwh if r.res_available_kwh > 0
                          else 0.0),
         grid_share=r.grid_kwh / r.electricity_kwh, full_load_hours=flh, hours_on=r.hours_on,
-        kwh_per_kg_total=kwh_total, compression_kwh_per_kg=compression,
-        efficiency_lhv=h2.system_efficiency_lhv(kwh_total), water_m3=water_m3,
+        kwh_per_kg_total=r.electricity_kwh / kg, compression_kwh_per_kg=compression,
+        efficiency_lhv=h2.system_efficiency_lhv(r.electricity_kwh / kg), water_m3=water_m3,
         oxygen_t=kg * h2.OXYGEN_KG_PER_KG / 1000.0, storage_kg=storage_kg,
         storage_m3=h2.storage_volume_m3(storage_kg, inp.storage_bar),
         stack_life_years=inp.stack_hours / flh,
@@ -203,5 +246,10 @@ def size_hydrogen_plant(inp: HydrogenInputs, prof: HydrogenProfiles) -> Hydrogen
         cost_res=cost_res, cost_grid=cost_grid, cost_water=cost_water, lcoh=total / kg,
         co2_kg_per_kg=co2, co2_saved_t_per_year=(inp.grey_h2_kg_co2_per_kg - co2) * kg / 1000.0,
         profile_source=prof.source, monthly_res_kwh=r.monthly_res_kwh,
-        monthly_grid_kwh=r.monthly_grid_kwh,
+        monthly_grid_kwh=r.monthly_grid_kwh, hydrogen_kg_year1=r.hydrogen_kg_year1,
+        kg_by_year=r.kg_by_year, nominal_kwh_per_kg_total=kwh_total,
+        load_hist_kwh=r.load_hist_kwh, tank_level_kg=tank_level, storage_mode=inp.storage_mode,
+        mean_grid_price=(cost_grid / r.grid_kwh if r.grid_kwh > 0 else 0.0),
+        flat_grid_price=(sum(prof.prices) / len(prof.prices) if prof.prices else
+                         inp.grid_price_per_kwh),
     )

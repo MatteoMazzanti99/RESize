@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from resize_energy.core import hydrogen as h2
 from resize_energy.core import profiles as prof
 from resize_energy.core import wind
 from resize_energy.core.hydrogen_design import (
@@ -310,6 +311,18 @@ class HydrogenPlantPage(StepPage):
         self.water = NumberField(d.water_l_per_kg, 9, 30, 0, "L/kg", "hydrogen.water")
         self.cap = NumberField(d.grid_hours_cap, 1, 8760, 0, "full-load hours per year",
                                "hydrogen.dispatch")
+        self.part_load = QCheckBox("Efficiency depends on the load")
+        self.part_load.setChecked(True)
+        self.aux = NumberField(d.aux_share * 100, 0, 30, 0, "% of nominal power",
+                               "hydrogen.partload")
+        self.gain = NumberField(d.stack_gain * 100, 0, 30, 0, "% at very low load",
+                                "hydrogen.partload")
+        self.degr = NumberField(0.2, 0, 2, 2, "% per 1000 hours", "hydrogen.ageing")
+        self.tank_mode = QComboBox()
+        self.tank_mode.addItems(["Days of autonomy (simple)",
+                                 "Hour by hour from the production (constant offtake)"])
+        self.cheapest = QCheckBox("Buy grid electricity in the cheapest hours (invented hourly prices)")
+        self.cheapest.setChecked(True)
         form = QFormLayout()
         form.addRow("Consumption of stack and auxiliaries", self.kwh)
         form.addRow("Minimum load", self.min_load)
@@ -319,11 +332,21 @@ class HydrogenPlantPage(StepPage):
         form.addRow("Water consumption", self.water)
         form.addRow("Grid energy limit", self.cap)
         self.form = form
+        deep = QGroupBox("Deeper models (more realistic, a bit slower to read)")
+        df = QFormLayout(deep)
+        df.addRow(self.part_load)
+        df.addRow("Auxiliaries (pumps, cooling)", self.aux)
+        df.addRow("Stack gain at part load", self.gain)
+        df.addRow("Stack ageing", self.degr)
+        df.addRow("Storage sizing", self.tank_mode)
+        df.addRow(self.cheapest)
+        self.deep_form = df
         box = QGroupBox("Electrolyser, compression and storage")
         box.setLayout(form)
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
         layout.addWidget(box)
+        layout.addWidget(deep)
         layout.addWidget(_hint(
             "A PEM system needs about 50-58 kWh per kilogram, with a minimum load of 5-10 %. "
             "The grid limit says how many full-load hours a year the grid may supply: "
@@ -333,11 +356,13 @@ class HydrogenPlantPage(StepPage):
 
     def initializePage(self) -> None:
         _show_row(self.form, self.cap, self.goal.grid.isChecked())
+        self.cheapest.setVisible(self.goal.grid.isChecked())
 
     def validatePage(self) -> bool:
         items = [("Consumption", self.kwh), ("Minimum load", self.min_load),
                  ("Outlet pressure", self.outlet), ("Storage pressure", self.storage_bar),
-                 ("Storage autonomy", self.days), ("Water", self.water)]
+                 ("Storage autonomy", self.days), ("Water", self.water),
+                 ("Auxiliaries", self.aux), ("Stack gain", self.gain), ("Stack ageing", self.degr)]
         if self.goal.grid.isChecked():
             items.append(("Grid limit", self.cap))
         if not _warn(self, items):
@@ -452,6 +477,10 @@ class HydrogenResultsPage(BaseResultsPage):
             outlet_bar=p.outlet.value(), storage_bar=p.storage_bar.value(),
             storage_days=p.days.value(), water_l_per_kg=p.water.value(),
             grid_hours_cap=p.cap.value() if g.grid.isChecked() else 1.0,
+            part_load_model=p.part_load.isChecked(), aux_share=p.aux.value() / 100.0,
+            stack_gain=p.gain.value() / 100.0, degradation_per_1000h=p.degr.value() / 100.0,
+            storage_mode="hourly" if p.tank_mode.currentIndex() == 1 else "days",
+            cheapest_hours_first=g.grid.isChecked() and p.cheapest.isChecked(),
             electrolyser_capex_per_kw=c.el_capex.value(),
             electrolyser_om_fraction=c.el_om.value() / 100.0, stack_hours=c.stack_h.value(),
             stack_cost_fraction=c.stack_cost.value() / 100.0,
@@ -464,6 +493,8 @@ class HydrogenResultsPage(BaseResultsPage):
             grey_h2_kg_co2_per_kg=c.grey.value(),
         )
         profiles = self.site.profiles()
+        if inputs.use_grid and inputs.cheapest_hours_first:
+            profiles = replace(profiles, prices=h2.synthetic_price_profile(inputs.grid_price_per_kwh))
         design = size_hydrogen_plant(inputs, profiles)
         findings = check_hydrogen_design(inputs, design)
         note = f"Site: lat {self.site.lat.value():.4f}, lon {self.site.lon.value():.4f}."

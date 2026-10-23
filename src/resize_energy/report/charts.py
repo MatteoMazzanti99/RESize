@@ -237,6 +237,34 @@ def hydrogen_charts(inp: HydrogenInputs, d: HydrogenDesign) -> dict[str, ChartSp
             caption="Summer is high for solar, winter for wind: the electrolyser follows the "
                     "resource." + ("" if d.profile_source != "synthetic" else
                                    " (Invented year: the shape is only indicative.)"))
+    if inp.part_load_model and d.load_hist_kwh:
+        from resize_energy.core import hydrogen as _h2
+
+        xs = tuple(i / 50 for i in range(5, 51))
+        out["h2_partload"] = ChartSpec(
+            "lines", "Consumption of the electrolyser at part load", (),
+            (Series("kWh per kg", tuple(d.nominal_kwh_per_kg_total * _h2.part_load_factor(
+                x, inp.aux_share, inp.stack_gain) for x in xs), PURPLE, x=tuple(x * 100 for x in xs)),),
+            x_label="Load [% of nominal power]", y_label="kWh per kg of hydrogen", decimals=0,
+            vlines=((inp.min_load * 100, "minimum load"),),
+            caption="Flat in the middle, steeply worse below 20 %: the auxiliaries still draw "
+                    "power when little hydrogen is made.")
+    if inp.degradation_per_1000h > 0 and len(d.kg_by_year) > 1:
+        out["h2_ageing"] = ChartSpec(
+            "bars", "Hydrogen made in each year of the plant's life",
+            tuple(str(i + 1) for i in range(len(d.kg_by_year))),
+            (Series("kg", d.kg_by_year, PURPLE),), x_label="Year", y_label="Hydrogen [kg]",
+            caption="The stack ages and makes less hydrogen from the same electricity; each jump "
+                    "up is a new stack.")
+    if d.tank_level_kg:
+        out["h2_tank"] = ChartSpec(
+            "lines", "Hydrogen in the tank through the year (constant offtake)", (),
+            (Series("kg in the tank", d.tank_level_kg, TEAL,
+                    x=tuple(float(i) for i in range(len(d.tank_level_kg))), fill=True),),
+            x_label="Day of the year", y_label="Hydrogen stored [kg]",
+            hlines=((d.storage_kg, f"tank {d.storage_kg:,.0f} kg"),),
+            caption="It fills when production is above the average and empties otherwise: the "
+                    "tank is the highest point.")
     out["h2_carbon"] = ChartSpec(
         "hbars", "Carbon footprint of the hydrogen",
         ("This plant", "Limit for 'renewable' hydrogen (EU)", "Hydrogen from natural gas"),

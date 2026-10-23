@@ -197,3 +197,91 @@ def test_hour_index_and_parse_hourly():
 
 def test_inputs_replace_keeps_defaults():
     assert replace(HydrogenInputs(), use_grid=True).use_grid
+
+
+# --- deeper models: part load, ageing, hourly tank, hourly prices ---------------------------
+def deep(**kw):
+    return case(**kw)
+
+
+def test_part_load_factor_shape():
+    assert h2.part_load_factor(1.0) == pytest.approx(1.0)
+    assert h2.part_load_factor(0.1) > h2.part_load_factor(0.5) > 0.9
+    assert h2.part_load_factor(0.5) < 1.02            # almost flat in the middle
+    with pytest.raises(ValueError):
+        h2.part_load_factor(0.0)
+
+
+def test_defaults_keep_the_simple_model():
+    inp, d = deep()
+    assert d.kwh_per_kg_total == pytest.approx(d.nominal_kwh_per_kg_total)
+    assert d.hydrogen_kg == pytest.approx(d.hydrogen_kg_year1)
+    assert d.storage_mode == "days"
+
+
+def test_part_load_costs_hydrogen():
+    _, simple = case(mode="plant", pv_kwp=1500.0, electrolyser_kw=1000.0)
+    _, deepd = case(mode="plant", pv_kwp=1500.0, electrolyser_kw=1000.0, part_load_model=True)
+    assert deepd.hydrogen_kg < simple.hydrogen_kg
+    assert deepd.kwh_per_kg_total > simple.kwh_per_kg_total
+    assert sum(deepd.load_hist_kwh) == pytest.approx(deepd.electricity_kwh)
+
+
+def test_ageing_lowers_the_hydrogen_year_by_year():
+    _, d = case(mode="plant", pv_kwp=1500.0, electrolyser_kw=1000.0,
+                degradation_per_1000h=0.002, stack_hours=500_000.0)
+    assert d.kg_by_year[0] > d.kg_by_year[-1]
+    assert d.kg_by_year == tuple(sorted(d.kg_by_year, reverse=True))
+    assert d.hydrogen_kg < d.hydrogen_kg_year1
+    assert d.hydrogen_kg == pytest.approx(sum(d.kg_by_year) / len(d.kg_by_year))
+
+
+def test_stack_replacement_resets_the_ageing():
+    _, d = case(mode="plant", pv_kwp=1500.0, electrolyser_kw=1000.0,
+                degradation_per_1000h=0.002, stack_hours=8000.0)
+    assert max(d.kg_by_year[1:]) > min(d.kg_by_year)   # not monotone: new stacks
+
+
+def test_hourly_tank_and_prices():
+    _, days = case(mode="plant", pv_kwp=1500.0, electrolyser_kw=1000.0)
+    _, hourly = case(mode="plant", pv_kwp=1500.0, electrolyser_kw=1000.0, storage_mode="hourly")
+    assert hourly.storage_kg > days.storage_kg      # solar-only hydrogen needs a big seasonal tank
+    assert len(hourly.tank_level_kg) == 365 and min(hourly.tank_level_kg) >= -1e-6
+    assert max(hourly.tank_level_kg) == pytest.approx(hourly.storage_kg, rel=0.02)  # daily samples
+
+
+def test_cheapest_hours_buy_cheaper_electricity():
+    prices = h2.synthetic_price_profile(0.12)
+    assert sum(prices) / len(prices) == pytest.approx(0.12)
+    prof_p = HydrogenProfiles(PV, None, "synthetic", prices)
+    kw = dict(use_grid=True, mode="plant", pv_kwp=500.0, electrolyser_kw=1000.0,
+              grid_hours_cap=3000.0)
+    even = size_hydrogen_plant(HydrogenInputs(**kw), prof_p)
+    cheap = size_hydrogen_plant(HydrogenInputs(cheapest_hours_first=True, **kw), prof_p)
+    assert cheap.grid_kwh == pytest.approx(even.grid_kwh, rel=1e-6)
+    assert cheap.mean_grid_price < even.mean_grid_price
+    assert cheap.lcoh < even.lcoh
+
+
+@pytest.mark.parametrize("kw", [{"storage_mode": "weekly"}, {"degradation_per_1000h": 0.5},
+                                {"aux_share": 0.9}])
+def test_bad_deep_inputs_rejected(kw):
+    with pytest.raises(ValueError):
+        case(**kw)
+
+
+def test_deep_report_charts_and_texts():
+    from resize_energy.report.charts import hydrogen_charts
+
+    prices = h2.synthetic_price_profile(0.12)
+    inp = HydrogenInputs(
+        mode="plant", pv_kwp=1500.0, electrolyser_kw=1000.0, use_grid=True, grid_hours_cap=2000.0,
+        part_load_model=True, degradation_per_1000h=0.002, storage_mode="hourly",
+        cheapest_hours_first=True)
+    d = size_hydrogen_plant(inp, HydrogenProfiles(PV, None, "synthetic", prices))
+    charts = hydrogen_charts(inp, d)
+    assert {"h2_partload", "h2_ageing", "h2_tank"} <= set(charts)
+    for key in ("hydrogen.partload", "hydrogen.ageing", "hydrogen.tank", "hydrogen.prices"):
+        assert hydrogen_worked_example(key, inp, d)
+    html = build_hydrogen_report(inp, d, check_hydrogen_design(inp, d))
+    assert "cheapest hours first" in html and "chart:h2_tank" in html

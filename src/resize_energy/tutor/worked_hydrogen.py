@@ -16,6 +16,36 @@ def hydrogen_worked_example(key: str, inp: HydrogenInputs, d: HydrogenDesign) ->
             f"Electricity used = {d.hydrogen_kg:,.0f} kg x {d.kwh_per_kg_total:.1f} = "
             f"{d.electricity_kwh:,.0f} kWh"
         )
+    if key == "hydrogen.partload":
+        if not inp.part_load_model:
+            return ("The part-load model is off: one constant consumption of "
+                    f"{d.kwh_per_kg_total:.1f} kWh/kg at any load.")
+        pts = ", ".join(f"{x:.0%}: x{h2.part_load_factor(x, inp.aux_share, inp.stack_gain):.2f}"
+                        for x in (0.1, 0.2, 0.5, 1.0))
+        return (f"Factors on the consumption at {pts}\n"
+                f"Nominal {d.nominal_kwh_per_kg_total:.1f} kWh/kg -> over the year "
+                f"{d.kwh_per_kg_total:.1f} kWh/kg (efficiency {d.efficiency_lhv:.0%} LHV)")
+    if key == "hydrogen.ageing":
+        if inp.degradation_per_1000h <= 0 or not d.kg_by_year:
+            return "Ageing is off: the same hydrogen every year."
+        return (f"Drift {inp.degradation_per_1000h:.2%} per 1000 h; first year "
+                f"{d.kg_by_year[0]:,.0f} kg, last year {d.kg_by_year[-1]:,.0f} kg, average "
+                f"{d.hydrogen_kg:,.0f} kg ({d.hydrogen_kg / d.hydrogen_kg_year1:.1%} of a new "
+                "stack)")
+    if key == "hydrogen.tank":
+        if d.storage_mode == "hourly":
+            return (f"Hourly balance: tank {d.storage_kg:,.0f} kg = "
+                    f"{d.storage_kg / d.hydrogen_kg_per_day:.0f} days of average production, "
+                    f"{d.storage_m3:,.0f} m3 at {inp.storage_bar:.0f} bar")
+        return (f"Days of autonomy: {inp.storage_days:.0f} x {d.hydrogen_kg_per_day:,.0f} kg/day "
+                f"= {d.storage_kg:,.0f} kg ({d.storage_m3:,.1f} m3)")
+    if key == "hydrogen.prices":
+        if d.grid_kwh <= 0:
+            return "The grid is not used."
+        flat = d.flat_grid_price
+        return (f"Grid energy {d.grid_kwh:,.0f} kWh at an average {d.mean_grid_price:.3f} "
+                f"euro/kWh (market mean {flat:.3f}): "
+                f"{'cheapest hours first' if inp.cheapest_hours_first else 'spread evenly'}")
     if key == "hydrogen.dispatch":
         sources = [name for name, on in (("PV", inp.use_pv), ("wind", inp.use_wind),
                                          ("grid", inp.use_grid)) if on]
