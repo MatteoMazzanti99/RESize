@@ -4,6 +4,7 @@ from resize_energy.tutor.checker import check_pv_design
 from resize_energy.tutor.explanations import EXPLANATIONS, TOPIC_ORDER
 from resize_energy.tutor.explanations_biomass import BIOMASS_TOPIC_ORDER
 from resize_energy.tutor.explanations_compare import COMPARE_TOPIC_ORDER
+from resize_energy.tutor.explanations_hydrogen import HYDROGEN_TOPIC_ORDER
 from resize_energy.tutor.explanations_wind import WIND_TOPIC_ORDER
 from resize_energy.tutor.why_html import explanation_html
 from resize_energy.tutor.worked import worked_example
@@ -18,7 +19,7 @@ def case(**kw):
 
 def test_topic_order_covers_exactly_the_explanations():
     orders = [set(TOPIC_ORDER), set(WIND_TOPIC_ORDER), set(COMPARE_TOPIC_ORDER),
-              set(BIOMASS_TOPIC_ORDER)]
+              set(BIOMASS_TOPIC_ORDER), set(HYDROGEN_TOPIC_ORDER)]
     assert set().union(*orders) == set(EXPLANATIONS)
     assert sum(len(o) for o in orders) == len(set().union(*orders))  # no key in two modules
     assert len(TOPIC_ORDER) == len(set(TOPIC_ORDER))

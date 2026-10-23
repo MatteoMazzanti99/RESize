@@ -157,3 +157,8 @@ EXPLANATIONS.update(COMPARE_EXPLANATIONS)
 from resize_energy.tutor.explanations_biomass import BIOMASS_EXPLANATIONS  # noqa: E402
 
 EXPLANATIONS.update(BIOMASS_EXPLANATIONS)
+
+# And for the green hydrogen module.
+from resize_energy.tutor.explanations_hydrogen import HYDROGEN_EXPLANATIONS  # noqa: E402
+
+EXPLANATIONS.update(HYDROGEN_EXPLANATIONS)

@@ -33,6 +33,14 @@ from resize_energy.gui.compare_wizard import (
     CompareSitePage,
 )
 from resize_energy.gui.home import HomePage
+from resize_energy.gui.hydrogen_wizard import (
+    HYDROGEN_STEP_NAMES,
+    HydrogenCostPage,
+    HydrogenGoalPage,
+    HydrogenPlantPage,
+    HydrogenResultsPage,
+    HydrogenSitePage,
+)
 from resize_energy.gui.widgets import Sidebar, StepPage, make_label
 from resize_energy.gui.wind_wizard import (
     WIND_STEP_NAMES,
@@ -71,6 +79,12 @@ class MainWindow(QMainWindow):
         self.bio_fuel = BiomassFuelPage(self.bio_demand)
         self.bio_plant = BiomassPlantPage(self.bio_demand)
         self.bio_results = BiomassResultsPage(self.bio_demand, self.bio_fuel, self.bio_plant)
+        self.h2_goal = HydrogenGoalPage()
+        self.h2_site = HydrogenSitePage(self.h2_goal)
+        self.h2_plant = HydrogenPlantPage(self.h2_goal)
+        self.h2_costs = HydrogenCostPage()
+        self.h2_results = HydrogenResultsPage(self.h2_goal, self.h2_site, self.h2_plant,
+                                              self.h2_costs)
         self.cmp_site = CompareSitePage()
         self.cmp_plant = ComparePlantPage(self.cmp_site)
         self.cmp_costs = CompareCostPage()
@@ -82,6 +96,8 @@ class MainWindow(QMainWindow):
                                        self.wind_results]),
             "biomass": (BIOMASS_STEP_NAMES, [self.bio_demand, self.bio_fuel, self.bio_plant,
                                              self.bio_results]),
+            "hydrogen": (HYDROGEN_STEP_NAMES, [self.h2_goal, self.h2_site, self.h2_plant,
+                                               self.h2_costs, self.h2_results]),
             "compare": (COMPARE_STEP_NAMES, [self.cmp_site, self.cmp_plant, self.cmp_costs,
                                              self.cmp_results]),
         }
@@ -142,7 +158,7 @@ class MainWindow(QMainWindow):
 
     # --- navigation ---------------------------------------------------------------
     def _start(self, tech: str = "pv") -> None:
-        """Open the first step of the ``tech`` flow ("pv", "wind", "biomass" or "compare")."""
+        """Open the first step of the ``tech`` flow ("pv", "wind", "biomass", "hydrogen" or "compare")."""
         if tech not in self.flows:
             tech = "pv"
         self.tech = tech

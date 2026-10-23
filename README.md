@@ -6,8 +6,7 @@ RESize guides MSc students (and engineers doing a first-pass design) through the
 renewable energy plants. At every step it shows the formula, the assumptions and the
 reasoning, so you learn *why* a choice is made, not just the number that comes out.
 
-> **Status:** early release. Photovoltaic, wind and biomass are available; green hydrogen
-> is planned. Interfaces and results may change.
+> **Status:** early release. Photovoltaic, wind, biomass and green hydrogen are available. Interfaces and results may change.
 
 ![RESize home screen](docs/images/home.png)
 
@@ -66,6 +65,22 @@ Every step has **Why?** panels with your numbers, design checks and a PDF report
 substrate values are typical handbook figures: replace them with your supplier's specification
 or a laboratory methane potential test.
 
+## Green hydrogen module
+
+Start it from the home screen (**Start a green hydrogen project**). Two ways in: from a
+**hydrogen demand** (electrolyser and renewable plants are sized for it) or from a
+**renewable plant you already have** (how much hydrogen it can make). The electricity can come
+from PV, wind, the grid or any combination.
+
+The calculation runs hour by hour over a year: renewables first, electrolyser off below its
+minimum load, optional grid top-up limited to a number of full-load hours. You get the
+hydrogen per year, full-load hours, curtailment, compression work, storage volume, water, stack
+life, the **cost of hydrogen (LCOH)** with its breakdown and the **carbon intensity** compared
+with the EU renewable-hydrogen threshold (about 3.4 kg CO2/kg) and with hydrogen from natural
+gas. A button downloads one real year of hourly wind and radiation from NASA POWER; offline an
+invented year with the same yearly totals is used and the report says so. Costs and emission
+factors are round placeholders to replace with quotes.
+
 ## Technology comparison
 
 The **Compare technologies** button on the home screen sizes a photovoltaic and a wind plant
@@ -115,7 +130,7 @@ or less. AI answers can be wrong: the formulas in the **Why?** panel are the ref
 | v0.1 | Guided photovoltaic wizard (resource data, strings, inverter, losses, yield) + PDF report |
 | v0.2 | "Why?" panels (done), rule-based design checker (done), optional AI tutor (done), Italian interface |
 | v0.3 | Wind module (done: resource, Weibull, turbine yield, layout, checks, report) + technology comparison (done: LCOE, payback, NPV, avoided CO2) |
-| v0.4 | Biomass module (done: boiler, ORC cogeneration, biogas) + green hydrogen: PEM electrolyser coupled to PV/wind |
+| v0.4 | Biomass module (done: boiler, ORC cogeneration, biogas) + green hydrogen (done: PEM electrolyser fed by PV, wind and/or grid, hourly dispatch, LCOH, carbon) |
 
 ## Design principles
 

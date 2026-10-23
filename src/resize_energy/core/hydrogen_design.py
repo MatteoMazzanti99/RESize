@@ -1,0 +1,204 @@
+"""Preliminary design of a green hydrogen plant: PEM electrolyser fed by PV, wind and/or grid.
+
+Two ways in: from a hydrogen demand (the plant is sized for it) or from an existing
+renewable plant (the hydrogen it can make is calculated). Hourly profiles decide how many
+hours the electrolyser runs. Pure calculation, no GUI.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Literal
+
+from resize_energy.core import economics as eco
+from resize_energy.core import hydrogen as h2
+
+Mode = Literal["demand", "plant"]
+MODES: dict[str, str] = {
+    "demand": "From a hydrogen demand: size electrolyser and renewable plant",
+    "plant": "From a renewable plant I already have: how much hydrogen can it make",
+}
+
+
+@dataclass(frozen=True)
+class HydrogenProfiles:
+    """One year of hourly output per kWp (PV) and per kW rated (wind)."""
+
+    pv_unit: tuple[float, ...] | None = None
+    wind_unit: tuple[float, ...] | None = None
+    source: str = "synthetic"
+
+
+@dataclass(frozen=True)
+class HydrogenInputs:
+    mode: Mode = "demand"
+    use_pv: bool = True
+    use_wind: bool = False
+    use_grid: bool = False
+    # --- demand mode ---
+    h2_demand_kg_per_year: float = 100_000.0
+    pv_kwp_per_kw_el: float = 1.5          # renewable kW per kW of electrolyser
+    wind_kw_per_kw_el: float = 1.2
+    # --- plant mode ---
+    pv_kwp: float = 0.0
+    wind_kw: float = 0.0
+    electrolyser_kw: float = 0.0
+    # --- electrolyser and storage ---
+    kwh_per_kg_stack: float = 55.0         # system consumption at nominal load, without compression
+    min_load: float = 0.10
+    outlet_bar: float = 30.0
+    storage_bar: float = 350.0
+    storage_days: float = 3.0
+    water_l_per_kg: float = 10.0
+    grid_hours_cap: float = 4000.0         # max grid energy, in full-load hours of the electrolyser
+    # --- costs (euro) ---
+    electrolyser_capex_per_kw: float = 1800.0
+    electrolyser_om_fraction: float = 0.03   # of CAPEX per year
+    stack_hours: float = 60_000.0
+    stack_cost_fraction: float = 0.40        # of the electrolyser CAPEX
+    storage_capex_per_kg: float = 600.0
+    water_price_per_m3: float = 3.0
+    pv_capex_per_kwp: float = 1000.0
+    pv_om_per_kwp: float = 15.0
+    wind_capex_per_kw: float = 1500.0
+    wind_om_per_kw: float = 45.0
+    res_life_years: float = 25.0
+    electrolyser_life_years: float = 20.0
+    discount_rate: float = 0.05
+    grid_price_per_kwh: float = 0.12
+    # --- emissions (kg CO2 per kWh, and per kg of hydrogen) ---
+    grid_ef: float = 0.25
+    pv_ef: float = 0.045
+    wind_ef: float = 0.011
+    grey_h2_kg_co2_per_kg: float = 9.0
+
+
+@dataclass(frozen=True)
+class HydrogenDesign:
+    electrolyser_kw: float
+    pv_kwp: float
+    wind_kw: float
+    hydrogen_kg: float
+    hydrogen_kg_per_day: float
+    electricity_kwh: float
+    res_available_kwh: float
+    res_used_kwh: float
+    curtailed_kwh: float
+    grid_kwh: float
+    res_utilisation: float
+    grid_share: float
+    full_load_hours: float
+    hours_on: int
+    kwh_per_kg_total: float
+    compression_kwh_per_kg: float
+    efficiency_lhv: float
+    water_m3: float
+    oxygen_t: float
+    storage_kg: float
+    storage_m3: float
+    stack_life_years: float
+    cost_electrolyser: float      # euro per year
+    cost_stack: float
+    cost_storage: float
+    cost_res: float
+    cost_grid: float
+    cost_water: float
+    lcoh: float                   # euro per kg
+    co2_kg_per_kg: float
+    co2_saved_t_per_year: float
+    profile_source: str
+
+
+def _check(inp: HydrogenInputs, prof: HydrogenProfiles) -> None:
+    if not (inp.use_pv or inp.use_wind or inp.use_grid):
+        raise ValueError("choose at least one electricity source")
+    if inp.use_pv and not prof.pv_unit:
+        raise ValueError("a PV profile is needed when PV is a source")
+    if inp.use_wind and not prof.wind_unit:
+        raise ValueError("a wind profile is needed when wind is a source")
+    if inp.mode == "demand" and inp.h2_demand_kg_per_year <= 0:
+        raise ValueError("the hydrogen demand must be > 0")
+    if inp.mode == "plant":
+        if inp.electrolyser_kw <= 0:
+            raise ValueError("the electrolyser power must be > 0")
+        if inp.use_pv and inp.pv_kwp <= 0 or inp.use_wind and inp.wind_kw <= 0:
+            raise ValueError("enter the size of each renewable source you selected")
+    if inp.kwh_per_kg_stack <= 0 or inp.stack_hours <= 0 or inp.storage_days < 0:
+        raise ValueError("consumption and stack life must be > 0 and storage days >= 0")
+    if inp.storage_bar < inp.outlet_bar or inp.outlet_bar <= 0:
+        raise ValueError("storage pressure cannot be below the electrolyser outlet pressure")
+    if inp.use_grid and inp.grid_hours_cap <= 0:
+        raise ValueError("the grid limit must be > 0 hours when the grid is a source")
+    if not 0 <= inp.discount_rate < 1:
+        raise ValueError("discount rate must be in [0, 1)")
+    if inp.mode == "demand" and inp.use_pv and inp.pv_kwp_per_kw_el <= 0:
+        raise ValueError("PV per kW of electrolyser must be > 0")
+    if inp.mode == "demand" and inp.use_wind and inp.wind_kw_per_kw_el <= 0:
+        raise ValueError("wind per kW of electrolyser must be > 0")
+
+
+def size_hydrogen_plant(inp: HydrogenInputs, prof: HydrogenProfiles) -> HydrogenDesign:
+    """Run the year and size or evaluate the plant."""
+    _check(inp, prof)
+    compression = h2.compression_kwh_per_kg(inp.outlet_bar, max(inp.storage_bar, inp.outlet_bar))
+    kwh_total = inp.kwh_per_kg_stack + compression
+
+    def run(p_el: float, p_pv: float, p_wind: float) -> h2.DispatchResult:
+        return h2.simulate_dispatch(
+            prof.pv_unit if inp.use_pv else None, prof.wind_unit if inp.use_wind else None,
+            p_pv, p_wind, p_el, inp.min_load, kwh_total, inp.use_grid, inp.grid_hours_cap)
+
+    if inp.mode == "demand":
+        # The dispatch is linear in size: simulate 1 kW of electrolyser, then scale.
+        unit = run(1.0, inp.pv_kwp_per_kw_el if inp.use_pv else 0.0,
+                   inp.wind_kw_per_kw_el if inp.use_wind else 0.0)
+        if unit.hydrogen_kg <= 0:
+            raise ValueError("with these sources the electrolyser never reaches its minimum load")
+        p_el = inp.h2_demand_kg_per_year / unit.hydrogen_kg
+        p_pv = inp.pv_kwp_per_kw_el * p_el if inp.use_pv else 0.0
+        p_wind = inp.wind_kw_per_kw_el * p_el if inp.use_wind else 0.0
+    else:
+        p_el = inp.electrolyser_kw
+        p_pv = inp.pv_kwp if inp.use_pv else 0.0
+        p_wind = inp.wind_kw if inp.use_wind else 0.0
+    r = run(p_el, p_pv, p_wind)
+    kg = r.hydrogen_kg
+    if kg <= 0:
+        raise ValueError("with these sizes the electrolyser never reaches its minimum load")
+
+    flh = r.electricity_kwh / p_el
+    per_day = kg / 365.0
+    storage_kg = per_day * inp.storage_days
+    rate = inp.discount_rate
+    crf_el = eco.capital_recovery_factor(rate, inp.electrolyser_life_years)
+    crf_res = eco.capital_recovery_factor(rate, inp.res_life_years)
+    capex_el = p_el * inp.electrolyser_capex_per_kw
+    cost_el = capex_el * (crf_el + inp.electrolyser_om_fraction)
+    cost_stack = capex_el * inp.stack_cost_fraction * flh / inp.stack_hours
+    cost_storage = storage_kg * inp.storage_capex_per_kg * crf_el
+    cost_res = (p_pv * (inp.pv_capex_per_kwp * crf_res + inp.pv_om_per_kwp)
+                + p_wind * (inp.wind_capex_per_kw * crf_res + inp.wind_om_per_kw))
+    cost_grid = r.grid_kwh * inp.grid_price_per_kwh
+    water_m3 = kg * inp.water_l_per_kg / 1000.0
+    cost_water = water_m3 * inp.water_price_per_m3
+    total = cost_el + cost_stack + cost_storage + cost_res + cost_grid + cost_water
+    co2 = (r.grid_kwh * inp.grid_ef + r.pv_used_kwh * inp.pv_ef
+           + r.wind_used_kwh * inp.wind_ef) / kg
+    return HydrogenDesign(
+        electrolyser_kw=p_el, pv_kwp=p_pv, wind_kw=p_wind, hydrogen_kg=kg,
+        hydrogen_kg_per_day=per_day, electricity_kwh=r.electricity_kwh,
+        res_available_kwh=r.res_available_kwh, res_used_kwh=r.res_used_kwh,
+        curtailed_kwh=r.res_available_kwh - r.res_used_kwh, grid_kwh=r.grid_kwh,
+        res_utilisation=(r.res_used_kwh / r.res_available_kwh if r.res_available_kwh > 0
+                         else 0.0),
+        grid_share=r.grid_kwh / r.electricity_kwh, full_load_hours=flh, hours_on=r.hours_on,
+        kwh_per_kg_total=kwh_total, compression_kwh_per_kg=compression,
+        efficiency_lhv=h2.system_efficiency_lhv(kwh_total), water_m3=water_m3,
+        oxygen_t=kg * h2.OXYGEN_KG_PER_KG / 1000.0, storage_kg=storage_kg,
+        storage_m3=h2.storage_volume_m3(storage_kg, inp.storage_bar),
+        stack_life_years=inp.stack_hours / flh,
+        cost_electrolyser=cost_el, cost_stack=cost_stack, cost_storage=cost_storage,
+        cost_res=cost_res, cost_grid=cost_grid, cost_water=cost_water, lcoh=total / kg,
+        co2_kg_per_kg=co2, co2_saved_t_per_year=(inp.grey_h2_kg_co2_per_kg - co2) * kg / 1000.0,
+        profile_source=prof.source,
+    )
