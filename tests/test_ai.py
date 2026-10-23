@@ -111,7 +111,16 @@ def test_network_failure_mentions_ollama_hint():
 
     with pytest.raises(AIError) as info:
         ask(AISettings("ollama"), "S", QUESTION, urlopen=offline)
-    assert "Ollama" in str(info.value) and "localhost" in str(info.value)
+    text = str(info.value)
+    assert "Ollama" in text and "localhost" in text
+    assert "ollama serve" in text and "ollama pull llama3.1" in text and "ollama.com" in text
+
+
+def test_ollama_missing_model_says_how_to_download_it():
+    with pytest.raises(AIError) as info:
+        ask(AISettings("ollama", model="mistral"), "S", QUESTION,
+            urlopen=http_error(404, b'{"error": "model not found"}'))
+    assert "ollama pull mistral" in str(info.value)
 
 
 def test_bad_replies_are_rejected():
@@ -211,3 +220,4 @@ def test_broken_keyring_does_not_crash():
     kr = FakeKeyring(fail=True)
     assert ai_settings.save_api_key("anthropic", "KEY", kr) is False
     assert ai_settings.load_api_key("anthropic", kr, {"ANTHROPIC_API_KEY": "ENV"}) == "ENV"
+

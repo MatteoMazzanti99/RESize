@@ -158,6 +158,12 @@ def _post_json(
                 f"The service rejected the API key (error {exc.code}). "
                 f"Check the key in Settings.{suffix}"
             ) from exc
+        if exc.code == 404 and provider == "ollama":
+            model = body.get("model", "the model")
+            raise AIError(
+                f"Ollama is running but does not have the model '{model}'. Download it once "
+                f"with:  ollama pull {model}  (or choose another model in Settings).{suffix}"
+            ) from exc
         if exc.code == 404:
             raise AIError(
                 "Address or model not found (error 404). Check the model name and the "
@@ -170,8 +176,15 @@ def _post_json(
         raise AIError(f"The service returned error {exc.code}.{suffix}") from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         host = urllib.parse.urlparse(url).netloc or url
-        hint = " Is Ollama running?" if provider == "ollama" else ""
-        raise AIError(f"Could not reach {host}: {exc}.{hint}") from exc
+        if provider == "ollama":
+            raise AIError(
+                f"Ollama is not running at {host}. Install it from ollama.com, start it (open "
+                "the Ollama app, or run:  ollama serve ), then download a model once, for "
+                f"example:  ollama pull {body.get('model', 'llama3.1')}  . "
+                "The model name in Settings must match. No Ollama? Use 'Copy project for any "
+                "chatbot' instead."
+            ) from exc
+        raise AIError(f"Could not reach {host}: {exc}.") from exc
     try:
         data = json.loads(raw.decode("utf-8-sig"))
     except json.JSONDecodeError as exc:
