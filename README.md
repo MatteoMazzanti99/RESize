@@ -91,7 +91,7 @@ factors are round placeholders to replace with quotes.
 ## Technology comparison
 
 On the home screen, click a technology card to start its project, or **drag two or more cards
-into the Compare zone** (they appear as little floating icons) and press **Compare**. Photovoltaic,
+into the Compare zone** (they stand facing each other with a "VS" between them) and press **Compare**: after a short clash you land on a **Versus** screen where the bars of each round (cost of energy, payback, net present value, CO2) fill up like life bars; the full report is in the second tab. Photovoltaic,
 wind, biogas CHP and green hydrogen are sized for the same yearly energy and put side by side:
 cost of energy (LCOE), simple and discounted payback, net present value and avoided CO2, with
 **Why?** panels for every formula and a PDF report. Electricity technologies are compared with

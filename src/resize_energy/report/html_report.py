@@ -18,6 +18,7 @@ from resize_energy.report.charts import (
     pv_charts,
     wind_charts,
 )
+from resize_energy.report.versus import versus_rounds
 from resize_energy.tutor.checker import Finding
 from resize_energy.tutor.explanations import EXPLANATIONS, TOPIC_ORDER
 from resize_energy.tutor.explanations_biomass import topics_for
@@ -101,6 +102,23 @@ def _charts_html(charts: dict[str, ChartSpec]) -> str:
         f'<p align="center"><img src="chart:{name}" width="{c.width}" height="{c.height}">'
         + (f'<br><span style="color:#556377">{escape(c.caption)}</span>' if c.caption else "")
         + "</p>" for name, c in charts.items())
+
+
+def _versus_html(r: ComparisonResult) -> str:
+    """Round by round table with proportional bars (the window shows the animated version)."""
+    out = []
+    for i, rd in enumerate(versus_rounds(r), start=1):
+        out.append(f'<tr><td colspan="3"><b>Round {i}: {escape(rd.title)}</b> '
+                   f'<span style="color:#556377">({escape(rd.hint)})</span></td></tr>')
+        for e in rd.entries:
+            pct = max(1, round(100 * e.score))
+            star = " &#9733;" if rd.winner == e.name else ""
+            out.append(
+                f"<tr><td>{escape(e.name)}</td><td>{escape(e.text)}{star}</td>"
+                f'<td width="200"><table width="100%" cellspacing="0"><tr>'
+                f'<td width="{pct}%" bgcolor="{_TECH_COLORS[e.key]}">&nbsp;</td><td></td>'
+                "</tr></table></td></tr>")
+    return f'<table cellpadding="2">{"".join(out)}</table>'
 
 
 def _glance(kpis: list[tuple[str, str]], verdict: str) -> str:
@@ -416,6 +434,7 @@ def build_comparison_report(
         for key in COMPARE_TOPIC_ORDER
         if key in EXPLANATIONS
     )
+    versus = _versus_html(r)
     glance = _kpi_html([
         (r.lowest_lcoe, "cheapest energy"), (r.fastest_payback, "fastest payback"),
         (r.highest_npv, "highest net present value"), (r.most_co2, "most CO2 avoided"),
@@ -429,6 +448,7 @@ def build_comparison_report(
 </style></head><body>
 <h1>{escape(title)}</h1>{note}
 <h2>Which is better, and for what?</h2>{glance}{verdict}
+<h2>Round by round</h2>{versus}
 <h2>The numbers in pictures</h2>{charts_html}
 <h2>Checks</h2>{checks_html}
 <h2>All figures side by side</h2>

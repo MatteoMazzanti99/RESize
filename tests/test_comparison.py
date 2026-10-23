@@ -104,7 +104,8 @@ def test_oversized_wind_and_expensive_energy_are_flagged():
 
 # ---- four technologies -------------------------------------------------------------------
 
-from resize_energy.gui.zone_physics import ICON_SIZE, advance  # noqa: E402
+from resize_energy.gui import zone_layout as zl  # noqa: E402
+from resize_energy.report.versus import rounds_won, versus_rounds  # noqa: E402
 
 
 def many(techs, **kw):
@@ -165,14 +166,42 @@ def test_selection_is_validated():
         many(("pv", "hydrogen"), h2_use_pv=False, h2_use_wind=False)
 
 
-def test_icons_stay_inside_and_bounce():
-    items = {"pv": [10.0, 10.0, -3.0, -2.0], "wind": [200.0, 100.0, 4.0, 3.0]}
-    for _ in range(2000):
-        advance(items, 300.0, 140.0)
-        for x, y, _vx, _vy in items.values():
-            assert -1e-9 <= x <= 300 - ICON_SIZE + 1e-9
-            assert -1e-9 <= y <= 140 - ICON_SIZE + 1e-9
-    # two icons on top of each other do not stick: they exchange velocity and move apart
-    items = {"a": [50.0, 50.0, 1.0, 0.0], "b": [60.0, 50.0, -1.0, 0.0]}
-    advance(items, 300.0, 140.0)
-    assert items["a"][2] < 0 < items["b"][2]
+def test_zone_layout_and_motion():
+    for n in (1, 2, 3, 4):
+        centres = zl.slot_centres(n, 400.0, 140.0)
+        assert len(centres) == n
+        xs = [x for x, _ in centres]
+        assert xs == sorted(xs) and 0 < xs[0] and xs[-1] < 400
+        assert len(zl.vs_centres(centres)) == n - 1
+        # icons never overlap, also with 4 in a narrow zone
+        assert all(b - a > zl.ICON_SIZE for a, b in zip(xs, xs[1:], strict=False)) or n == 4
+    assert zl.slot_centres(0, 400, 100) == []
+    assert all(abs(zl.bob(t / 10, i)) <= 3.0 + 1e-9 for t in range(100) for i in range(4))
+    assert zl.pop_scale(0.0) == pytest.approx(0.3) and zl.pop_scale(1.0) == 1.0
+    assert max(zl.pop_scale(t / 100) for t in range(31)) >= 1.0   # small overshoot
+    # clash: icons on both sides end up closer to the middle and never cross it
+    for x in (50.0, 350.0):
+        positions = [zl.clash_x(x, 200.0, p / 20) for p in range(21)]
+        assert abs(positions[11] - 200) < abs(x - 200) * 0.5
+        assert all((p - 200) * (x - 200) > 0 for p in positions)
+    assert zl.flash_alpha(0.55) > 150 and zl.flash_alpha(0.0) == 0
+
+
+def test_versus_rounds():
+    _, r = many(("pv", "wind", "biomass", "hydrogen"))
+    rounds = versus_rounds(r)
+    assert [x.title for x in rounds] == ["Cost of one kWh", "Payback time",
+                                         "Net present value", "CO2 avoided"]
+    for rd in rounds:
+        assert len(rd.entries) == 4
+        assert all(0.0 <= e.score <= 1.0 for e in rd.entries)
+        assert max(e.score for e in rd.entries) == pytest.approx(1.0) or rd.title == "Net present value"
+    # the winner of each round is the technology with the best real figure
+    assert rounds[0].winner == r.lowest_lcoe
+    assert rounds[1].winner == r.fastest_payback
+    assert rounds[3].winner == r.most_co2
+    never = [e for e in rounds[1].entries if e.text == "never"]
+    assert never and all(e.score == 0.0 for e in never)
+    assert sum(rounds_won(rounds).values()) == sum(rd.winner is not None for rd in rounds)
+    html = build_comparison_report(*(many(("pv", "wind"))[0], many(("pv", "wind"))[1], []))
+    assert "Round 1: Cost of one kWh" in html

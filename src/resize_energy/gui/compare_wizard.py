@@ -15,6 +15,8 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QScrollArea,
+    QTabWidget,
     QVBoxLayout,
 )
 
@@ -31,10 +33,12 @@ from resize_energy.core.nasa_power import NasaPowerError, fetch_wind_climate
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.core.turbine_library import load_library
 from resize_energy.core.wind_design import TurbineSpec, WindInputs
+from resize_energy.gui.versus_panel import VersusPanel
 from resize_energy.gui.widgets import StepPage
 from resize_energy.gui.wizard import BaseResultsPage, NumberField, _hint, first_error
 from resize_energy.report.charts import ChartSpec, comparison_charts
 from resize_energy.report.html_report import build_comparison_report
+from resize_energy.report.versus import versus_rounds
 from resize_energy.tutor.checker import Finding
 from resize_energy.tutor.checker_compare import check_comparison
 from resize_energy.tutor.context_compare import build_compare_context
@@ -462,6 +466,15 @@ class CompareResultsPage(BaseResultsPage):
         super().__init__()
         self.setTitle("4. Comparison")
         self.setSubTitle("Side by side. Pick a step on the right to see why.")
+        # the Versus screen first, the full report in the second tab
+        self.versus = VersusPanel()
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(self.versus)
+        self.tabs = QTabWidget()
+        self.tabs.addTab(scroll, "Versus")
+        self.tabs.addTab(self.browser, "Full report")
+        self.splitter.replaceWidget(0, self.tabs)
 
     def _compute(self) -> tuple[object, object, list[Finding], str, str]:
         s, p = self.site, self.plant
@@ -500,6 +513,9 @@ class CompareResultsPage(BaseResultsPage):
         self.setSubTitle(f"{self.selection.names()} side by side. Pick a step on the right "
                          "for the why.")
         super().initializePage()
+        if self._design is not None:
+            self.versus.set_rounds(versus_rounds(self._design))
+            self.tabs.setCurrentIndex(0)
 
     def _worked(self, key: str) -> str | None:
         return compare_worked_example(key, self._inputs, self._design)

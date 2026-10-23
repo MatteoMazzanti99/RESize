@@ -1,18 +1,18 @@
 """Drag-and-drop pieces of the home page: clickable technology cards and the Compare zone.
 
 A technology card starts its project when clicked and can be dragged into the Compare zone.
-In the zone the technologies appear as small icons drifting around, without any text; once two
-or more are inside, the Compare button is enabled.
+In the zone the technologies stand as small icons facing each other with a "VS" between them
+(no text with their names); with two or more the Compare button is enabled, and pressing it
+plays a short clash before the comparison opens.
 """
 
 from __future__ import annotations
 
-import math
-import random
+import time
 from collections.abc import Callable
 
 from PySide6.QtCore import QMimeData, QPoint, QPointF, QRectF, Qt, QTimer
-from PySide6.QtGui import QColor, QDrag, QPainter, QPixmap
+from PySide6.QtGui import QColor, QDrag, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QFrame,
@@ -25,7 +25,16 @@ from PySide6.QtWidgets import (
 
 from resize_energy.gui.icons import paint_icon_tile
 from resize_energy.gui.theme import COLORS
-from resize_energy.gui.zone_physics import ICON_SIZE, advance
+from resize_energy.gui.zone_layout import (
+    CLASH_SECONDS,
+    ICON_SIZE,
+    bob,
+    clash_x,
+    flash_alpha,
+    pop_scale,
+    slot_centres,
+    vs_centres,
+)
 
 MIME_PREFIX = "resize/tech:"
 TICK_MS = 33
@@ -78,66 +87,123 @@ class TechCard(QFrame):
 
 
 class _Arena(QWidget):
-    """The area where the dropped icons move. Click an icon to take it out."""
+    """The area where the dropped icons face each other. Click an icon to take it out."""
 
     def __init__(self, zone: CompareZone) -> None:
         super().__init__()
         self.zone = zone
-        self.items: dict[str, list[float]] = {}
+        self.keys: list[str] = []
+        self._born: dict[str, float] = {}
+        self._clash_start: float | None = None
+        self._after_clash: Callable[[], None] | None = None
         self.setMinimumHeight(110)
         self._timer = QTimer(self)
         self._timer.setInterval(TICK_MS)
         self._timer.timeout.connect(self._tick)
 
-    def add(self, key: str, at: QPointF | None = None) -> None:
-        if key in self.items:
+    # --- content ---------------------------------------------------------------------
+    def add(self, key: str) -> None:
+        if key in self.keys:
             return
-        width, height = max(self.width(), 2 * ICON_SIZE), max(self.height(), 2 * ICON_SIZE)
-        x = min(max(0.0, (at.x() if at else random.uniform(0, width)) - ICON_SIZE / 2),
-                width - ICON_SIZE)
-        y = min(max(0.0, (at.y() if at else random.uniform(0, height)) - ICON_SIZE / 2),
-                height - ICON_SIZE)
-        angle = random.uniform(0, 2 * math.pi)
-        speed = random.uniform(1.1, 1.9)
-        self.items[key] = [x, y, speed * math.cos(angle), speed * math.sin(angle)]
+        self.keys.append(key)
+        self._born[key] = time.monotonic()
         self._timer.start()
         self.update()
 
     def remove(self, key: str) -> None:
-        self.items.pop(key, None)
-        if not self.items:
+        if key in self.keys:
+            self.keys.remove(key)
+            self._born.pop(key, None)
+        if not self.keys:
             self._timer.stop()
         self.update()
 
     def clear(self) -> None:
-        self.items.clear()
+        self.keys.clear()
+        self._born.clear()
         self._timer.stop()
         self.update()
 
+    def busy(self) -> bool:
+        return self._clash_start is not None
+
+    def clash(self, then: Callable[[], None]) -> None:
+        """Play the face-off, then call ``then``."""
+        self._clash_start = time.monotonic()
+        self._after_clash = then
+        self._timer.start()
+
+    # --- animation -------------------------------------------------------------------
     def _tick(self) -> None:
-        if not self.isVisible():
-            return
-        advance(self.items, self.width(), self.height())
-        self.update()
+        if self._clash_start is not None and (
+                time.monotonic() - self._clash_start >= CLASH_SECONDS):
+            done, self._after_clash = self._after_clash, None
+            self._clash_start = None
+            if done is not None:
+                done()
+        if self.isVisible():
+            self.update()
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        if not self.items:
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        w, h = float(self.width()), float(self.height())
+        now = time.monotonic()
+        if not self.keys:
             painter.setPen(QColor(COLORS["muted"]))
             painter.drawText(QRectF(self.rect()), Qt.AlignmentFlag.AlignCenter,
                              "Drag technologies here to compare them")
-        for key, (x, y, _vx, _vy) in self.items.items():
+            painter.end()
+            return
+        centres = slot_centres(len(self.keys), w, h)
+        progress = (None if self._clash_start is None
+                    else (now - self._clash_start) / CLASH_SECONDS)
+        mid_x = w / 2.0
+        for i, (key, (cx, cy)) in enumerate(zip(self.keys, centres, strict=True)):
+            x = cx if progress is None else clash_x(cx, mid_x, progress)
+            y = cy + (bob(now, i) if progress is None else 0.0)
+            scale = pop_scale(now - self._born.get(key, 0.0))
             painter.save()
             painter.translate(x, y)
+            painter.scale(scale, scale)
+            painter.translate(-ICON_SIZE / 2.0, -ICON_SIZE / 2.0)
             paint_icon_tile(painter, key, float(ICON_SIZE))
             painter.restore()
+        font = QFont(painter.font())
+        font.setBold(True)
+        font.setPointSizeF(11.0)
+        painter.setFont(font)
+        for vx, vy in vs_centres(centres):
+            if progress is not None and progress > 0.5:
+                continue
+            painter.setPen(QColor("#C77700"))
+            painter.drawText(QRectF(vx - 20, vy - 12, 40, 24), Qt.AlignmentFlag.AlignCenter, "VS")
+        if progress is not None:
+            alpha = flash_alpha(progress)
+            if alpha > 0:
+                colour = QColor("#F5B941")
+                colour.setAlpha(alpha)
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(colour)
+                painter.drawEllipse(QPointF(mid_x, centres[0][1]), 34.0, 34.0)
+        elif len(self.keys) == 1:
+            painter.setPen(QColor(COLORS["muted"]))
+            small = QFont(painter.font())
+            small.setBold(False)
+            small.setPointSizeF(8.5)
+            painter.setFont(small)
+            painter.drawText(QRectF(0, h - 26, w, 20), Qt.AlignmentFlag.AlignCenter,
+                             "Needs an opponent: drag another one in")
         painter.end()
 
     def mousePressEvent(self, event) -> None:
+        if self.busy():
+            return
         pos = event.position()
-        for key, (x, y, _vx, _vy) in list(self.items.items()):
-            if x <= pos.x() <= x + ICON_SIZE and y <= pos.y() <= y + ICON_SIZE:
+        centres = slot_centres(len(self.keys), float(self.width()), float(self.height()))
+        for key, (cx, cy) in zip(list(self.keys), centres, strict=True):
+            if abs(pos.x() - cx) <= ICON_SIZE / 2 and abs(pos.y() - cy) <= ICON_SIZE / 2:
                 self.zone.remove(key)
                 return
 
@@ -180,12 +246,12 @@ class CompareZone(QFrame):
 
     # --- state ---------------------------------------------------------------------
     def keys(self) -> list[str]:
-        return [k for k in self.allowed if k in self.arena.items]
+        return [k for k in self.allowed if k in self.arena.keys]
 
-    def add(self, key: str, at: QPointF | None = None) -> bool:
+    def add(self, key: str) -> bool:
         if key not in self.allowed:
             return False
-        self.arena.add(key, at)
+        self.arena.add(key)
         self._refresh()
         return True
 
@@ -198,14 +264,22 @@ class CompareZone(QFrame):
         self._refresh()
 
     def _refresh(self) -> None:
-        n = len(self.arena.items)
-        self.button.setEnabled(n >= 2)
-        self.clear_button.setEnabled(n >= 1)
+        n = len(self.arena.keys)
+        busy = self.arena.busy()
+        self.button.setEnabled(n >= 2 and not busy)
+        self.clear_button.setEnabled(n >= 1 and not busy)
 
     def _compare(self) -> None:
         keys = self.keys()
-        if len(keys) >= 2:
+        if len(keys) < 2 or self.arena.busy():
+            return
+
+        def go() -> None:
+            self._refresh()
             self._on_compare(keys)
+
+        self.arena.clash(go)
+        self._refresh()
 
     # --- drag and drop -------------------------------------------------------------
     @staticmethod
@@ -234,6 +308,5 @@ class CompareZone(QFrame):
         self._highlight(False)
         key = self._key_of(event)
         if key in self.allowed:
-            at = self.arena.mapFrom(self, event.position().toPoint())
-            self.add(key, QPointF(at))
+            self.add(key)
             event.acceptProposedAction()

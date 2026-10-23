@@ -387,7 +387,7 @@ class BaseResultsPage(StepPage):
         ask_step.clicked.connect(self._ask_about_step)
         why_layout.addWidget(ask_step)
 
-        splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.splitter = splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(self.browser)
         splitter.addWidget(why_panel)
         splitter.setStretchFactor(0, 3)
