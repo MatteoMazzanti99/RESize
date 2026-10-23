@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "resize-energy"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "RESize: a step-by-step tutor for sizing renewable energy systems (students and preliminary design)."
 readme = "README.md"
 requires-python = ">=3.10"

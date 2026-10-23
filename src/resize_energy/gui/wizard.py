@@ -137,14 +137,21 @@ class SitePage(StepPage):
         manual = QFormLayout()
         manual.addRow("Annual in-plane irradiation H", self.irr)
 
+        fetch_row = QHBoxLayout()
+        fetch_row.addWidget(fetch)
+        fetch_row.addStretch(1)
+
         layout = QVBoxLayout(self)
+        layout.setSpacing(12)
         layout.addLayout(form)
-        layout.addWidget(fetch)
+        layout.addLayout(fetch_row)
         layout.addWidget(self.status)
+        layout.addSpacing(8)
         layout.addWidget(_hint(
             "If you are offline, or already have a value from another source, type the annual "
             "in-plane irradiation by hand below."))
         layout.addLayout(manual)
+        layout.addStretch(1)
 
     def implied_pr(self) -> float | None:
         return self._implied_pr
@@ -344,7 +351,7 @@ class ResultsPage(StepPage):
                             "reasoning, and your own numbers substituted in.</p>")
         why_panel = QWidget()
         why_layout = QVBoxLayout(why_panel)
-        why_layout.setContentsMargins(0, 0, 0, 0)
+        why_layout.setContentsMargins(14, 0, 0, 0)  # air between report and Why? panel
         why_layout.addWidget(make_label("Why?", "sectionTitle", wrap=False))
         why_layout.addWidget(self.topics, 1)
         why_layout.addWidget(self.detail, 2)
