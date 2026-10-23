@@ -7,6 +7,7 @@ from collections.abc import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
+from resize_energy.gui.hero import HeroArt
 from resize_energy.gui.icons import IconTile
 from resize_energy.gui.widgets import StepPage, make_card, make_label, make_pill
 
@@ -43,16 +44,18 @@ class HomePage(StepPage):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        root.addWidget(make_label("RENEWABLE ENERGY SIZING TUTOR", "overline", wrap=False))
-        root.addSpacing(6)
-        root.addWidget(make_label("Size renewable energy systems.\nStep by step, with the why.",
+        text = QVBoxLayout()
+        text.setSpacing(0)
+        text.addWidget(make_label("RENEWABLE ENERGY SIZING TUTOR", "overline", wrap=False))
+        text.addSpacing(6)
+        text.addWidget(make_label("Size renewable energy systems.\nStep by step, with the why.",
                                   "headline"))
-        root.addSpacing(10)
-        root.addWidget(make_label(
+        text.addSpacing(10)
+        text.addWidget(make_label(
             "RESize takes you from site data to a sized plant. It is built for MSc students in "
             "renewable energy and for engineers doing a first-pass design: at each step you see "
             "the formula, the assumptions and your own numbers.", "lead"))
-        root.addSpacing(16)
+        text.addSpacing(16)
 
         start = QPushButton("Start a photovoltaic project  →")
         start.setProperty("variant", "primary")
@@ -71,7 +74,13 @@ class HomePage(StepPage):
         row.addWidget(start_wind)
         row.addWidget(compare)
         row.addStretch(1)
-        root.addLayout(row)
+        text.addLayout(row)
+
+        top = QHBoxLayout()
+        top.setSpacing(28)
+        top.addLayout(text, 1)
+        top.addWidget(HeroArt(), 0, Qt.AlignmentFlag.AlignTop)
+        root.addLayout(top)
         root.addSpacing(26)
 
         benefits = QHBoxLayout()

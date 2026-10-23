@@ -300,7 +300,7 @@ class WindResultsPage(BaseResultsPage):
         findings = check_wind_design(inputs, design)
         note = f"Site: lat {self.site.lat.value():.4f}, lon {self.site.lon.value():.4f}."
         light = build_wind_report(inputs, design, findings, site_note=note, theme="light")
-        dark = build_wind_report(inputs, design, findings, site_note=note, theme="dark")
+        dark = build_wind_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, dark
 
     def _worked(self, key: str) -> str | None:

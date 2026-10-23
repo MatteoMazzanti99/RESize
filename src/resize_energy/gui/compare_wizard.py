@@ -340,7 +340,7 @@ class CompareResultsPage(BaseResultsPage):
         findings = check_comparison(inputs, result)
         note = f"Site: lat {s.lat.value():.4f}, lon {s.lon.value():.4f}."
         light = build_comparison_report(inputs, result, findings, site_note=note, theme="light")
-        dark = build_comparison_report(inputs, result, findings, site_note=note, theme="dark")
+        dark = build_comparison_report(inputs, result, findings, site_note=note, theme="screen")
         return inputs, result, findings, light, dark
 
     def _worked(self, key: str) -> str | None:

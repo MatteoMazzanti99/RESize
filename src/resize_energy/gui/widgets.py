@@ -3,7 +3,15 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFrame, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import (
+    QFrame,
+    QGraphicsDropShadowEffect,
+    QLabel,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 
 from resize_energy import __version__
 from resize_energy.gui.brand import LogoMark
@@ -24,8 +32,13 @@ def make_card(kind: str = "card") -> tuple[QFrame, QVBoxLayout]:
     frame = QFrame()
     frame.setObjectName(kind)
     layout = QVBoxLayout(frame)
-    layout.setContentsMargins(16, 14, 16, 14)
+    layout.setContentsMargins(18, 16, 18, 16)
     layout.setSpacing(6)
+    shadow = QGraphicsDropShadowEffect(frame)  # soft lift; the card keeps a hairline border
+    shadow.setBlurRadius(22)
+    shadow.setOffset(0, 4)
+    shadow.setColor(QColor(15, 27, 45, 28))
+    frame.setGraphicsEffect(shadow)
     return frame, layout
 
 

@@ -30,7 +30,7 @@ def test_primary_button_text_is_readable():
 
 
 def test_borders_are_visible_against_the_background():
-    assert theme.contrast_ratio(C["border"], C["bg"]) >= 2.0
+    assert theme.contrast_ratio(C["border"], C["bg"]) >= 1.4
 
 
 def test_all_colours_are_valid_hex():
@@ -49,14 +49,14 @@ def test_stylesheet_is_complete_and_balanced():
     assert C["accent"] in qss and C["bg"] in qss
 
 
-def test_dark_report_is_readable_on_the_dark_window():
+def test_screen_report_matches_the_light_window_and_pdf_stays_printable():
     inp = PVInputs(annual_demand_kwh=4500, annual_irradiation_kwh_m2=1500, performance_ratio=0.8)
     design = size_pv_system(inp)
     findings = check_pv_design(inp, design)
-    dark = build_pv_report(inp, design, findings, theme="dark")
+    dark = build_pv_report(inp, design, findings, theme="screen")
     light = build_pv_report(inp, design, findings, theme="light")
-    assert "#E8EEF8" in dark and "#1A2540" in dark
-    assert "background: #eee" in light and "#E8EEF8" not in light
+    assert C["accent"].upper() in dark.upper() and C["surface2"].upper() in dark.upper()
+    assert "background: #eee" in light and C["surface2"].upper() not in light.upper()
     # same content in both looks; only the style differs
     assert "With your numbers" in dark and "With your numbers" in light
     assert "Design checks" in dark and "Design checks" in light

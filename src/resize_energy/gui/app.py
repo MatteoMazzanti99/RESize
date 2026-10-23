@@ -26,6 +26,29 @@ def _walk_through(window, app) -> int:
     return 0
 
 
+def _screenshots(window, app, folder: str) -> None:
+    """Save a picture of the home page and of the first and last step of every flow."""
+    from pathlib import Path
+
+    out = Path(folder)
+    out.mkdir(parents=True, exist_ok=True)
+    window.resize(1240, 820)
+    app.processEvents()
+    window.grab().save(str(out / "home.png"))
+    for tech in ("pv", "wind", "compare"):
+        window._start(tech)
+        app.processEvents()
+        window.grab().save(str(out / f"{tech}_1.png"))
+        for _ in range(3):
+            window._next()
+            app.processEvents()
+            if window.index == 3:
+                window.grab().save(str(out / f"{tech}_3.png"))
+        app.processEvents()
+        window.grab().save(str(out / f"{tech}_4.png"))
+        window._restart()
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the app. ``--self-test`` builds the main window, then exits (used by CI/releases)."""
     args = sys.argv if argv is None else argv
@@ -49,6 +72,8 @@ def main(argv: list[str] | None = None) -> int:
         window.show()
         app.processEvents()
         code = _walk_through(window, app)
+        if "--screenshots" in args:
+            _screenshots(window, app, args[args.index("--screenshots") + 1])
         print("RESize self-test OK" if code == 0 else "RESize self-test FAILED", flush=True)
     else:
         window.show()

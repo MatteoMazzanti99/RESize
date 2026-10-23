@@ -482,7 +482,7 @@ class ResultsPage(BaseResultsPage):
             f"tilt {self.site.tilt.value():.0f} deg, azimuth {self.site.azimuth.value():.0f} deg."
         )
         light = build_pv_report(inputs, design, findings, site_note=note, theme="light")
-        dark = build_pv_report(inputs, design, findings, site_note=note, theme="dark")
+        dark = build_pv_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, dark
 
     def _worked(self, key: str) -> str | None:

@@ -40,7 +40,7 @@ resize = "resize_energy.gui.app:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-resize_energy = ["data/*.json"]
+resize_energy = ["data/*.json", "data/fonts/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

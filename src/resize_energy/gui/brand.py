@@ -6,7 +6,9 @@ from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QPainter, QPen, QPixmap, QTextOption
 from PySide6.QtWidgets import QWidget
 
-from resize_energy.gui.theme import COLORS
+# The logo keeps its own colours so it looks the same on any background.
+_DISC, _LETTER = "#0F1B2D", "#FFFFFF"
+_SUN, _WIND, _GREEN = "#F5B941", "#6CB4FF", "#2DE08A"
 
 
 def draw_logo(painter: QPainter, size: float) -> None:
@@ -17,7 +19,7 @@ def draw_logo(painter: QPainter, size: float) -> None:
     """
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
     painter.setPen(QPen(Qt.PenStyle.NoPen))
-    painter.setBrush(QBrush(QColor(COLORS["sidebar"])))
+    painter.setBrush(QBrush(QColor(_DISC)))
     painter.drawEllipse(QRectF(0, 0, size, size))
 
     width = size * 0.07
@@ -25,8 +27,7 @@ def draw_logo(painter: QPainter, size: float) -> None:
     ring = QRectF(size / 2 - radius, size / 2 - radius, 2 * radius, 2 * radius)
     painter.setBrush(QBrush(Qt.BrushStyle.NoBrush))
     # Qt angles: counter-clockwise from 3 o'clock, in 1/16 degree
-    for start_deg, color in ((-24, COLORS["warning"]), (-144, COLORS["info"]),
-                             (-264, COLORS["accent"])):
+    for start_deg, color in ((-24, _SUN), (-144, _WIND), (-264, _GREEN)):
         pen = QPen(QColor(color), width)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
@@ -36,7 +37,7 @@ def draw_logo(painter: QPainter, size: float) -> None:
     font.setBold(True)
     font.setPixelSize(max(6, int(size * 0.50)))
     painter.setFont(font)
-    painter.setPen(QPen(QColor(COLORS["text"])))
+    painter.setPen(QPen(QColor(_LETTER)))
     painter.drawText(QRectF(0, size * 0.015, size, size), "R", QTextOption(Qt.AlignmentFlag.AlignCenter))
 
 

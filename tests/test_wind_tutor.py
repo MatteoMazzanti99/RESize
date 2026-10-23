@@ -69,8 +69,8 @@ def test_context_and_report_contain_the_numbers():
     ctx = build_wind_context(inp, d, findings)
     assert f"{d.n_turbines} (" in ctx and "DESIGN CHECKS" in ctx and "wind plant" in ctx
     light = build_wind_report(inp, d, findings)
-    dark = build_wind_report(inp, d, findings, theme="dark")
+    dark = build_wind_report(inp, d, findings, theme="screen")
     for html in (light, dark):
         assert "Method and formulas" in html and "With your numbers" in html
         assert f"{d.capacity_factor_net:.1%}" in html
-    assert "#E8EEF8" in dark and "#E8EEF8" not in light
+    assert "#0A7452" in dark and "#0A7452" not in light

@@ -19,7 +19,7 @@ from resize_energy.tutor.worked_wind import wind_worked_example
 
 _LABELS = {"error": "ERROR", "warning": "WARNING", "info": "NOTE", "ok": "OK"}
 
-# Two looks for the same report: "light" for the PDF (white paper), "dark" for the window.
+# Two looks for the same report: "light" for the PDF (white paper), "screen" for the window.
 _THEMES = {
     "light": {
         "colors": {"error": "#b3261e", "warning": "#b26a00", "info": "#1a5fb4", "ok": "#2e7d32"},
@@ -31,15 +31,15 @@ _THEMES = {
             "code { background: #eee; }"
         ),
     },
-    "dark": {
-        "colors": {"error": "#FF7A7A", "warning": "#F5B941", "info": "#6CB4FF", "ok": "#4ADE80"},
+    "screen": {
+        "colors": {"error": "#B3261E", "warning": "#8F5600", "info": "#1F5FBF", "ok": "#0A7452"},
         "css": (
-            "body { color: #E8EEF8; font-size: 10pt; }\n"
-            "h1 { font-size: 17pt; color: #E8EEF8; }\n"
-            "h2 { font-size: 13pt; margin-top: 16px; color: #2DE08A; }\n"
-            "h3 { font-size: 10.5pt; margin-bottom: 2px; color: #2DE08A; }\n"
+            "body { color: #0F1B2D; font-size: 10pt; }\n"
+            "h1 { font-size: 17pt; color: #0F1B2D; }\n"
+            "h2 { font-size: 13pt; margin-top: 16px; color: #0A7452; }\n"
+            "h3 { font-size: 10.5pt; margin-bottom: 2px; color: #0A7452; }\n"
             "table { border-collapse: collapse; } td { padding: 2px 10px 2px 0; }\n"
-            "code { background-color: #1A2540; color: #9CF3C6; }"
+            "code { background-color: #EAF0F6; color: #085F43; }"
         ),
     },
 }
@@ -59,7 +59,7 @@ def build_pv_report(
 ) -> str:
     """HTML string with inputs, results, checks and the formulas used.
 
-    ``theme`` is "light" (for the PDF) or "dark" (for showing it inside the dark window).
+    ``theme`` is "light" (for the PDF) or "screen" (for showing it inside the window).
     """
     look = _THEMES.get(theme, _THEMES["light"])
     colors = look["colors"]
@@ -257,7 +257,7 @@ def build_comparison_report(
         two("CO2 avoided over the lifetime", f"{a.co2_avoided_lifetime_t:,.0f} t",
             f"{b.co2_avoided_lifetime_t:,.0f} t"),
     ])
-    pv_color, wind_color = ("#2DE08A", "#6CB4FF") if theme == "dark" else ("#2e7d32", "#1a5fb4")
+    pv_color, wind_color = ("#0A7452", "#1F5FBF")
 
     bars = "".join([
         _bar_rows("Cost of energy, euro/kWh (lower is better)", [

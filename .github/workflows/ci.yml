@@ -46,8 +46,14 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           set +e
-          python -X faulthandler -m resize_energy.gui.app --self-test > smoke.txt 2>&1
+          python -X faulthandler -m resize_energy.gui.app --self-test --screenshots shots > smoke.txt 2>&1
           code=$?
           body=$(python -c "import urllib.parse;t=open('smoke.txt').read()[-1800:];print(urllib.parse.quote(t,safe=' /:.,()-+=*#'))")
           echo "::notice title=GUI self-test output (exit $code)::${body}"
           exit $code
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gui-screenshots
+          path: shots
+          if-no-files-found: ignore

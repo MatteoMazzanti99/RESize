@@ -38,3 +38,10 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+## Poppins font
+
+`src/resize_energy/data/fonts/` contains the Poppins typeface (Regular, Medium, Bold),
+copyright 2020 The Poppins Project Authors (<https://github.com/itfoundry/Poppins>),
+licensed under the SIL Open Font License 1.1. The licence text is in
+`src/resize_energy/data/fonts/OFL.txt`.

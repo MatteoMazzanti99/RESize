@@ -6,29 +6,29 @@ Everything except :func:`apply_theme` is plain Python (no Qt), so it is unit-tes
 from __future__ import annotations
 
 COLORS: dict[str, str] = {
-    "bg": "#0B1220",          # window background (midnight blue)
-    "sidebar": "#0E1729",     # left navigation
-    "surface": "#121B2E",     # panels, text areas
-    "surface2": "#1A2540",    # raised elements, hover
-    "border": "#3D507D",
-    "text": "#E8EEF8",
-    "muted": "#93A4C3",
-    "accent": "#2DE08A",      # electric green
-    "accent_hover": "#5BEBA6",
-    "accent_text": "#04210F", # text on top of the accent colour
-    "accent_tint": "#0F2A2B", # card background for the active technology
-    "warning": "#F5B941",
-    "error": "#FF7A7A",
-    "info": "#6CB4FF",
+    "bg": "#F4F7FA",          # window background (cool light grey)
+    "sidebar": "#FFFFFF",     # left navigation
+    "surface": "#FFFFFF",     # panels, text areas
+    "surface2": "#EAF0F6",    # raised elements, hover
+    "border": "#C3CCD9",
+    "text": "#0F1B2D",
+    "muted": "#556377",
+    "accent": "#0A7452",      # green, readable as text on white
+    "accent_hover": "#085F43",
+    "accent_text": "#FFFFFF", # text on top of the accent colour
+    "accent_tint": "#E6F5EE", # card background for the active technology
+    "warning": "#8F5600",
+    "error": "#B3261E",
+    "info": "#1F5FBF",
 }
 
-FONT_FAMILY = '"Segoe UI", "Inter", "SF Pro Text", "Helvetica Neue", Arial, sans-serif'
+FONT_FAMILY = '"Poppins", "Segoe UI", "Inter", "SF Pro Text", "Helvetica Neue", Arial, sans-serif'
 
 # Style for HTML shown inside QTextBrowser widgets (the PDF keeps its own light style).
 SCREEN_DOC_CSS = (
     f"body {{ color: {COLORS['text']}; }} "
     f"h3 {{ color: {COLORS['accent']}; }} "
-    f"code {{ background-color: {COLORS['surface2']}; color: #9CF3C6; }} "
+    f"code {{ background-color: {COLORS['surface2']}; color: {COLORS['accent_hover']}; }} "
     f"a {{ color: {COLORS['info']}; }}"
 )
 
@@ -62,7 +62,7 @@ QToolTip { background-color: {surface2}; color: {text}; border: 1px solid {borde
 QScrollArea { background: transparent; border: none; }
 QScrollArea > QWidget > QWidget { background: transparent; }
 
-QWidget#sidebar { background-color: {sidebar}; border-right: 1px solid {border}; }
+QWidget#sidebar { background-color: {sidebar}; border-right: 1px solid {surface2}; }
 QWidget#sidebar QLabel { background: transparent; }
 QLabel#brandName { font-size: 17pt; font-weight: 700; }
 QLabel#brandTagline { color: {muted}; font-size: 9pt; }
@@ -76,40 +76,42 @@ QLabel#lead { color: {muted}; font-size: 11.5pt; }
 QLabel#hint { color: {muted}; }
 QLabel#sectionTitle { font-size: 12pt; font-weight: 700; }
 
-QFrame#card { background-color: {surface}; border: 1px solid {border}; border-radius: 12px; }
-QFrame#cardActive { background-color: {accent_tint}; border: 1px solid {accent}; border-radius: 12px; }
-QFrame#cardDim { background-color: {surface}; border: 1px dashed {border}; border-radius: 12px; }
+QFrame#card { background-color: {surface}; border: 1px solid {surface2}; border-radius: 16px; }
+QFrame#card:hover { border: 1px solid {border}; }
+QFrame#cardActive { background-color: {surface}; border: 1px solid {border}; border-radius: 16px; }
+QFrame#cardActive:hover { background-color: {accent_tint}; border: 1px solid {accent}; }
+QFrame#cardDim { background-color: {bg}; border: 1px dashed {border}; border-radius: 16px; }
 QFrame#cardDim QLabel#cardTitle { color: {text}; }
 QLabel#cardTitle { font-size: 12pt; font-weight: 700; }
 QLabel#cardText { color: {muted}; }
-QLabel#cardIcon { background-color: {surface2}; color: {accent}; border-radius: 10px; font-size: 13pt; font-weight: 700; }
-QLabel#pillOn { background-color: {accent}; color: {accent_text}; border-radius: 9px; padding: 2px 10px; font-size: 8.5pt; font-weight: 700; }
-QLabel#pillOff { background-color: {surface2}; color: {muted}; border-radius: 9px; padding: 2px 10px; font-size: 8.5pt; }
+QLabel#cardIcon { background-color: {accent_tint}; color: {accent}; border-radius: 12px; font-size: 13pt; font-weight: 700; }
+QLabel#pillOn { background-color: {accent_tint}; color: {accent}; border-radius: 10px; padding: 2px 10px; font-size: 8.5pt; font-weight: 700; }
+QLabel#pillOff { background-color: {surface2}; color: {muted}; border-radius: 10px; padding: 2px 10px; font-size: 8.5pt; }
 
-QPushButton { background-color: {surface2}; color: {text}; border: 1px solid {border}; border-radius: 8px; padding: 7px 16px; }
+QPushButton { background-color: {surface}; color: {text}; border: 1px solid {border}; border-radius: 18px; padding: 8px 20px; font-weight: 500; }
 QPushButton:hover { border-color: {accent}; }
-QPushButton:pressed { background-color: {surface}; }
+QPushButton:pressed { background-color: {surface2}; }
 QPushButton:disabled { color: {muted}; border-color: {surface2}; }
-QPushButton[variant="primary"] { background-color: {accent}; color: {accent_text}; border: 1px solid {accent}; font-weight: 700; padding: 8px 22px; }
+QPushButton[variant="primary"] { background-color: {accent}; color: {accent_text}; border: 1px solid {accent}; font-weight: 700; padding: 9px 26px; }
 QPushButton[variant="primary"]:hover { background-color: {accent_hover}; border-color: {accent_hover}; }
 QPushButton[variant="primary"]:disabled { background-color: {surface2}; color: {muted}; border-color: {surface2}; }
 QPushButton[variant="ghost"] { background-color: transparent; border: 1px solid {border}; }
 QPushButton#whyButton { border-radius: 12px; padding: 0px; min-width: 24px; max-width: 24px; min-height: 24px; max-height: 24px; color: {accent}; font-weight: 700; }
 
-QLineEdit, QComboBox { background-color: {surface}; color: {text}; border: 1px solid {border}; border-radius: 6px; padding: 5px 8px; selection-background-color: {accent}; selection-color: {accent_text}; }
+QLineEdit, QComboBox { background-color: {surface}; color: {text}; border: 1px solid {border}; border-radius: 10px; padding: 5px 8px; selection-background-color: {accent}; selection-color: {accent_text}; }
 QLineEdit:focus, QComboBox:focus { border: 1px solid {accent}; }
 QComboBox::drop-down { border: none; width: 22px; }
 QComboBox QAbstractItemView { background-color: {surface}; color: {text}; border: 1px solid {border}; selection-background-color: {surface2}; selection-color: {text}; }
 QCheckBox { background: transparent; spacing: 8px; }
 
-QGroupBox { background: transparent; border: 1px solid {border}; border-radius: 10px; margin-top: 14px; padding: 14px 10px 8px 10px; }
+QGroupBox { background: transparent; border: 1px solid {border}; border-radius: 14px; margin-top: 14px; padding: 14px 10px 8px 10px; }
 QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 14px; padding: 0 6px; color: {muted}; font-weight: 700; }
 
-QTextBrowser { background-color: {surface}; color: {text}; border: 1px solid {border}; border-radius: 10px; padding: 8px; selection-background-color: {accent}; selection-color: {accent_text}; }
-QListWidget { background-color: {surface}; border: 1px solid {border}; border-radius: 10px; padding: 4px; outline: none; }
+QTextBrowser { background-color: {surface}; color: {text}; border: 1px solid {surface2}; border-radius: 14px; padding: 8px; selection-background-color: {accent}; selection-color: {accent_text}; }
+QListWidget { background-color: {surface}; border: 1px solid {surface2}; border-radius: 14px; padding: 4px; outline: none; }
 QListWidget::item { padding: 6px 8px; border-radius: 6px; }
 QListWidget::item:hover { background-color: {surface2}; }
-QListWidget::item:selected { background-color: {surface2}; color: {accent}; }
+QListWidget::item:selected { background-color: {accent_tint}; color: {accent}; }
 
 QSplitter::handle { background-color: {bg}; width: 8px; }
 QScrollBar:vertical { background: transparent; width: 10px; margin: 2px; }
@@ -132,9 +134,24 @@ def build_stylesheet() -> str:
     return qss
 
 
+def load_fonts() -> int:
+    """Register the Poppins files shipped with the app; returns how many were loaded."""
+    from importlib.resources import files
+
+    from PySide6.QtGui import QFontDatabase
+
+    loaded = 0
+    for entry in files("resize_energy").joinpath("data", "fonts").iterdir():
+        if entry.name.endswith(".ttf") and QFontDatabase.addApplicationFont(str(entry)) >= 0:
+            loaded += 1
+    return loaded
+
+
 def apply_theme(app) -> None:
-    """Use the Fusion style, a dark palette (for native dialogs) and the style sheet."""
+    """Use the Fusion style, the light palette (for native dialogs), Poppins and the style sheet."""
     from PySide6.QtGui import QColor, QPalette
+
+    load_fonts()
 
     app.setStyle("Fusion")
     palette = QPalette()

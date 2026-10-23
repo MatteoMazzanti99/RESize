@@ -23,7 +23,7 @@ class IconTile(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(QPen(Qt.PenStyle.NoPen))
-        painter.setBrush(QBrush(QColor(COLORS["surface2"])))
+        painter.setBrush(QBrush(QColor(COLORS["accent_tint"])))
         s = float(self._size)
         painter.drawRoundedRect(QRectF(0, 0, s, s), s * 0.25, s * 0.25)
 

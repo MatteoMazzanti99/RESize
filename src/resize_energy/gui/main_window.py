@@ -5,8 +5,10 @@ It hosts one flow of steps per technology (photovoltaic, wind, comparison); the 
 
 from __future__ import annotations
 
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation
 from PySide6.QtWidgets import (
     QFrame,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QMainWindow,
     QPushButton,
@@ -154,10 +156,25 @@ class MainWindow(QMainWindow):
             self.pages[index].initializePage()
         self._show(index)
 
+    def _fade_in(self, widget: QWidget) -> None:
+        """Short fade when a step appears. The effect is removed at the end (it costs speed)."""
+        effect = QGraphicsOpacityEffect(widget)
+        effect.setOpacity(0.0)
+        widget.setGraphicsEffect(effect)
+        anim = QPropertyAnimation(effect, b"opacity", self)
+        anim.setDuration(220)
+        anim.setStartValue(0.0)
+        anim.setEndValue(1.0)
+        anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        anim.finished.connect(lambda w=widget: w.setGraphicsEffect(None))
+        self._fade = anim  # keep a reference while it runs
+        anim.start()
+
     def _show(self, index: int) -> None:
         self.index = index
         page = self.pages[index]
         self.stack.setCurrentWidget(self._scroll_of[id(page)])
+        self._fade_in(self._scroll_of[id(page)])
         self.sidebar.set_current(index - 1)
         self.header_title.setVisible(page.show_header)
         self.header_subtitle.setVisible(page.show_header)

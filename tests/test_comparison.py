@@ -89,7 +89,7 @@ def test_tutor_pieces_work_together():
         assert text and any(ch.isdigit() for ch in text), key
     assert compare_worked_example("nope", inp, r) is None
     assert "Photovoltaic" in build_compare_context(inp, r, findings)
-    for theme in ("light", "dark"):
+    for theme in ("light", "screen"):
         html = build_comparison_report(inp, r, findings, theme=theme)
         assert "Which is better" in html and "LCOE" in html
 
