@@ -169,6 +169,7 @@ def build_pv_report(
         _row("Target PV coverage", f"{inp.coverage:.0%}"),
         _row("Annual in-plane irradiation", f"{inp.annual_irradiation_kwh_m2:,.0f} kWh/m2"),
         _row("Performance ratio", f"{inp.performance_ratio:.2f}"),
+        _row("Shading loss", f"{inp.shading_loss:.1%}" if inp.shading_loss > 0 else "none"),
         _row("Minimum ambient temperature", f"{inp.t_min_c:.0f} degC"),
         _row("Maximum cell temperature", f"{inp.t_cell_max_c:.0f} degC"),
         _row("Module", f"{m.name} ({m.p_stc_w:.0f} Wp)"),

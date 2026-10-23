@@ -27,6 +27,7 @@ from resize_energy.core.pv_design import (
     PVInputs,
     size_pv_system,
 )
+from resize_energy.core.pv_extra import shading_loss
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.gui.chart_render import render_chart
 from resize_energy.gui.numparse import format_number, parse_in_range
@@ -221,18 +222,34 @@ class LoadPage(StepPage):
         self.demand = NumberField(4500, 1, 1e9, 0, "kWh per year")
         self.coverage = NumberField(100, 1, 100, 0, "%", "pv.required_peak_power")
         self.pr = NumberField(0.80, 0.5, 0.95, 2, "", "pv.performance_ratio")
+        self.obstacle = NumberField(0, 0, 80, 0, "deg above the horizon", "pv.shading")
+        self.az_from = NumberField(-60, -180, 180, 0, "deg (0 = south)", "pv.shading")
+        self.az_to = NumberField(60, -180, 180, 0, "deg (0 = south)", "pv.shading")
 
         form = QFormLayout()
         form.addRow("Annual electricity demand", self.demand)
         form.addRow("Share of the demand to cover with PV", self.coverage)
         form.addRow("Performance ratio (PR)", self.pr)
+        shade = QGroupBox("Shading by a nearby obstacle (0 degrees = no obstacle)")
+        sf = QFormLayout(shade)
+        sf.addRow("Height of the obstacle", self.obstacle)
+        sf.addRow("From azimuth", self.az_from)
+        sf.addRow("To azimuth", self.az_to)
         layout = QVBoxLayout(self)
         layout.addLayout(form)
+        layout.addWidget(shade)
         layout.addWidget(_hint(
             "PR groups all losses (temperature, soiling, wiring, inverter, mismatch). "
             "Typical values are 0.75-0.85. A 100% target does not account for the hour-by-hour "
             "match between production and consumption: that needs a storage/self-consumption "
             "analysis."))
+
+    def shading(self) -> float:
+        """Share of the yearly energy lost to the obstacle (0 when none is entered)."""
+        if self.obstacle.value() <= 0:
+            return 0.0
+        return shading_loss(self.site.lat.value(), self.obstacle.value(),
+                            self.az_from.value(), self.az_to.value())
 
     def initializePage(self) -> None:
         implied = self.site.implied_pr()
@@ -241,9 +258,14 @@ class LoadPage(StepPage):
 
     def validatePage(self) -> bool:
         error = first_error([("Annual demand", self.demand), ("Coverage", self.coverage),
-                             ("Performance ratio", self.pr)])
+                             ("Performance ratio", self.pr), ("Obstacle height", self.obstacle),
+                             ("Azimuth from", self.az_from), ("Azimuth to", self.az_to)])
         if error:
             QMessageBox.warning(self, "Check the value", error)
+            return False
+        if self.az_to.value() < self.az_from.value():
+            QMessageBox.warning(self, "Check the value",
+                                "The end azimuth must not be before the start azimuth.")
             return False
         return True
 
@@ -514,6 +536,7 @@ class ResultsPage(BaseResultsPage):
             coverage=self.load.coverage.value() / 100.0,
             performance_ratio=self.load.pr.value(),
             t_min_c=t_min, t_cell_max_c=t_max, module=module, inverter=inverter,
+            latitude_deg=self.site.lat.value(), shading_loss=self.load.shading(),
         )
         design = size_pv_system(inputs)
         findings = check_pv_design(inputs, design)

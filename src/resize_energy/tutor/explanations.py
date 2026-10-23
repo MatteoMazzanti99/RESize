@@ -140,6 +140,9 @@ TOPIC_ORDER: tuple[str, ...] = (
     "pv.string_layout",
     "pv.dc_ac_ratio",
     "pv.annual_energy",
+    "pv.shading",
+    "pv.monthly",
+    "pv.battery",
 )
 
 
@@ -167,3 +170,8 @@ EXPLANATIONS.update(HYDROGEN_EXPLANATIONS)
 from resize_energy.tutor.explanations_battery import BATTERY_EXPLANATIONS  # noqa: E402
 
 EXPLANATIONS.update(BATTERY_EXPLANATIONS)
+
+# And the deeper PV topics.
+from resize_energy.tutor.explanations_pv_extra import PV_EXTRA_EXPLANATIONS  # noqa: E402
+
+EXPLANATIONS.update(PV_EXTRA_EXPLANATIONS)

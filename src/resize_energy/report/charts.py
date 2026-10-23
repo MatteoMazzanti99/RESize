@@ -16,6 +16,7 @@ from resize_energy.core.biomass_design import BiomassDesign, BiomassInputs
 from resize_energy.core.comparison import ComparisonInputs, ComparisonResult
 from resize_energy.core.hydrogen_design import HydrogenDesign, HydrogenInputs
 from resize_energy.core.pv_design import PVDesign, PVInputs
+from resize_energy.core.pv_extra import battery_view
 from resize_energy.core.wind_design import WindDesign, WindInputs
 
 GREEN, BLUE, AMBER, PURPLE = "#0A7452", "#1F5FBF", "#C77700", "#7B3FB8"
@@ -94,7 +95,32 @@ def pv_charts(inp: PVInputs, d: PVDesign) -> dict[str, ChartSpec]:
     voltages = (d.voc_cold_string_v, d.vmp_hot_string_v, d.vmp_cold_string_v)
     ok = (d.voc_cold_string_v <= inv.vdc_max_v, d.vmp_hot_string_v >= inv.mppt_vmin_v,
           d.vmp_cold_string_v <= inv.mppt_vmax_v)
-    return {
+    extra: dict[str, ChartSpec] = {}
+    if d.monthly_kwh:
+        months = tuple(float(i) for i in range(1, 13))
+        extra["pv_monthly"] = ChartSpec(
+            "lines", "Month by month: what the plant makes and what you use", (),
+            (Series("PV production [kWh]", d.monthly_kwh, GREEN, x=months, fill=True),
+             Series("your demand, flat [kWh]", (inp.annual_demand_kwh / 12,) * 12, GREY,
+                    x=months)),
+            x_label="Month (1 = January)", y_label="Energy per month [kWh]", height=280,
+            caption="Above the grey line the plant makes more than you use; below it you buy "
+                    "from the grid. The yearly total hides this swing.")
+    if d.feasible and d.dc_power_kwp > 0 and inp.annual_demand_kwh > 0:
+        b = battery_view(inp.latitude_deg, inp.annual_demand_kwh, d.dc_power_kwp,
+                         d.specific_yield_kwh_per_kwp)
+        extra["pv_battery"] = ChartSpec(
+            "hbars", f"With and without a {b.capacity_kwh:.1f} kWh battery",
+            ("Self-sufficiency, no battery", "Self-sufficiency, with battery",
+             "Self-consumption, no battery", "Self-consumption, with battery"),
+            (Series("share [%]", (b.self_sufficiency_without * 100, b.self_sufficiency * 100,
+                                  b.self_consumption_without * 100, b.self_consumption * 100),
+                    colors=(LIGHT, GREEN, LIGHT, GREEN)),),
+            x_label="Share [%]", decimals=0,
+            caption="Self-sufficiency: share of your consumption not bought. Self-consumption: "
+                    "share of the production you use yourself. See the Battery module to size "
+                    "it properly.")
+    base = {
         "pv_energy": ChartSpec(
             "hbars", "Yearly energy: demand and photovoltaic production",
             ("Your yearly demand", "Share you want from PV", "PV production (expected)"),
@@ -112,6 +138,7 @@ def pv_charts(inp: PVInputs, d: PVDesign) -> dict[str, ChartSpec]:
             caption="Green bars respect the inverter. The cold Voc must stay left of 'Vdc max', "
                     "the other two inside the MPPT window."),
     }
+    return {**base, **extra}
 
 
 # --- wind ----------------------------------------------------------------------------------

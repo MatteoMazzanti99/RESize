@@ -141,4 +141,22 @@ def check_pv_design(inp: PVInputs, design: PVDesign) -> list[Finding]:
                 "(modules come in discrete sizes).",
                 "pv.required_peak_power",
             ))
+    # 8. Shading and the seasonal swing
+    if inp.shading_loss >= 0.10:
+        out.append(Finding(
+            "warning", "shading_high",
+            f"Shading takes {inp.shading_loss:.0%} of the yearly energy: move the array, "
+            "remove the obstacle or use optimisers and more MPPT inputs.", "pv.shading"))
+    elif inp.shading_loss > 0:
+        out.append(Finding(
+            "info", "shading_low",
+            f"Shading costs {inp.shading_loss:.1%} of the yearly energy.", "pv.shading"))
+    if design.monthly_kwh and inp.annual_demand_kwh > 0:
+        worst = min(design.monthly_kwh)
+        if worst < 0.3 * inp.annual_demand_kwh / 12:
+            out.append(Finding(
+                "info", "winter_gap",
+                f"In the worst month the plant makes only {worst:,.0f} kWh against a monthly "
+                f"demand of {inp.annual_demand_kwh / 12:,.0f} kWh: in winter you still buy "
+                "most of your electricity.", "pv.monthly"))
     return out

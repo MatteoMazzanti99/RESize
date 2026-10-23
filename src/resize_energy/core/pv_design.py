@@ -10,6 +10,7 @@ import math
 from dataclasses import dataclass, field
 
 from resize_energy.core import pv
+from resize_energy.core.pv_extra import monthly_energy_kwh
 
 
 @dataclass(frozen=True)
@@ -50,6 +51,8 @@ class PVInputs:
     performance_ratio: float = 0.80
     t_min_c: float = -10.0
     t_cell_max_c: float = 70.0
+    latitude_deg: float = 45.0
+    shading_loss: float = 0.0     # share of the yearly energy lost to nearby obstacles
     module: ModuleSpec = field(default_factory=ModuleSpec)
     inverter: InverterSpec = field(default_factory=InverterSpec)
 
@@ -76,6 +79,9 @@ class PVDesign:
     voc_cold_string_v: float
     vmp_hot_string_v: float
     vmp_cold_string_v: float
+    shading_loss: float = 0.0
+    performance_ratio_effective: float = 0.0
+    monthly_kwh: tuple[float, ...] = ()
 
 
 def size_pv_system(inp: PVInputs) -> PVDesign:
@@ -87,11 +93,14 @@ def size_pv_system(inp: PVInputs) -> PVDesign:
     inverter's current capacity.
     """
     mod, inv = inp.module, inp.inverter
+    if not 0.0 <= inp.shading_loss < 0.9:
+        raise ValueError("the shading loss must be between 0 and 90 %")
+    pr_eff = inp.performance_ratio * (1.0 - inp.shading_loss)
 
     target_kwp = pv.required_peak_power_kwp(
         inp.annual_demand_kwh,
         inp.annual_irradiation_kwh_m2,
-        inp.performance_ratio,
+        pr_eff,
         inp.coverage,
     )
     modules_target = max(1, math.ceil(target_kwp * 1000.0 / mod.p_stc_w))
@@ -128,7 +137,7 @@ def size_pv_system(inp: PVInputs) -> PVDesign:
     n_modules = n_series * n_parallel
     dc_kwp = n_modules * mod.p_stc_w / 1000.0
     h = inp.annual_irradiation_kwh_m2
-    energy = dc_kwp * h * inp.performance_ratio
+    energy = dc_kwp * h * pr_eff
     demand = inp.annual_demand_kwh
 
     return PVDesign(
@@ -144,7 +153,7 @@ def size_pv_system(inp: PVInputs) -> PVDesign:
         dc_power_kwp=dc_kwp,
         dc_ac_ratio=pv.dc_ac_ratio(dc_kwp, inv.p_ac_kw),
         annual_energy_kwh=energy,
-        specific_yield_kwh_per_kwp=h * inp.performance_ratio,
+        specific_yield_kwh_per_kwp=h * pr_eff,
         achieved_coverage=(energy / demand) if demand > 0 else float("inf"),
         array_area_m2=n_modules * mod.area_m2,
         voc_cold_string_v=n_series
@@ -155,4 +164,6 @@ def size_pv_system(inp: PVInputs) -> PVDesign:
         ),
         vmp_cold_string_v=n_series
         * pv.module_voltage_at_temperature(mod.vmp_v, mod.temp_coeff_vmp_pct_per_c, inp.t_min_c),
+        shading_loss=inp.shading_loss, performance_ratio_effective=pr_eff,
+        monthly_kwh=monthly_energy_kwh(inp.latitude_deg, energy),
     )

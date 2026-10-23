@@ -6,6 +6,7 @@ import math
 
 from resize_energy.core import pv
 from resize_energy.core.pv_design import PVDesign, PVInputs
+from resize_energy.core.pv_extra import battery_view
 
 
 def worked_example(key: str, inp: PVInputs, design: PVDesign) -> str | None:
@@ -22,11 +23,41 @@ def worked_example(key: str, inp: PVInputs, design: PVDesign) -> str | None:
         )
 
     if key == "pv.performance_ratio":
+        if inp.shading_loss > 0:
+            return (
+                f"PR = {pr:.2f}; with shading {inp.shading_loss:.1%}: "
+                f"{pr:.2f} x (1 - {inp.shading_loss:.3f}) = {design.performance_ratio_effective:.3f}\n"
+                f"Specific yield = H x PR = {h:,.0f} x {design.performance_ratio_effective:.3f} = "
+                f"{design.specific_yield_kwh_per_kwp:,.0f} kWh/kWp"
+            )
         return (
             f"PR = {pr:.2f}\n"
             f"Specific yield = H x PR = {h:,.0f} x {pr:.2f} = "
             f"{design.specific_yield_kwh_per_kwp:,.0f} kWh/kWp"
         )
+
+    if key == "pv.shading":
+        if inp.shading_loss <= 0:
+            return "No obstacle: no shading loss."
+        return (f"Shading loss {inp.shading_loss:.1%} of the yearly energy -> "
+                f"{design.annual_energy_kwh:,.0f} kWh instead of "
+                f"{design.annual_energy_kwh / (1 - inp.shading_loss):,.0f} kWh")
+
+    if key == "pv.monthly" and design.monthly_kwh:
+        best = max(range(12), key=lambda i: design.monthly_kwh[i])
+        worst = min(range(12), key=lambda i: design.monthly_kwh[i])
+        names = "JFMAMJJASOND"
+        return (f"Best month ({names[best]}): {design.monthly_kwh[best]:,.0f} kWh; worst "
+                f"({names[worst]}): {design.monthly_kwh[worst]:,.0f} kWh; flat demand "
+                f"{inp.annual_demand_kwh / 12:,.0f} kWh a month")
+
+    if key == "pv.battery":
+        b = battery_view(inp.latitude_deg, inp.annual_demand_kwh, design.dc_power_kwp,
+                         design.specific_yield_kwh_per_kwp)
+        return (f"Battery {b.capacity_kwh:.1f} kWh: self-sufficiency "
+                f"{b.self_sufficiency_without:.0%} -> {b.self_sufficiency:.0%}, self-consumption "
+                f"{b.self_consumption_without:.0%} -> {b.self_consumption:.0%}; net present "
+                f"value of the battery {b.npv:,.0f} euro")
 
     if key == "pv.required_peak_power":
         return (
