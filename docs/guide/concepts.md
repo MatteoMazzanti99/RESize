@@ -25,6 +25,23 @@ Each check is a rule of thumb applied to your numbers, labelled **error** (the d
 work), **warning** (probably wrong or risky), **note** (worth knowing) or **ok**. Every check
 points to the *Why?* topic that explains it. They are deterministic and work offline.
 
+## Which values to check
+
+Every report has a section **Which values to check**. It counts how many of your numbers are
+still the ones the program proposes (typical or placeholder figures that nobody has checked
+for your case), how many you changed, and how many came from a data source (PVGIS, NASA
+POWER). The values still at the program's default are listed by step, so you know what to
+verify before trusting the result.
+
+## Comparing two versions
+
+Press **Keep this version as A**, go back, change one or more inputs and return to the
+results. The report now has a section **Compared with version A**: the key results side by
+side, and the inputs that differ. **Why did it change?** applies each difference alone to
+version A and shows what it did to the main results. Effects of inputs that act together are
+not additive, so the table has a row for the interaction. Version A lives while the window is
+open; save the project if you want to keep a version.
+
 ## Costs, savings and sensitivity
 
 Photovoltaic, wind, hydrogen, battery and solar thermal flows have a *costs* step. From it they

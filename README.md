@@ -63,6 +63,13 @@ Wind can also use a wake model (step 3, Layout): Jensen wakes over a wind rose f
 staggered rows, giving the real wake loss, the efficiency of every turbine and of every
 wind direction, and a turbine count that accounts for it.
 
+## Knowing what to trust, and comparing versions
+
+Every report lists the values still at the program's defaults, the ones you changed and the
+ones fetched from PVGIS or NASA POWER (**Which values to check**). **Keep this version as A**
+lets you change inputs and come back to a report that compares the two versions and shows what
+each changed input did to the results (**Why did it change?**).
+
 ## Saving and reopening projects
 
 **Save project** (button at the bottom, or Ctrl+S) writes a small `.resize` file with every value
