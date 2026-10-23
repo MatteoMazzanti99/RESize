@@ -33,6 +33,7 @@ from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.core.turbine_library import load_library
 from resize_energy.core.wind_design import TurbineSpec
 from resize_energy.gui.biomass_wizard import _show_row
+from resize_energy.gui.country import CountryBar
 from resize_energy.gui.widgets import StepPage
 from resize_energy.gui.wizard import BaseResultsPage, NumberField, _hint, first_error
 from resize_energy.report.charts import ChartSpec, hydrogen_charts
@@ -356,6 +357,7 @@ class HydrogenPlantPage(StepPage):
         layout.addStretch(1)
 
     def initializePage(self) -> None:
+        self.country_bar.sync()
         _show_row(self.form, self.cap, self.goal.grid.isChecked())
         self.cheapest.setVisible(self.goal.grid.isChecked())
 
@@ -447,6 +449,9 @@ class HydrogenCostPage(StepPage):
         layout.setSpacing(12)
         layout.addLayout(row)
         layout.addWidget(em)
+        self.country_bar = CountryBar({"grid_ef": self.grid_ef})
+        self.country = self.country_bar.combo
+        layout.insertWidget(0, self.country_bar)
         layout.addWidget(_hint(
             "Defaults are round orders of magnitude for a PEM system installed in Europe, not "
             "quotes. The whole renewable plant is charged to the hydrogen, also the curtailed "

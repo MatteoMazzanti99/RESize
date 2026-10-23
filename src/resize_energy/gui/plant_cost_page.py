@@ -5,6 +5,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import QFormLayout, QGroupBox, QMessageBox, QVBoxLayout
 
 from resize_energy.core.plant_economics import EconomicInputs
+from resize_energy.gui.country import CountryBar
 from resize_energy.gui.widgets import StepPage
 from resize_energy.gui.wizard import NumberField, _hint, first_error
 
@@ -60,10 +61,16 @@ class PlantCostPage(StepPage):
         layout.addWidget(plant)
         layout.addWidget(money)
         layout.addWidget(co2)
+        self.country_bar = CountryBar({"electricity": self.retail, "export": self.export, "grid_ef": self.ef})
+        self.country = self.country_bar.combo
+        layout.insertWidget(0, self.country_bar)
         layout.addWidget(_hint(
             d["text"] + " The saving counts the energy you use at the price you pay and the "
             "surplus at the export price. No incentives, taxes or financing are included."))
         layout.addStretch(1)
+
+    def initializePage(self) -> None:
+        self.country_bar.sync()
 
     def inputs(self) -> EconomicInputs:
         return EconomicInputs(

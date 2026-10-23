@@ -20,6 +20,7 @@ from resize_energy.core.biomass_design import (
     size_biomass_plant,
 )
 from resize_energy.core.fuel_library import SOLID_FUELS, SUBSTRATES, SolidFuel
+from resize_energy.gui.country import CountryBar
 from resize_energy.gui.widgets import StepPage
 from resize_energy.gui.wizard import BaseResultsPage, NumberField, _hint, first_error
 from resize_energy.report.charts import ChartSpec, biomass_charts
@@ -262,6 +263,9 @@ class BiomassPlantPage(StepPage):
         layout.setSpacing(12)
         layout.addWidget(plant)
         layout.addWidget(em)
+        self.country_bar = CountryBar({"grid_ef": self.grid})
+        self.country = self.country_bar.combo
+        layout.insertWidget(0, self.country_bar)
         layout.addWidget(_hint(
             "Typical efficiencies: boiler 80-90 %, ORC about 70 % thermal and 15 % electrical, "
             "gas engine about 45 % thermal and 38 % electrical. The supply-chain factor and the "
@@ -269,6 +273,7 @@ class BiomassPlantPage(StepPage):
         layout.addStretch(1)
 
     def initializePage(self) -> None:
+        self.country_bar.sync()
         key = self.demand.pathway()
         solid, biogas = key != "biogas", key == "biogas"
         if key != self._last:  # new pathway: start from its typical efficiencies

@@ -43,6 +43,9 @@ verdict. Then come the charts (energy balance, wind distribution and power curve
 curve, cost build-up, hydrogen per month, comparison of cost, payback, cash flow and CO2), the
 design checks sorted by importance, and finally the detailed tables and the formulas.
 
+On the cost pages, a **Country** drop-down fills the electricity and heat prices, the price of
+the surplus and the grid emission factor with typical values of 18 countries (editable).
+
 For every technology (not the comparison), **Export to Excel (live formulas)** writes a workbook in which every
 step is a formula with named inputs (change a cell, watch the results move) plus a *Check*
 sheet comparing it with the numbers computed by RESize. It is verified in the tests by

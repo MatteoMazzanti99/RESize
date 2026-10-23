@@ -54,6 +54,18 @@ of which input moves the result most (each moved by 20 %), and curves of the res
 input changes. If the net present value changes sign inside the range, the decision is fragile
 for that input.
 
+## Country presets
+
+On every cost page the **Country** drop-down fills the price you pay for electricity, the
+price paid for the surplus, the heat price (gas boiler) and the grid emission factor with
+typical values of 18 countries (Italy, Spain, Germany, France, USA, China, India, Brazil...).
+The choice follows you to the cost pages of the other technologies. Every number stays
+editable, and the report's *Which values to check* list marks the ones that came from a
+preset. The values are indicative (about 2025): household electricity and gas prices from
+Eurostat and GlobalPetrolPrices, grid emissions from lowcarbonpower.org; the price paid for
+the surplus and some gas prices are rough estimates, flagged under the drop-down. Money is in
+euro (dollar prices converted at 1.17 USD/EUR). They are not your tariff: check it.
+
 ## Report
 
 **Save the report as PDF** writes the page you see, in a light version, with the charts and

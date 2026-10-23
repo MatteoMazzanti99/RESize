@@ -23,6 +23,7 @@ from resize_energy.core.battery_design import (
     size_battery,
 )
 from resize_energy.gui.biomass_wizard import _show_row
+from resize_energy.gui.country import CountryBar
 from resize_energy.gui.hydrogen_wizard import HydrogenSitePage
 from resize_energy.gui.widgets import StepPage
 from resize_energy.gui.wizard import BaseResultsPage, NumberField, _hint, first_error
@@ -213,11 +214,17 @@ class BatteryCostPage(StepPage):
         layout.setSpacing(12)
         layout.addWidget(box)
         layout.addWidget(el)
+        self.country_bar = CountryBar({"electricity": self.retail, "export": self.export, "grid_ef": self.ef})
+        self.country = self.country_bar.combo
+        layout.insertWidget(0, self.country_bar)
         layout.addWidget(_hint(
             "The gain of a battery is the difference between the price you pay and the price "
             "you are paid for the surplus: if the two are close, the battery cannot repay itself. "
             "No incentives or taxes are included."))
         layout.addStretch(1)
+
+    def initializePage(self) -> None:
+        self.country_bar.sync()
 
     def validatePage(self) -> bool:
         return _warn(self, [

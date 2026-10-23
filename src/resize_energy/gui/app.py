@@ -52,7 +52,7 @@ def _walk_through(window, app) -> int:
         print("self-test: the comparison charts were not drawn", flush=True)
         return 1
     window._restart()
-    for check in (_versions_check, _solar_cooling_check):
+    for check in (_versions_check, _solar_cooling_check, _country_check):
         code = check(window, app)
         if code:
             return code
@@ -103,6 +103,34 @@ def _solar_cooling_check(window, app) -> int:
     window._restart()
     if not ok:
         print("self-test: the solar cooling comparison did not appear", flush=True)
+        return 1
+    return 0
+
+
+def _country_check(window, app) -> int:
+    """Pick Italy on the PV cost page: prices and emissions follow, flagged as a preset."""
+    from resize_energy.core.countries import get_country
+    from resize_energy.gui import country
+
+    country.forget_choice()
+    window._start("pv")
+    costs = window.pv_costs
+    index = costs.country.findData("IT")
+    costs.country.setCurrentIndex(index)
+    costs.country_bar._picked(index)
+    italy = get_country("IT")
+    ok = (abs(costs.retail.value() - italy.electricity_eur_kwh) < 1e-6
+          and abs(costs.ef.value() - italy.grid_kg_co2_kwh) < 1e-6
+          and "Italy" in costs.retail.provenance())
+    # the choice follows to the battery page, which was still on its own defaults
+    window._start("battery")
+    battery = window.bat_costs
+    battery.initializePage()
+    ok = ok and abs(battery.retail.value() - italy.electricity_eur_kwh) < 1e-6
+    country.forget_choice()
+    window._restart()
+    if not ok:
+        print("self-test: the country preset did not fill the costs", flush=True)
         return 1
     return 0
 

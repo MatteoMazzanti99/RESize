@@ -35,6 +35,7 @@ from resize_energy.core.nasa_power import NasaPowerError, fetch_wind_climate
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.core.turbine_library import load_library
 from resize_energy.core.wind_design import TurbineSpec, WindInputs
+from resize_energy.gui.country import CountryBar
 from resize_energy.gui.versus_panel import VersusPanel
 from resize_energy.gui.widgets import StepPage
 from resize_energy.gui.wizard import BaseResultsPage, NumberField, _hint, first_error
@@ -411,6 +412,9 @@ class CompareCostPage(StepPage):
         layout.addLayout(row1)
         layout.addLayout(row2)
         layout.addWidget(common)
+        self.country_bar = CountryBar({"electricity": self.retail, "export": self.export, "grid_ef": self.grid})
+        self.country = self.country_bar.combo
+        layout.insertWidget(0, self.country_bar)
         layout.addWidget(_hint(
             "Defaults are round, typical orders of magnitude for utility and commercial plants "
             "in Europe, not quotes. Include grid connection and permits in the CAPEX if they "
@@ -419,6 +423,7 @@ class CompareCostPage(StepPage):
         layout.addStretch(1)
 
     def initializePage(self) -> None:
+        self.country_bar.sync()
         sel = self.selection
         self.pv_box.setVisible(sel.needs_sun())
         self.wind_box.setVisible(sel.needs_wind())

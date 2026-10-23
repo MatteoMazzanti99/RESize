@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from resize_energy.core import project_file as pf
-from resize_energy.gui import project_io
+from resize_energy.gui import country, project_io
 from resize_energy.gui.battery_wizard import (
     BATTERY_STEP_NAMES,
     BatteryCostPage,
@@ -349,6 +349,7 @@ class MainWindow(QMainWindow):
             raise pf.ProjectError("this is not a RESize project file") from exc
         if project.tech == "compare":
             self.cmp_selection.techs = project.compare_techs or self.cmp_selection.techs
+        country.forget_choice()    # the file's own prices win over an earlier pick
         self._start(project.tech)
         flow = self.pages[1:]
         problems: list[str] = []
