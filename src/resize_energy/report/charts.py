@@ -19,6 +19,9 @@ from resize_energy.core.plant_economics import Economics
 from resize_energy.core.pv_design import PVDesign, PVInputs
 from resize_energy.core.pv_extra import battery_view
 from resize_energy.core.sensitivity import Sensitivity
+from resize_energy.core.solar_thermal import COLLECTORS as SOLAR_COLLECTORS
+from resize_energy.core.solar_thermal import collector_efficiency as solar_eff
+from resize_energy.core.solar_thermal_design import SolarThermalDesign, SolarThermalInputs
 from resize_energy.core.wind_design import WindDesign, WindInputs
 
 GREEN, BLUE, AMBER, PURPLE = "#0A7452", "#1F5FBF", "#C77700", "#7B3FB8"
@@ -530,3 +533,102 @@ def battery_charts(inp: BatteryInputs, d: BatteryDesign) -> dict[str, ChartSpec]
             caption="The battery fills when the production is above the consumption and "
                     "empties in the evening.")
     return out | sensitivity_charts("bat", d.sensitivity)
+
+
+# --- solar thermal -------------------------------------------------------------------------
+def solar_charts(inp: SolarThermalInputs, d: SolarThermalDesign) -> dict[str, ChartSpec]:
+    r = d.run
+    out: dict[str, ChartSpec] = {}
+    if r.heat_demand_kwh > 0:
+        out["solar_monthly"] = ChartSpec(
+            "bars", "Hot water: what you need each month and what the sun gives", MONTHS,
+            (Series("demand [kWh]", r.monthly_heat_demand_kwh, GREY),
+             Series("covered by the sun [kWh]", r.monthly_heat_solar_kwh, AMBER)),
+            x_label="Month", y_label="Heat [kWh]", decimals=0,
+            caption=f"In summer the sun covers almost everything, in winter little: over the "
+                    f"year {r.heat_fraction:.0%} of the hot water is solar.")
+    if r.cooling_demand_kwh > 0:
+        out["solar_cooling"] = ChartSpec(
+            "bars", "Cooling: what you need each month and what the chiller delivers", MONTHS,
+            (Series("cooling demand [kWh]", r.monthly_cooling_demand_kwh, GREY),
+             Series("cold from the sun [kWh]", r.monthly_cooling_solar_kwh, BLUE)),
+            x_label="Month", y_label="Cold [kWh]", decimals=0,
+            caption=f"The adsorption chiller covers {r.cooling_fraction:.0%} of the cooling "
+                    "with heat from the collectors: it works exactly when the sun is strongest.")
+    parts = [("Hot water", r.heat_solar_kwh), ("Adsorption chiller", r.chiller_heat_kwh),
+             ("Tank heat losses", r.store_loss_kwh), ("Heat dumped (overheating)", r.wasted_kwh)]
+    parts = [p for p in parts if p[1] > 0.5]
+    out["solar_balance"] = ChartSpec(
+        "hbars", "Where the heat of the collectors goes",
+        tuple(p[0] for p in parts),
+        (Series("kWh per year", tuple(p[1] for p in parts),
+                colors=tuple((AMBER, BLUE, GREY, RED)[("Hot water", "Adsorption chiller",
+                                                       "Tank heat losses",
+                                                       "Heat dumped (overheating)").index(p[0])]
+                             for p in parts)),),
+        x_label="Heat per year [kWh]", decimals=0,
+        caption=f"The collectors put {r.collector_kwh:,.0f} kWh a year into the tank. Red is heat "
+                "that nobody used: a sign of a field that is too big for the load.")
+    if d.sweep:
+        areas = tuple(a for a, *_ in d.sweep)
+        out["solar_area"] = ChartSpec(
+            "lines", "More collectors: the solar fraction rises, each m2 yields less", (),
+            (Series("solar fraction [%]", tuple(f * 100 for _, f, _, _ in d.sweep), AMBER,
+                    x=areas),
+             Series("energy per m2 [kWh / 10]", tuple(y / 10 for _, _, y, _ in d.sweep), BLUE,
+                    x=areas)),
+            x_label="Collector area [m2]", y_label="Percent  /  kWh per m2 divided by 10",
+            decimals=0, height=280, vlines=((d.area_m2, "chosen"),),
+            caption="The orange line flattens and the blue one falls: the last square metres "
+                    "work less. The best area is usually before the orange line becomes flat.")
+        out["solar_npv"] = ChartSpec(
+            "lines", "Net present value against collector area (thousand euro)", (),
+            (Series("NPV [kEUR]", tuple(n / 1000.0 for *_, n in d.sweep), GREEN, x=areas),),
+            x_label="Collector area [m2]", y_label="NPV [thousand euro]", decimals=1,
+            height=250, hlines=((0.0, "break-even"),), vlines=((d.area_m2, "chosen"),),
+            caption="Above the zero line the plant repays itself; the top of the curve is the "
+                    "area that earns most.")
+    temps = tuple(float(x) for x in range(0, 101, 10))
+    types = [("flat", BLUE), ("tube", GREEN), ("unglazed", GREY)]
+    out["solar_efficiency"] = ChartSpec(
+        "lines", "Collector efficiency against how hot the water is (sun 800 W/m2)", (),
+        tuple(Series(
+            SOLAR_COLLECTORS[k].name + (" (yours)" if k == inp.collector else ""),
+            tuple(solar_eff(d.collector if k == inp.collector else SOLAR_COLLECTORS[k],
+                            20.0 + t, 20.0, 800.0) * 100 for t in temps), col, x=temps)
+              for k, col in types),
+        x_label="Collector water minus outside air [K]", y_label="Efficiency [%]", decimals=0,
+        height=280,
+        caption="At low temperature differences the glazed flat plate is best; at the high "
+                "temperatures of a chiller or industrial heat the evacuated tube keeps its "
+                "efficiency.")
+    week_x = tuple(float(h) for h in range(168))
+    lines = []
+    for name, color, label in (("winter", BLUE, "winter week (mid-January)"),
+                               ("summer", AMBER, "summer week (mid-July)")):
+        vals = r.store_temp_week.get(name, ())
+        if len(vals) == 168:
+            lines.append(Series(label, vals, color, x=week_x))
+    hl = [(95.0, "overheating"), (inp.t_use_c, "hot-water set point")]
+    if inp.cooling_kwh_per_year > 0:
+        hl.append((inp.t_drive_min_c, "chiller minimum"))
+    if lines:
+        out["solar_tank"] = ChartSpec(
+            "lines", "Tank temperature over a winter and a summer week", (), tuple(lines),
+            x_label="Hour of the week", y_label="Tank temperature [degC]", decimals=0,
+            height=280, hlines=tuple(hl),
+            caption="The tank heats up during the day and cools when the hot water is used. "
+                    "Near the red line the field is making more heat than the load can use.")
+    years = tuple(float(y) for y in range(int(math.ceil(inp.life_years)) + 1))
+    net = d.savings_per_year - d.om_per_year
+    cash = [-d.capex] + [-d.capex + net * eco.annuity_factor(inp.discount_rate, min(float(y), inp.life_years))
+                         for y in range(1, len(years))]
+    out["solar_cash"] = ChartSpec(
+        "lines", "Money over the life of the plant (discounted, thousand euro)", (),
+        (Series("cumulative result [kEUR]", tuple(c / 1000.0 for c in cash), GREEN, x=years,
+                fill=True),),
+        x_label="Year", y_label="Cumulative result [thousand euro]", decimals=1, height=260,
+        hlines=((0.0, "break-even"),),
+        caption=f"Investment {d.capex:,.0f} euro; the line ends at the net present value, "
+                f"{d.npv:,.0f} euro.")
+    return out | sensitivity_charts("solar", d.sensitivity)

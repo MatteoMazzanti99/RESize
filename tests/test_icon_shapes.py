@@ -2,7 +2,7 @@ from resize_energy.gui import icon_shapes as ic
 
 
 def test_every_technology_has_an_icon():
-    for key in ("pv", "wind", "biomass", "hydrogen", "battery"):  # keys used by gui/home.py
+    for key in ("pv", "wind", "biomass", "hydrogen", "battery", "solar"):  # keys used by gui/home.py
         assert key in ic.ICONS, key
 
 

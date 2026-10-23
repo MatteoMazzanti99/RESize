@@ -102,10 +102,25 @@ def _battery() -> list[Shape]:
     ]
 
 
+def _solar_thermal() -> list[Shape]:
+    sun = (9.0, 9.0)
+    rays: list[Shape] = []
+    for k in range(8):
+        a = math.radians(45.0 * k)
+        rays.append(([(sun[0] + 4.6 * math.cos(a), sun[1] + 4.6 * math.sin(a)),
+                      (sun[0] + 6.6 * math.cos(a), sun[1] + 6.6 * math.sin(a))], False, False))
+    return [
+        (circle(*sun, 2.8), True, False),
+        *rays,
+        ([(11.0, 20.0), (22.0, 20.0), (22.0, 15.0), (14.0, 12.5)], False, False),  # collector
+    ]
+
+
 ICONS: dict[str, list[Shape]] = {
     "pv": _photovoltaic(),
     "wind": _wind(),
     "biomass": _biomass(),
     "hydrogen": _hydrogen(),
     "battery": _battery(),
+    "solar": _solar_thermal(),
 }

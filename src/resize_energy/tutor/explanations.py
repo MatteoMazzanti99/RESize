@@ -186,3 +186,8 @@ from resize_energy.tutor.explanations_plant_econ import (  # noqa: E402
 
 EXPLANATIONS.update(PV_ECON_EXPLANATIONS)
 EXPLANATIONS.update(WIND_ECON_EXPLANATIONS)
+
+# And the solar thermal module.
+from resize_energy.tutor.explanations_solar import SOLAR_EXPLANATIONS  # noqa: E402
+
+EXPLANATIONS.update(SOLAR_EXPLANATIONS)

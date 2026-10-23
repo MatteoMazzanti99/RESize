@@ -17,6 +17,7 @@ Sections
   D  Hydrogen LCOH recomputed by hand for a grid-only plant; plausibility range
   E  Battery  second implementation of the dispatch; plausibility range
   F  Economics LCOE of PV and wind against published global averages
+  G  Solar thermal  second implementation of the hourly loop; f-chart (Klein); plausibility
 """
 
 from __future__ import annotations
@@ -32,11 +33,13 @@ from resize_energy.core import economics as eco
 from resize_energy.core import hydrogen as h2
 from resize_energy.core import profiles as prof
 from resize_energy.core import pv_extra, wind
+from resize_energy.core import solar_thermal as stm
 from resize_energy.core import wind_wake as ww
 from resize_energy.core.battery_design import BatteryInputs, BatteryProfiles, size_battery
 from resize_energy.core.comparison import ComparisonInputs, compare_technologies
 from resize_energy.core.fuel_library import SUBSTRATES
 from resize_energy.core.hydrogen_design import HydrogenInputs, HydrogenProfiles, size_hydrogen_plant
+from resize_energy.core.solar_thermal_design import SolarThermalInputs, size_solar_thermal
 from resize_energy.core.wind_design import TurbineSpec, WindInputs
 
 SITES = [("Torino", 45.07, 7.69), ("Palermo", 38.12, 13.36), ("Berlin", 52.52, 13.40)]
@@ -337,6 +340,111 @@ def section_economics() -> Section:
     return s
 
 
+# ---------------------------------------------------------------- G. solar thermal
+def _plain_hot_water(w, area, c, litres, ua, loop, lpd, t_use, t_mean, amp):
+    """Second, deliberately plain implementation of the hot-water loop (no chiller)."""
+    cap = litres * 0.001163
+    t = max(20.0, t_mean)
+    col = sol = dem = 0.0
+    for h in range(8760):
+        day, hour = divmod(h, 24)
+        g, ta = w.g_w_m2[h], w.t_amb_c[h]
+        if g > 0:
+            eta = max(0.0, c.eta0 - c.a1 * (t + 3.0 - ta) / g - c.a2 * (t + 3.0 - ta) ** 2 / g)
+            q = eta * g * area / 1000.0 * (1 - loop)
+            t += q / cap
+            col += q
+        if t > 95.0:
+            col -= (t - 95.0) * cap
+            t = 95.0
+        mains = max(4.0, t_mean - 0.5 * amp * math.cos(2 * math.pi * (day - 50) / 365))
+        need = lpd * stm.DAILY_DRAW_SHAPE[hour] / sum(stm.DAILY_DRAW_SHAPE) * 0.001163 * max(
+            0.0, t_use - mains)
+        if need > 0:
+            share = min(1.0, max(0.0, (t - mains) / (t_use - mains)))
+            t -= need * share / cap
+            sol += need * share
+            dem += need
+        loss = ua * max(0.0, t - 18.0) / 1000.0
+        t = max(4.0, t - loss / cap)
+    return col, sol, dem
+
+
+def _fchart(inp, area, run, w):
+    """Annual solar fraction of a hot-water system by the f-chart method (Klein, 1976)."""
+    c = stm.COLLECTORS[inp.collector]
+    days = (31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+    start = 0
+    total_f = total_l = 0.0
+    for m, n in enumerate(days):
+        hours = range(start * 24, (start + n) * 24)
+        h_t = sum(w.g_w_m2[i] for i in hours) / 1000.0
+        ta = sum(w.t_amb_c[i] for i in hours) / len(hours)
+        mains = sum(stm.mains_temperature(d, inp.t_mean_c, inp.t_season_amp_c)
+                    for d in range(start, start + n)) / n
+        load = run.monthly_heat_demand_kwh[m]
+        frul = c.a1 + c.a2 * 30.0
+        frta = c.eta0 * (1 - inp.loop_loss)
+        xc = (11.6 + 1.18 * inp.t_use_c + 3.86 * mains - 2.32 * ta) / (100.0 - ta)
+        x = area * frul * (100.0 - ta) * 24.0 * n / 1000.0 / load * xc
+        y = area * frta * h_t / load * (inp.store_l_per_m2 / 75.0) ** -0.25
+        f = 1.029 * y - 0.065 * x - 0.245 * y * y + 0.0018 * x * x + 0.0215 * y ** 3
+        f = min(1.0, max(0.0, f))
+        total_f += f * load
+        total_l += load
+        start += n
+    return total_f / total_l
+
+
+def section_solar() -> Section:
+    s = Section("G. Solar thermal: second implementation, f-chart and plausibility",
+                "Hot water, flat plate, 200 L/day at 55 degC, 4 m2 and 240 L of tank, "
+                "synthetic year of 1,400 kWh/m2 at latitude 45.",
+                ("Check", "RESize", "Reference", "Result"))
+    inp = SolarThermalInputs()
+    d = size_solar_thermal(inp, with_sweep=False, with_sensitivity=False)
+    w = stm.synthetic_weather(inp.latitude_deg, inp.irradiation_kwh_m2, inp.t_mean_c,
+                              inp.t_season_amp_c)
+    sysm = stm.SolarSystem(
+        area_m2=inp.area_m2, collector=stm.COLLECTORS["flat"], store_litres=d.store_litres,
+        store_ua_w_k=0.16 * math.sqrt(d.store_litres), dhw_litres_per_day=inp.dhw_litres_per_day,
+        flow_delta_t_c=6.0)
+    run = stm.simulate(sysm, w, inp.t_mean_c, inp.t_season_amp_c)
+    col, sol, dem = _plain_hot_water(w, inp.area_m2, stm.COLLECTORS["flat"], d.store_litres,
+                                     0.16 * math.sqrt(d.store_litres), inp.loop_loss,
+                                     inp.dhw_litres_per_day, inp.t_use_c, inp.t_mean_c,
+                                     inp.t_season_amp_c)
+    ok = (abs(run.heat_solar_kwh - sol) < 1e-6 * max(1.0, sol)
+          and abs(run.collector_kwh - col) < 1e-6 * max(1.0, col)
+          and abs(run.heat_demand_kwh - dem) < 1e-6 * max(1.0, dem))
+    s.hard_ok &= ok
+    s.rows.append(("Hot water delivered by the sun [kWh]", f"{run.heat_solar_kwh:,.1f}",
+                   f"{sol:,.1f} (plain loop)", "match" if ok else "MISMATCH"))
+    s.rows.append(("Collector heat [kWh]", f"{run.collector_kwh:,.1f}", f"{col:,.1f}",
+                   "match" if ok else "MISMATCH"))
+    f_chart = _fchart(inp, inp.area_m2, run, w)
+    s.rows.append(("Annual solar fraction", f"{run.heat_fraction:.2f}", f"{f_chart:.2f} (f-chart)",
+                   f"info: difference {run.heat_fraction - f_chart:+.2f}"))
+    s.rows.append(("Collector yield [kWh/m2 per year]", f"{run.heat_solar_kwh / inp.area_m2:,.0f}",
+                   "about 350-600 for DHW in central Europe", "info"))
+    cool = size_solar_thermal(SolarThermalInputs(
+        dhw_litres_per_day=0, cooling_kwh_per_year=12000, collector="tube", latitude_deg=38,
+        irradiation_kwh_m2=1750, t_mean_c=17, area_m2=30), with_sweep=False,
+        with_sensitivity=False)
+    cop = (cool.run.cooling_solar_kwh / cool.run.chiller_heat_kwh
+           if cool.run.chiller_heat_kwh else 0.0)
+    s.rows.append(("Mean thermal COP of the adsorption chiller", f"{cop:.2f}",
+                   "0.3-0.6 for silica-gel machines driven by solar heat", "info"))
+    s.notes.append("The f-chart is a correlation for monthly averages and a stratified tank; "
+                   "RESize uses an hourly balance and one mixed tank, which is the more "
+                   "conservative choice (a mixed tank gives a lower fraction). A difference of "
+                   "a few points is expected; a large one would deserve a look.")
+    s.notes.append("Yield and COP ranges are order-of-magnitude values quoted from memory "
+                   "(IEA SHC Solar Heat Worldwide, Henning 2010, manufacturer datasheets): "
+                   "check them before citing.")
+    return s
+
+
 def render(sections: list[Section]) -> list[str]:
     out = ["# Cross-checks of all technologies", "",
            "Generated by `validation/validate_cross.py`. Rows marked *match* are independent "
@@ -359,7 +467,8 @@ def main() -> int:
     ap.add_argument("--out", default="docs/validation/cross.md")
     args = ap.parse_args()
     sections = [section_wind(args.offline), section_pv(args.offline), section_biogas(),
-                section_hydrogen(), section_battery(), section_economics()]
+                section_hydrogen(), section_battery(), section_economics(),
+                section_solar()]
     lines = render(sections)
     path = Path(args.out)
     path.parent.mkdir(parents=True, exist_ok=True)

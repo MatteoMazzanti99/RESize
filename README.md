@@ -125,6 +125,28 @@ and a winter week hour by hour, and the curves of self-sufficiency and NPV again
 that show why a bigger battery is not always better. Every step has a "Why?" with the
 formula and your own numbers.
 
+PV and wind also have a **Costs and savings** step: installed cost, maintenance, the price you
+pay and the price paid for the surplus give the cost of energy (LCOE), payback, NPV and CO2
+avoided, with the same sensitivity pictures.
+
+## Solar thermal module (hot water and adsorption cooling)
+
+Click the **Solar thermal** card. Five steps: what you need (hot water, cooling, or both), site
+and sun (irradiation on the collectors from PVGIS, air temperature), collectors and tank (flat
+plate, evacuated tube or unglazed, with their efficiency curve; the size you choose or the
+area that reaches a target solar fraction), costs and prices, results.
+
+The plant is simulated hour by hour for a year with one mixed storage tank. Hot water is drawn
+with morning and evening peaks; the backup boiler covers what the sun does not. For **cooling**
+the hot water of the collectors drives an **adsorption chiller** (silica gel and water): a heat
+driven machine that makes chilled water with almost no electricity, needs 60-90 degC water and
+has a thermal COP of about 0.5-0.65. It works when the tank is hot enough, so the model shows
+the real average COP of the plant. You get the solar fraction (hot water and cooling), heat
+dumped by overheating, a winter and a summer week of the tank temperature, the solar fraction
+and the energy per m2 against the collector area, payback, NPV, cost of solar energy, CO2 and
+the sensitivity of the NPV. Prices and collector coefficients are round typical values: use
+the Solar Keymark certificate of your collector and the datasheet of the chiller.
+
 ## Technology comparison
 
 On the home screen, click a technology card to start its project, or **drag two or more cards

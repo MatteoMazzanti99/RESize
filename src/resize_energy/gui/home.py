@@ -31,6 +31,7 @@ TECHNOLOGIES: list[tuple[str, str, str, bool]] = [
     ("biomass", "Biomass", "Boiler, ORC cogeneration or biogas: plant size, fuel supply, digester.", True),
     ("hydrogen", "Green hydrogen", "PEM electrolyser fed by PV, wind and/or grid: hours, cost and carbon of hydrogen.", True),
     ("battery", "Battery storage", "Store the surplus of your PV or wind plant: self-sufficiency, cycles, payback and the best size.", True),
+    ("solar", "Solar thermal", "Collectors and tank for hot water, with optional adsorption cooling: solar fraction, area, payback.", True),
 ]
 # technologies that make energy and can be dragged into the Compare zone
 COMPARABLE: tuple[str, ...] = ("pv", "wind", "biomass", "hydrogen")
