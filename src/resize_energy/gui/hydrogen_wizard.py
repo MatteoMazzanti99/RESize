@@ -514,6 +514,11 @@ class HydrogenResultsPage(BaseResultsPage):
         screen = build_hydrogen_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, screen
 
+    def _flow(self):
+        from resize_energy.report.flow_pictures import hydrogen_picture
+
+        return hydrogen_picture(self._inputs, self._design)
+
     def _workbook(self):
         from resize_energy.report.excel_more import build_hydrogen_workbook
 

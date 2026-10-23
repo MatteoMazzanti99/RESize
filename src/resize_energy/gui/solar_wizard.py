@@ -412,6 +412,11 @@ class SolarResultsPage(BaseResultsPage):
         dark = build_solar_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, dark
 
+    def _flow(self):
+        from resize_energy.report.flow_pictures import solar_picture
+
+        return solar_picture(self._inputs, self._design)
+
     def _workbook(self):
         from resize_energy.report.excel_more import build_solar_workbook
 

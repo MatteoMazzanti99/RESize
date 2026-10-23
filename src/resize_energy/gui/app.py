@@ -36,6 +36,10 @@ def _walk_through(window, app) -> int:
             if wb is None or "Check" not in wb.sheetnames:
                 print(f"self-test: the {tech} Excel workbook was not built", flush=True)
                 return 1
+        if tech != "compare" and (results.banner.picture is None
+                                  or results.chart_images["chart:flow_banner"].isNull()):
+            print(f"self-test: the {tech} energy-flow picture is missing", flush=True)
+            return 1
         if not results.chart_images or any(i.isNull() for i in results.chart_images.values()):
             print(f"self-test: the {tech} charts were not drawn", flush=True)
             return 1

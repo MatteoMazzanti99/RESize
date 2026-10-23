@@ -360,6 +360,11 @@ class BiomassResultsPage(BaseResultsPage):
         screen = build_biomass_report(inputs, design, findings, theme="screen")
         return inputs, design, findings, light, screen
 
+    def _flow(self):
+        from resize_energy.report.flow_pictures import biomass_picture
+
+        return biomass_picture(self._inputs, self._design)
+
     def _workbook(self):
         from resize_energy.report.excel_more import build_biomass_workbook
 

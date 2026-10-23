@@ -329,6 +329,11 @@ class WindResultsPage(BaseResultsPage):
         dark = build_wind_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, dark
 
+    def _flow(self):
+        from resize_energy.report.flow_pictures import wind_picture
+
+        return wind_picture(self._inputs, self._design)
+
     def _workbook(self):
         from resize_energy.report.excel import build_wind_workbook
 

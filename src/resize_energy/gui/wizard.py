@@ -30,6 +30,7 @@ from resize_energy.core.pv_design import (
 from resize_energy.core.pv_extra import shading_loss
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.gui.chart_render import render_chart
+from resize_energy.gui.flow_banner import FlowBanner, picture_image
 from resize_energy.gui.numparse import format_number, parse_in_range
 from resize_energy.gui.provenance import insert_before_formulas, provenance_section
 from resize_energy.gui.theme import COLORS, SCREEN_DOC_CSS
@@ -37,6 +38,7 @@ from resize_energy.gui.tutor_panel import TutorDialog
 from resize_energy.gui.why import WhyButton
 from resize_energy.gui.widgets import StepPage, make_label
 from resize_energy.report.charts import ChartSpec, pv_charts
+from resize_energy.report.flow_art import picture_size
 from resize_energy.report.html_report import build_pv_report
 from resize_energy.tutor.checker import Finding, check_pv_design
 from resize_energy.tutor.context import build_project_context
@@ -401,6 +403,7 @@ class BaseResultsPage(StepPage):
         self.setTitle("4. Results and design checks")
         self.setSubTitle("Your results first, then charts and checks. Use the list on the right to see why each number is what it is.")
         self.browser = ReportBrowser()
+        self.banner = FlowBanner()   # energy-flow picture above the report
         self.chart_images: dict[str, QImage] = {}
         self.html = ""  # light version, used for the PDF
         self.html_screen = ""  # dark version, shown in the window
@@ -468,6 +471,7 @@ class BaseResultsPage(StepPage):
         layout.addWidget(make_label(
             "Left: your results, the charts and the design checks (start from 'In short'). "
             "Right: pick a step to see its formula with your own numbers.", "hint"), 0)
+        layout.addWidget(self.banner)
         layout.addWidget(splitter, 1)  # the report takes all the spare height
         layout.addLayout(buttons)
 
@@ -489,9 +493,23 @@ class BaseResultsPage(StepPage):
         """The charts named in the report (``chart:NAME``)."""
         return {}
 
+    def _flow(self):
+        """The energy-flow picture (nodes, flows) of the design, or None. Technologies fill it in."""
+        return None
+
     def _draw_charts(self) -> None:
         self.chart_images = {f"chart:{name}": render_chart(spec)
                              for name, spec in self._charts().items()}
+        try:
+            picture = self._flow()
+        except Exception:  # noqa: BLE001 - a picture must never stop the report
+            picture = None
+        self.banner.set_picture(picture)
+        self._banner_ratio = 0.0
+        if picture is not None:
+            self.chart_images["chart:flow_banner"] = picture_image(picture)
+            w, h = picture_size(picture[0])
+            self._banner_ratio = h / w
         self.browser.images = self.chart_images
 
     # --- shared behaviour ----------------------------------------------------------------
@@ -549,10 +567,21 @@ class BaseResultsPage(StepPage):
         extra = provenance_section(self)
         compare = versions_ui.compare_sections(self)
         light, dark = self._base
+        light = self._with_banner(light)
         self.html = insert_before_formulas(light, extra + compare[0] + self._explained[0])
         self.html_screen = insert_before_formulas(dark, extra + compare[1] + self._explained[1])
         self.explain_button.setEnabled(self._version_a is not None and bool(compare[0]))
         self.browser.setHtml(self.html_screen)
+
+    def _with_banner(self, html: str) -> str:
+        """The still picture under the title of the report (PDF only; the screen has the
+        animated banner above the report)."""
+        ratio = getattr(self, "_banner_ratio", 0.0)
+        if not ratio or "chart:flow_banner" not in self.chart_images or "</h1>" not in html:
+            return html
+        tag = (f'<p align="center"><img src="chart:flow_banner" width="600" '
+               f'height="{int(600 * ratio)}"></p>')
+        return html.replace("</h1>", "</h1>" + tag, 1)
 
     def _keep_version(self) -> None:
         from resize_energy.gui import versions_ui
@@ -652,6 +681,11 @@ class ResultsPage(BaseResultsPage):
         light = build_pv_report(inputs, design, findings, site_note=note, theme="light")
         dark = build_pv_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, dark
+
+    def _flow(self):
+        from resize_energy.report.flow_pictures import pv_picture
+
+        return pv_picture(self._inputs, self._design)
 
     def _workbook(self):
         from resize_energy.report.excel import build_pv_workbook

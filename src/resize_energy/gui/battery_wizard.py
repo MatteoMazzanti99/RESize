@@ -271,6 +271,11 @@ class BatteryResultsPage(BaseResultsPage):
         screen = build_battery_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, screen
 
+    def _flow(self):
+        from resize_energy.report.flow_pictures import battery_picture
+
+        return battery_picture(self._inputs, self._design)
+
     def _workbook(self):
         from resize_energy.report.excel_more import build_battery_workbook
 
