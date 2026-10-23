@@ -19,6 +19,7 @@ from resize_energy.core.plant_economics import Economics
 from resize_energy.core.pv_design import PVDesign, PVInputs
 from resize_energy.core.pv_extra import battery_view
 from resize_energy.core.sensitivity import Sensitivity
+from resize_energy.core.solar_thermal import CHILLERS as SOLAR_CHILLERS
 from resize_energy.core.solar_thermal import COLLECTORS as SOLAR_COLLECTORS
 from resize_energy.core.solar_thermal import collector_efficiency as solar_eff
 from resize_energy.core.solar_thermal_design import SolarThermalDesign, SolarThermalInputs
@@ -553,8 +554,19 @@ def solar_charts(inp: SolarThermalInputs, d: SolarThermalDesign) -> dict[str, Ch
             (Series("cooling demand [kWh]", r.monthly_cooling_demand_kwh, GREY),
              Series("cold from the sun [kWh]", r.monthly_cooling_solar_kwh, BLUE)),
             x_label="Month", y_label="Cold [kWh]", decimals=0,
-            caption=f"The adsorption chiller covers {r.cooling_fraction:.0%} of the cooling "
-                    "with heat from the collectors: it works exactly when the sun is strongest.")
+            caption=f"The {SOLAR_CHILLERS[inp.chiller].name.split(' (')[0].lower()} covers "
+                    f"{r.cooling_fraction:.0%} of the cooling with heat from the collectors: it "
+                    "works exactly when the sun is strongest.")
+        if d.cooling_options:
+            opts = d.cooling_options
+            out["solar_chillers"] = ChartSpec(
+                "hbars", "Cooling technologies on the same collectors",
+                tuple(o.name.split(" (")[0] for o in opts),
+                (Series("share of the cooling [%]", tuple(o.cooling_fraction * 100 for o in opts),
+                        colors=tuple(BLUE if o.is_main else LIGHT for o in opts)),),
+                x_label="Cooling covered by the sun [%]", decimals=0,
+                caption="Blue is your main technology. Mean COPs: " + ", ".join(
+                    f"{o.name.split(' (')[0].lower()} {o.mean_cop:.2f}" for o in opts) + ".")
     parts = [("Hot water", r.heat_solar_kwh), ("Adsorption chiller", r.chiller_heat_kwh),
              ("Tank heat losses", r.store_loss_kwh), ("Heat dumped (overheating)", r.wasted_kwh)]
     parts = [p for p in parts if p[1] > 0.5]

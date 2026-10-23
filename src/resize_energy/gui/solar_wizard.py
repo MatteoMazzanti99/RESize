@@ -5,6 +5,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QFormLayout,
     QGroupBox,
@@ -16,11 +17,12 @@ from PySide6.QtWidgets import (
 )
 
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
-from resize_energy.core.solar_thermal import COLLECTORS
+from resize_energy.core.solar_thermal import CHILLERS, COLLECTORS
 from resize_energy.core.solar_thermal_design import (
     SolarThermalInputs,
     size_solar_thermal,
 )
+from resize_energy.gui.biomass_wizard import _show_row
 from resize_energy.gui.widgets import StepPage
 from resize_energy.gui.wizard import BaseResultsPage, NumberField, _hint, first_error
 from resize_energy.report.charts import ChartSpec, solar_charts
@@ -51,33 +53,63 @@ class SolarLoadPage(StepPage):
         self.setSubTitle("Hot water, cooling, or both. Put 0 in the one you do not need.")
         self.litres = NumberField(d.dhw_litres_per_day, 0, 1e6, 0, "litres per day", "solar.load")
         self.t_use = NumberField(d.t_use_c, 30, 90, 0, "degC", "solar.load")
+        self.use_cooling = QCheckBox("Add cooling (a heat-driven chiller fed by the collectors)")
         self.cooling = NumberField(3000, 0, 1e8, 0, "kWh of cold per year", "solar.adsorption")
+        self.compare_boxes = {key: QCheckBox(c.name) for key, c in CHILLERS.items()}
+        self.compare_boxes["adsorption"].setChecked(True)
+        for key, box in self.compare_boxes.items():
+            setattr(self, f"compare_{key}", box)       # so the project file keeps the choice
+        self.use_cooling.toggled.connect(self._cooling_toggled)
 
         water = QGroupBox("Hot water")
         wf = QFormLayout(water)
         wf.addRow("Hot water used per day", self.litres)
         wf.addRow("Temperature at the tap", self.t_use)
-        cool = QGroupBox("Cooling with an adsorption chiller (optional)")
-        cf = QFormLayout(cool)
+        cool = QGroupBox("Cooling (optional)")
+        cv = QVBoxLayout(cool)
+        cv.addWidget(self.use_cooling)
+        cf = QFormLayout()
         cf.addRow("Cooling needed per year", self.cooling)
+        cv.addLayout(cf)
+        cv.addWidget(_hint("Technologies to evaluate on the same collectors (you pick the main "
+                           "one in step 3; the others are compared with it):"))
+        for box in self.compare_boxes.values():
+            cv.addWidget(box)
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
         layout.addWidget(water)
         layout.addWidget(cool)
         layout.addWidget(_hint(
             "A family of four uses about 150-250 litres a day; a small hotel or a gym, a few "
-            "thousand. An adsorption chiller makes chilled water from the hot water of the "
-            "collectors, with almost no electricity: it makes sense when you need cooling in "
-            "summer, exactly when the sun is strongest. The default 3,000 kWh/year is a small "
-            "office; set it to 0 for hot water only. Press the (?) next to the field to see how "
-            "it works."))
+            "thousand. Cooling is optional: a heat-driven chiller (adsorption, absorption or "
+            "desiccant) makes cold from the hot water of the collectors with almost no "
+            "electricity, which makes sense when you need cooling in summer, exactly when the "
+            "sun is strongest. 3,000 kWh/year is a small office. Press the (?) next to the field "
+            "to see how it works."))
         layout.addStretch(1)
+        self._cooling_toggled(False)
+
+    def _cooling_toggled(self, on: bool) -> None:
+        self.cooling.setEnabled(on)
+        for box in self.compare_boxes.values():
+            box.setEnabled(on)
+
+    def cooling_kwh(self) -> float:
+        """Cooling asked for (0 when the cooling is not added)."""
+        return self.cooling.value() if self.use_cooling.isChecked() else 0.0
+
+    def compared_chillers(self) -> tuple[str, ...]:
+        if not self.use_cooling.isChecked():
+            return ()
+        return tuple(k for k, b in self.compare_boxes.items() if b.isChecked())
 
     def validatePage(self) -> bool:
-        if not _warn(self, [("Hot water", self.litres), ("Temperature", self.t_use),
-                            ("Cooling", self.cooling)]):
+        items = [("Hot water", self.litres), ("Temperature", self.t_use)]
+        if self.use_cooling.isChecked():
+            items.append(("Cooling", self.cooling))
+        if not _warn(self, items):
             return False
-        if self.litres.value() <= 0 and self.cooling.value() <= 0:
+        if self.litres.value() <= 0 and self.cooling_kwh() <= 0:
             QMessageBox.warning(self, "Check the value",
                                 "Give a hot-water demand, a cooling demand, or both.")
             return False
@@ -158,8 +190,9 @@ class SolarSitePage(StepPage):
 
 
 class SolarCollectorPage(StepPage):
-    def __init__(self) -> None:
+    def __init__(self, load: SolarLoadPage) -> None:
         super().__init__()
+        self.load = load
         d = SolarThermalInputs()
         self.setTitle("3. Collectors and tank")
         self.setSubTitle("The type of collector, how many square metres, and the tank. The chiller values matter only if you asked for cooling.")
@@ -178,9 +211,18 @@ class SolarCollectorPage(StepPage):
         self.target = NumberField(d.target_fraction * 100, 5, 95, 0, "%", "solar.solar_fraction")
         self.store = NumberField(d.store_l_per_m2, 10, 300, 0, "litres per m2", "solar.store")
         self.loop = NumberField(d.loop_loss * 100, 0, 40, 0, "%", "solar.simulation")
-        self.cop = NumberField(d.cop_nominal, 0.2, 1.1, 2, "", "solar.chiller_cop")
-        self.t_min = NumberField(d.t_drive_min_c, 40, 90, 0, "degC", "solar.chiller_cop")
-        self.t_nom = NumberField(d.t_drive_nominal_c, 50, 110, 0, "degC", "solar.chiller_cop")
+        self.chiller_kind = QComboBox()
+        for c in CHILLERS.values():
+            self.chiller_kind.addItem(c.name)
+        c1 = CHILLERS["adsorption"]
+        self.cop = NumberField(c1.cop_nominal, 0.2, 1.2, 2, "", "solar.chiller_cop")
+        self.t_min = NumberField(c1.t_drive_min_c, 30, 95, 0, "degC", "solar.chiller_cop")
+        self.t_nom = NumberField(c1.t_drive_nominal_c, 40, 110, 0, "degC", "solar.chiller_cop")
+        self.parasitic = NumberField(c1.parasitic, 0, 0.5, 2, "kWh electricity per kWh of cold",
+                                     "solar.chillers")
+        self.chiller_cost = NumberField(c1.cost_per_kw, 0, 20000, 0, "euro per kW of cooling",
+                                        "solar.economics")
+        self.chiller_kind.currentIndexChanged.connect(self._chiller_picked)
         self.chiller = NumberField(0, 0, 5000, 1, "kW of cooling (0 = automatic)",
                                    "solar.adsorption")
         self.kind.currentIndexChanged.connect(self._picked)
@@ -199,11 +241,15 @@ class SolarCollectorPage(StepPage):
         zf.addRow("Target solar fraction", self.target)
         zf.addRow("Tank volume", self.store)
         zf.addRow("Pipe and pump losses", self.loop)
-        chill = QGroupBox("Adsorption chiller")
+        self.chill_box = chill = QGroupBox("Cooling machine")
         hf = QFormLayout(chill)
+        self.chill_form = hf
+        hf.addRow("Main cooling technology", self.chiller_kind)
         hf.addRow("Thermal COP at nominal drive", self.cop)
         hf.addRow("Minimum drive temperature", self.t_min)
         hf.addRow("Nominal drive temperature", self.t_nom)
+        hf.addRow("Electricity use (pumps, fans, tower)", self.parasitic)
+        hf.addRow("Cost of the machine", self.chiller_cost)
         hf.addRow("Chiller size", self.chiller)
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
@@ -213,12 +259,27 @@ class SolarCollectorPage(StepPage):
         layout.addWidget(_hint(
             "Take eta0, a1 and a2 from the Solar Keymark certificate of the collector. Flat "
             "plates suit hot water; evacuated tubes keep their efficiency at the 70-90 degC a "
-            "chiller needs. The silica-gel chillers on the market have a thermal COP of about "
-            "0.5-0.65 and start at about 55-60 degC: use the datasheet."))
+            "chiller needs. The values of the cooling machine are typical for its family "
+            "(adsorption COP 0.5-0.65 from 55-60 degC, absorption 0.7 from 75 degC, desiccant "
+            "from 50 degC): use the datasheet."))
         layout.addStretch(1)
 
     def kind_key(self) -> str:
         return list(COLLECTORS)[self.kind.currentIndex()]
+
+    def chiller_key(self) -> str:
+        return list(CHILLERS)[self.chiller_kind.currentIndex()]
+
+    def _chiller_picked(self, _index: int) -> None:
+        c = CHILLERS[self.chiller_key()]
+        self.cop.set_value(c.cop_nominal)
+        self.t_min.set_value(c.t_drive_min_c)
+        self.t_nom.set_value(c.t_drive_nominal_c)
+        self.parasitic.set_value(c.parasitic)
+        self.chiller_cost.set_value(c.cost_per_kw)
+
+    def initializePage(self) -> None:
+        self.chill_box.setVisible(self.load.use_cooling.isChecked())
 
     def _picked(self, _index: int) -> None:
         c = COLLECTORS[self.kind_key()]
@@ -228,13 +289,17 @@ class SolarCollectorPage(StepPage):
         self.cost.set_value(c.cost_per_m2)
 
     def validatePage(self) -> bool:
-        if not _warn(self, [
-                ("eta0", self.eta0), ("a1", self.a1), ("a2", self.a2), ("Cost", self.cost),
-                ("Area", self.area), ("Target", self.target), ("Tank volume", self.store),
-                ("Losses", self.loop), ("COP", self.cop), ("Minimum drive", self.t_min),
-                ("Nominal drive", self.t_nom), ("Chiller", self.chiller)]):
+        items = [("eta0", self.eta0), ("a1", self.a1), ("a2", self.a2), ("Cost", self.cost),
+                 ("Area", self.area), ("Target", self.target), ("Tank volume", self.store),
+                 ("Losses", self.loop)]
+        cooling = self.load.use_cooling.isChecked()
+        if cooling:
+            items += [("COP", self.cop), ("Minimum drive", self.t_min),
+                      ("Nominal drive", self.t_nom), ("Electricity use", self.parasitic),
+                      ("Cost of the machine", self.chiller_cost), ("Chiller", self.chiller)]
+        if not _warn(self, items):
             return False
-        if self.t_min.value() >= self.t_nom.value():
+        if cooling and self.t_min.value() >= self.t_nom.value():
             QMessageBox.warning(self, "Check the value",
                                 "The minimum drive temperature must be below the nominal one.")
             return False
@@ -242,15 +307,15 @@ class SolarCollectorPage(StepPage):
 
 
 class SolarCostPage(StepPage):
-    def __init__(self) -> None:
+    def __init__(self, load: SolarLoadPage) -> None:
         super().__init__()
+        self.load = load
         d = SolarThermalInputs()
         self.setTitle("4. Costs and prices")
         self.setSubTitle("What the rest of the plant costs and what the heat you replace is worth. The defaults are round placeholders: replace them with quotes and your tariff.")
         key = "solar.economics"
         self.store = NumberField(d.store_cost_per_litre, 0, 50, 2, "euro per litre", key)
         self.fixed = NumberField(d.fixed_cost, 0, 1e7, 0, "euro", key)
-        self.chiller = NumberField(d.chiller_cost_per_kw, 0, 20000, 0, "euro per kW of cooling", key)
         self.om = NumberField(d.om_fraction * 100, 0, 10, 1, "% of CAPEX per year", key)
         self.heat = NumberField(d.heat_price, 0.001, 2, 3, "euro per kWh of heat", key)
         self.elec = NumberField(d.electricity_price, 0.001, 2, 3, "euro/kWh", key)
@@ -264,12 +329,12 @@ class SolarCostPage(StepPage):
         pf = QFormLayout(plant)
         pf.addRow("Storage tank", self.store)
         pf.addRow("Controller, pumps, piping, labour", self.fixed)
-        pf.addRow("Adsorption chiller (with heat rejection)", self.chiller)
         pf.addRow("Operation and maintenance", self.om)
         pf.addRow("Lifetime", self.life)
         price = QGroupBox("Prices and finance")
         mf = QFormLayout(price)
         mf.addRow("Heat from the backup boiler", self.heat)
+        self.price_form = mf
         mf.addRow("Electricity", self.elec)
         mf.addRow("COP of the compressor chiller you replace", self.comp)
         mf.addRow("Discount rate", self.rate)
@@ -288,9 +353,14 @@ class SolarCostPage(StepPage):
             "taxes: in many countries they change the result a lot."))
         layout.addStretch(1)
 
+    def initializePage(self) -> None:
+        cooling = self.load.use_cooling.isChecked()
+        _show_row(self.price_form, self.elec, cooling)
+        _show_row(self.price_form, self.comp, cooling)
+
     def validatePage(self) -> bool:
         return _warn(self, [
-            ("Tank", self.store), ("Fixed cost", self.fixed), ("Chiller", self.chiller),
+            ("Tank", self.store), ("Fixed cost", self.fixed),
             ("O&M", self.om), ("Heat price", self.heat), ("Electricity", self.elec),
             ("Compressor COP", self.comp), ("Lifetime", self.life), ("Discount rate", self.rate),
             ("Heat emissions", self.heat_ef), ("Grid emissions", self.grid_ef)])
@@ -310,7 +380,7 @@ class SolarResultsPage(BaseResultsPage):
         ld, st, cp, ct = self.load, self.site, self.coll, self.costs
         inputs = SolarThermalInputs(
             dhw_litres_per_day=ld.litres.value(), t_use_c=ld.t_use.value(),
-            cooling_kwh_per_year=ld.cooling.value(),
+            cooling_kwh_per_year=ld.cooling_kwh(),
             latitude_deg=st.lat.value(), irradiation_kwh_m2=st.irr.value(),
             t_mean_c=st.t_mean.value(), t_season_amp_c=st.t_amp.value(),
             collector=cp.kind_key(), eta0=cp.eta0.value(), a1=cp.a1.value(), a2=cp.a2.value(),
@@ -318,10 +388,12 @@ class SolarResultsPage(BaseResultsPage):
             mode="given" if cp.mode.currentIndex() == 0 else "target",
             area_m2=cp.area.value(), target_fraction=cp.target.value() / 100.0,
             store_l_per_m2=cp.store.value(), loop_loss=cp.loop.value() / 100.0,
+            chiller=cp.chiller_key(), compare_chillers=ld.compared_chillers(),
             chiller_kw=cp.chiller.value(), cop_nominal=cp.cop.value(),
+            chiller_parasitic=cp.parasitic.value(),
             t_drive_min_c=cp.t_min.value(), t_drive_nominal_c=cp.t_nom.value(),
             store_cost_per_litre=ct.store.value(), fixed_cost=ct.fixed.value(),
-            chiller_cost_per_kw=ct.chiller.value(), om_fraction=ct.om.value() / 100.0,
+            chiller_cost_per_kw=cp.chiller_cost.value(), om_fraction=ct.om.value() / 100.0,
             heat_price=ct.heat.value(), electricity_price=ct.elec.value(),
             compressor_cop=ct.comp.value(), life_years=ct.life.value(),
             discount_rate=ct.rate.value() / 100.0, heat_ef_kg_per_kwh=ct.heat_ef.value(),

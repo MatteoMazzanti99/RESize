@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from resize_energy.core import solar_thermal as st
 from resize_energy.core.solar_thermal_design import SolarThermalDesign, SolarThermalInputs
 from resize_energy.tutor.checker import Finding
 
@@ -23,7 +24,7 @@ def build_solar_context(inp: SolarThermalInputs, d: SolarThermalDesign,
         f"collector, air {inp.t_mean_c:g} degC +/- {inp.t_season_amp_c:g}",
         f"- Collector {c.name}: eta0 {c.eta0}, a1 {c.a1}, a2 {c.a2}; "
         f"{inp.store_l_per_m2:g} L of store per m2",
-        f"- Chiller COP {inp.cop_nominal} (nominal), drive {inp.t_drive_min_c:g}-"
+        f"- Cooling machine: {st.CHILLERS[inp.chiller].name}; COP {inp.cop_nominal} (nominal), drive {inp.t_drive_min_c:g}-"
         f"{inp.t_drive_nominal_c:g} degC",
         "",
         "RESULTS",
@@ -38,5 +39,10 @@ def build_solar_context(inp: SolarThermalInputs, d: SolarThermalDesign,
         "",
         "DESIGN CHECKS",
     ]
+    if d.cooling_options:
+        lines[lines.index("DESIGN CHECKS") - 1:lines.index("DESIGN CHECKS") - 1] = [
+            "- Cooling technologies on the same field: " + "; ".join(
+                f"{o.name} {o.cooling_fraction:.0%} (mean COP {o.mean_cop:.2f})"
+                for o in d.cooling_options)]
     lines += [f"- [{_SEVERITY[f.severity]}] {f.message}" for f in findings] or ["- (none)"]
     return "\n".join(lines)

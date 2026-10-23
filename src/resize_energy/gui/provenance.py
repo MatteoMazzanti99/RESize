@@ -43,6 +43,8 @@ def collect(pages: list[StepPage]) -> list[Row]:
                 field = field_item.widget() if field_item else None
                 if not isinstance(field, NumberField) or label_item is None:
                     continue
+                if not field.isEnabled() or not field.isVisibleTo(page):
+                    continue            # a field the user cannot see or use is not an assumption
                 label = label_item.widget().text() if label_item.widget() else ""
                 unit = _unit(field)
                 rows.append(Row(step, label, f"{field.edit.text()} {unit}".strip(),

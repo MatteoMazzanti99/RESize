@@ -125,8 +125,8 @@ class MainWindow(QMainWindow):
                                               self.bat_costs)
         self.sol_load = SolarLoadPage()
         self.sol_site = SolarSitePage()
-        self.sol_coll = SolarCollectorPage()
-        self.sol_costs = SolarCostPage()
+        self.sol_coll = SolarCollectorPage(self.sol_load)
+        self.sol_costs = SolarCostPage(self.sol_load)
         self.sol_results = SolarResultsPage(self.sol_load, self.sol_site, self.sol_coll,
                                             self.sol_costs)
         self.cmp_selection = CompareSelection()

@@ -44,9 +44,10 @@ def _walk_through(window, app) -> int:
         print("self-test: the comparison charts were not drawn", flush=True)
         return 1
     window._restart()
-    code = _versions_check(window, app)
-    if code:
-        return code
+    for check in (_versions_check, _solar_cooling_check):
+        code = check(window, app)
+        if code:
+            return code
     return _project_roundtrip(window, app)
 
 
@@ -74,6 +75,26 @@ def _versions_check(window, app) -> int:
     window._restart()
     if not ok:
         print("self-test: the explanation of the changes failed", flush=True)
+        return 1
+    return 0
+
+
+def _solar_cooling_check(window, app) -> int:
+    """Solar thermal with cooling added: three cooling technologies are compared."""
+    window._start("solar")
+    load = window.sol_load
+    load.use_cooling.setChecked(True)
+    for key in ("absorption", "desiccant"):
+        getattr(load, f"compare_{key}").setChecked(True)
+    for _ in range(len(window.pages) - 2):
+        window._next()
+        app.processEvents()
+    results = window.sol_results
+    ok = (window.index == len(window.pages) - 1 and "Cooling technologies" in results.html
+          and "solar_chillers" in {k.split(":")[-1] for k in results.chart_images})
+    window._restart()
+    if not ok:
+        print("self-test: the solar cooling comparison did not appear", flush=True)
         return 1
     return 0
 

@@ -158,3 +158,40 @@ def test_checker_flags_oversizing_and_unglazed_cooling():
     assert "stagnation" in codes or "fraction_too_high" in codes
     bad = replace(COOL, collector="unglazed")
     assert "unglazed_cooling" in {f.code for f in check_solar_design(bad, size_solar_thermal(bad))}
+
+
+def test_cooling_technologies_are_compared_on_the_same_field():
+    from resize_energy.core.solar_thermal_design import chiller_variant
+    inp = replace(COOL, compare_chillers=("absorption", "desiccant"))
+    d = size_solar_thermal(inp, with_sensitivity=False)
+    assert [o.key for o in d.cooling_options] == ["adsorption", "absorption", "desiccant"]
+    assert d.cooling_options[0].is_main and not d.cooling_options[1].is_main
+    # the main option is the design itself
+    assert d.cooling_options[0].cooling_fraction == pytest.approx(d.run.cooling_fraction)
+    # a variant uses the catalogue values of the other family
+    v = chiller_variant(inp, "absorption")
+    assert v.cop_nominal == st.CHILLERS["absorption"].cop_nominal and v.chiller == "absorption"
+    # higher drive temperature needed: absorption stands idle more often on this field
+    assert d.cooling_options[1].hours_below_drive > d.cooling_options[0].hours_below_drive
+    assert size_solar_thermal(COOL, with_sensitivity=False).cooling_options == ()
+
+
+def test_unknown_cooling_technology_is_rejected():
+    with pytest.raises(ValueError):
+        size_solar_thermal(replace(COOL, chiller="magic"))
+    with pytest.raises(ValueError):
+        size_solar_thermal(replace(COOL, compare_chillers=("nope",)))
+
+
+def test_tutor_and_report_show_the_comparison():
+    inp = replace(COOL, compare_chillers=("absorption", "desiccant"))
+    d = size_solar_thermal(inp)
+    findings = check_solar_design(inp, d)
+    assert "Absorption" in solar_worked_example("solar.chillers", inp, d)
+    assert "solar_chillers" in solar_charts(inp, d)
+    assert "Cooling technologies" in build_solar_report(inp, d, findings)
+    assert "Cooling technologies on the same field" in build_solar_context(inp, d, findings)
+    none = size_solar_thermal(SolarThermalInputs())
+    assert "solar_chillers" not in solar_charts(SolarThermalInputs(), none)
+    assert any(ch.isdigit() for ch in solar_worked_example(
+        "solar.chillers", SolarThermalInputs(), none))

@@ -67,6 +67,14 @@ def check_solar_design(inp: SolarThermalInputs, d: SolarThermalDesign) -> list[F
                 f"In {r.hours_below_drive} hours the cooling was needed but the tank was below "
                 f"{inp.t_drive_min_c:.0f} degC; a conventional chiller must cover them.",
                 "solar.chiller_cop"))
+        best = max(d.cooling_options, key=lambda o: o.cooling_fraction, default=None)
+        main = next((o for o in d.cooling_options if o.is_main), None)
+        if best and main and not best.is_main and best.cooling_fraction > main.cooling_fraction + 0.05:
+            out.append(Finding(
+                "info", "better_cooling",
+                f"On the same collectors, {best.name.lower()} covers {best.cooling_fraction:.0%} "
+                f"of the cooling against {main.cooling_fraction:.0%} of the main technology: "
+                "see the comparison.", "solar.chillers"))
         if inp.collector == "unglazed":
             out.append(Finding(
                 "error", "unglazed_cooling",

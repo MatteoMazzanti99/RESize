@@ -109,8 +109,30 @@ def cooling_load_profile(weather: Weather, annual_kwh: float, balance_c: float =
     return tuple(annual_kwh * r / total for r in raw)
 
 
-def adsorption_cop(cop_nom: float, t_drive_c: float, t_min_c: float, t_nom_c: float) -> float:
-    """Thermal COP of the chiller at the drive temperature of the hot water.
+@dataclass(frozen=True)
+class ChillerType:
+    key: str
+    name: str
+    cop_nominal: float          # thermal COP at the nominal drive temperature
+    t_drive_min_c: float        # below this the machine does not work
+    t_drive_nominal_c: float
+    parasitic: float            # electricity per kWh of cold (pumps, fans, cooling tower)
+    cost_per_kw: float          # euro per kW of cooling, with heat rejection (indicative)
+
+
+# Typical catalogue values for small and medium machines, to replace with a datasheet.
+CHILLERS: dict[str, ChillerType] = {
+    "adsorption": ChillerType("adsorption", "Adsorption chiller (silica gel / water)",
+                              0.55, 60.0, 80.0, 0.03, 1100.0),
+    "absorption": ChillerType("absorption", "Absorption chiller (LiBr / water, single effect)",
+                              0.70, 75.0, 90.0, 0.04, 800.0),
+    "desiccant": ChillerType("desiccant", "Desiccant cooling (open cycle, air)",
+                             0.60, 50.0, 70.0, 0.10, 1000.0),
+}
+
+
+def chiller_cop(cop_nom: float, t_drive_c: float, t_min_c: float, t_nom_c: float) -> float:
+    """Thermal COP of a heat-driven chiller at the drive temperature of the hot water.
 
     Zero below the minimum temperature, rising linearly to ``cop_nom`` at the nominal one
     (a straight line is a fair summary of the catalogue curves of silica-gel/water machines).
@@ -120,6 +142,9 @@ def adsorption_cop(cop_nom: float, t_drive_c: float, t_min_c: float, t_nom_c: fl
     if t_drive_c >= t_nom_c:
         return cop_nom
     return cop_nom * (0.45 + 0.55 * (t_drive_c - t_min_c) / max(1e-9, t_nom_c - t_min_c))
+
+
+adsorption_cop = chiller_cop        # the first chiller of RESize was an adsorption one
 
 
 @dataclass(frozen=True)
@@ -247,7 +272,7 @@ def simulate(system: SolarSystem, weather: Weather, t_mean_c: float, t_season_am
         if c_need > 0:
             cool_dem += c_need
             m_cd[m] += c_need
-            cop = adsorption_cop(s.cop_nominal, t_store, s.t_drive_min_c, s.t_drive_nominal_c)
+            cop = chiller_cop(s.cop_nominal, t_store, s.t_drive_min_c, s.t_drive_nominal_c)
             if cop > 0 and s.chiller_kw_cooling > 0:
                 avail = max(0.0, (t_store - s.t_drive_min_c) * cap)
                 heat = min(c_need / cop, chiller_heat_cap, avail)

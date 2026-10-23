@@ -39,6 +39,8 @@ class SolarThermalInputs:
     target_fraction: float = 0.60
     store_l_per_m2: float = 60.0
     loop_loss: float = 0.08
+    chiller: str = "adsorption"              # key of st.CHILLERS (the main cooling technology)
+    compare_chillers: tuple[str, ...] = ()  # other technologies to evaluate on the same field
     chiller_kw: float = 0.0                 # 0 = size it for the peak hour of the load
     cop_nominal: float = 0.55
     t_drive_min_c: float = 60.0
@@ -57,6 +59,23 @@ class SolarThermalInputs:
     discount_rate: float = 0.05
     heat_ef_kg_per_kwh: float = 0.23        # of the backup heat (gas boiler)
     grid_ef_kg_per_kwh: float = 0.25
+
+
+@dataclass(frozen=True)
+class CoolingOption:
+    """One cooling technology evaluated on the same collectors and tank."""
+
+    key: str
+    name: str
+    is_main: bool
+    chiller_kw: float
+    cooling_fraction: float
+    mean_cop: float
+    solar_fraction: float
+    hours_below_drive: int
+    capex: float
+    npv: float
+    payback_years: float
 
 
 @dataclass(frozen=True)
@@ -83,6 +102,7 @@ class SolarThermalDesign:
     sweep: tuple[tuple[float, float, float, float], ...] = ()   # area, fraction, kWh/m2, NPV
     sensitivity: Sensitivity | None = None
     inputs_used: SolarThermalInputs | None = None
+    cooling_options: tuple[CoolingOption, ...] = ()
 
 
 def collector_of(i: SolarThermalInputs) -> st.CollectorType:
@@ -95,6 +115,8 @@ def collector_of(i: SolarThermalInputs) -> st.CollectorType:
 def _validate(i: SolarThermalInputs) -> None:
     if i.collector not in st.COLLECTORS:
         raise ValueError("unknown collector type")
+    if i.chiller not in st.CHILLERS or any(k not in st.CHILLERS for k in i.compare_chillers):
+        raise ValueError("unknown cooling technology")
     if i.dhw_litres_per_day < 0 or i.cooling_kwh_per_year < 0:
         raise ValueError("the loads cannot be negative")
     if i.dhw_litres_per_day <= 0 and i.cooling_kwh_per_year <= 0:
@@ -202,9 +224,35 @@ def size_solar_thermal(i: SolarThermalInputs, *, with_sweep: bool = True,
         yield_kwh_m2=m["useful"] / area if area > 0 else 0.0, inputs_used=i)
     if with_sweep:
         design = replace(design, sweep=area_sweep(i, area))
+    if i.cooling_kwh_per_year > 0 and i.compare_chillers:
+        design = replace(design, cooling_options=cooling_options(i, area))
     if with_sensitivity:
         design = replace(design, sensitivity=solar_thermal_sensitivity(i, area))
     return design
+
+
+def chiller_variant(i: SolarThermalInputs, key: str) -> SolarThermalInputs:
+    """The same project with the catalogue values of another cooling technology."""
+    c = st.CHILLERS[key]
+    return replace(i, chiller=key, cop_nominal=c.cop_nominal, t_drive_min_c=c.t_drive_min_c,
+                   t_drive_nominal_c=c.t_drive_nominal_c, chiller_parasitic=c.parasitic,
+                   chiller_cost_per_kw=c.cost_per_kw, chiller_kw=0.0)
+
+
+def cooling_options(i: SolarThermalInputs, area: float) -> tuple[CoolingOption, ...]:
+    """Main technology (with the user's values) and the others (catalogue values)."""
+    keys = [i.chiller] + [k for k in dict.fromkeys(i.compare_chillers) if k != i.chiller]
+    out = []
+    for key in keys:
+        j = i if key == i.chiller else chiller_variant(i, key)
+        s, run = _simulate(j, area)
+        m = _money(j, s, run)
+        cop = run.cooling_solar_kwh / run.chiller_heat_kwh if run.chiller_heat_kwh > 0 else 0.0
+        out.append(CoolingOption(
+            key, st.CHILLERS[key].name, key == i.chiller, s.chiller_kw_cooling,
+            run.cooling_fraction, cop, run.solar_fraction, run.hours_below_drive, m["capex"],
+            m["npv"], m["payback"]))
+    return tuple(out)
 
 
 def area_sweep(i: SolarThermalInputs, area: float) -> tuple[tuple[float, float, float, float], ...]:

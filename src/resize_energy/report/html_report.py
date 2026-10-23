@@ -11,6 +11,7 @@ from resize_energy.core.biomass_design import PATHWAYS, BiomassDesign, BiomassIn
 from resize_energy.core.comparison import ComparisonInputs, ComparisonResult
 from resize_energy.core.hydrogen_design import MODES, HydrogenDesign, HydrogenInputs
 from resize_energy.core.pv_design import PVDesign, PVInputs
+from resize_energy.core.solar_thermal import CHILLERS as SOLAR_CHILLERS
 from resize_energy.core.solar_thermal_design import SolarThermalDesign, SolarThermalInputs
 from resize_energy.core.wind_design import WindDesign, WindInputs
 from resize_energy.report.charts import (
@@ -840,9 +841,9 @@ def build_solar_report(
              f"the collector, air {inp.t_mean_c:g} degC +/- {inp.t_season_amp_c:g} K"),
         _row("Collector", f"{c.name}: eta0 {c.eta0:.2f}, a1 {c.a1:g}, a2 {c.a2:g}"),
         _row("Store / pipe losses", f"{inp.store_l_per_m2:g} L per m2 / {inp.loop_loss:.0%}"),
-        _row("Chiller", (f"COP {inp.cop_nominal:.2f}, drive {inp.t_drive_min_c:g}-"
-                         f"{inp.t_drive_nominal_c:g} degC") if inp.cooling_kwh_per_year > 0
-             else "none"),
+        _row("Cooling machine", (f"{SOLAR_CHILLERS[inp.chiller].name}: COP {inp.cop_nominal:.2f}, "
+                                 f"drive {inp.t_drive_min_c:g}-{inp.t_drive_nominal_c:g} degC")
+             if inp.cooling_kwh_per_year > 0 else "none"),
         _row("Costs", f"collector {c.cost_per_m2:,.0f} euro/m2, tank "
              f"{inp.store_cost_per_litre:g} euro/L, fixed {inp.fixed_cost:,.0f} euro, chiller "
              f"{inp.chiller_cost_per_kw:,.0f} euro/kW, O&M {inp.om_fraction:.1%}"),
@@ -873,6 +874,11 @@ def build_solar_report(
         _row("CO2 avoided", f"{d.co2_avoided_t:,.2f} t per year"),
     ]
     results = "".join(rows)
+    if d.cooling_options:
+        results += _row("Cooling technologies", "; ".join(
+            f"{o.name.split(' (')[0]}{' (main)' if o.is_main else ''}: "
+            f"{o.cooling_fraction:.0%} of the cooling, COP {o.mean_cop:.2f}, NPV {o.npv:,.0f} euro"
+            for o in d.cooling_options))
     why = "".join(
         explanation_html(key, solar_worked_example(key, inp, d))
         for key in SOLAR_TOPIC_ORDER

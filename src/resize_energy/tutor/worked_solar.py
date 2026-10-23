@@ -71,13 +71,23 @@ def solar_worked_example(key: str, inp: SolarThermalInputs, d: SolarThermalDesig
         if inp.cooling_kwh_per_year <= 0:
             return "No cooling in this project: nominal COP 0 is not used."
         mean = r.cooling_solar_kwh / r.chiller_heat_kwh if r.chiller_heat_kwh > 0 else 0.0
-        lo = st.adsorption_cop(inp.cop_nominal, inp.t_drive_min_c + 5, inp.t_drive_min_c,
+        lo = st.chiller_cop(inp.cop_nominal, inp.t_drive_min_c + 5, inp.t_drive_min_c,
                                inp.t_drive_nominal_c)
         return (f"Nominal COP {inp.cop_nominal:.2f} at {inp.t_drive_nominal_c:.0f} degC; at "
                 f"{inp.t_drive_min_c + 5:.0f} degC it is {lo:.2f}; stops below "
                 f"{inp.t_drive_min_c:.0f} degC\nAverage over the year: {r.cooling_solar_kwh:,.0f}"
                 f" / {r.chiller_heat_kwh:,.0f} = {mean:.2f}; {r.hours_below_drive} hours with "
                 "cooling wanted but the tank too cold")
+    if key == "solar.chillers":
+        if inp.cooling_kwh_per_year <= 0:
+            return "No cooling in this project: 0 cooling technologies evaluated."
+        if not d.cooling_options:
+            return (f"Only the main technology was evaluated (1 of {len(st.CHILLERS)}): "
+                    f"{st.CHILLERS[inp.chiller].name}. Tick the others in step 1 to compare.")
+        return "\n".join(
+            f"{o.name}{' (main)' if o.is_main else ''}: {o.chiller_kw:.1f} kW, mean COP "
+            f"{o.mean_cop:.2f}, {o.cooling_fraction:.0%} of the cooling, NPV {o.npv:,.0f} euro"
+            for o in d.cooling_options)
     if key == "solar.economics":
         return (f"CAPEX = {d.collector_cost:,.0f} (collectors) + {d.store_cost:,.0f} (tank) + "
                 f"{d.chiller_cost:,.0f} (chiller) + {d.fixed_cost:,.0f} (fixed) = {d.capex:,.0f} "
