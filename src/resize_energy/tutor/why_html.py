@@ -6,6 +6,7 @@ from html import escape
 
 from resize_energy.report.formula_art import register, worked_html
 from resize_energy.tutor.explanations import EXPLANATIONS
+from resize_energy.tutor.sources import SOURCES, sources_html
 
 
 def _multiline(text: str) -> str:
@@ -13,7 +14,7 @@ def _multiline(text: str) -> str:
 
 
 def explanation_html(key: str, worked: str | None = None, heading: bool = True,
-                     math: bool = False) -> str:
+                     math: bool = False, full_refs: bool = False) -> str:
     """Formula, reasoning, user's numbers (if given), assumptions and reference of a topic.
 
     With ``math`` the formula is a picture (``<img src="chart:fx_...">``, drawn by
@@ -38,7 +39,8 @@ def explanation_html(key: str, worked: str | None = None, heading: bool = True,
     elif worked:
         parts.append(f"<p><b>With your numbers</b><br><code>{_multiline(worked)}</code></p>")
     parts.append(f"<p><i>Assumptions: {escape(entry['assumptions'])}</i></p>")
-    reference = entry.get("reference")
-    if reference:
-        parts.append(f"<p><i>Reference: {escape(reference)}</i></p>")
+    if key in SOURCES:
+        parts.append(sources_html(key, full=full_refs))
+    elif entry.get("reference"):
+        parts.append(f"<p><i>Reference: {escape(entry['reference'])}</i></p>")
     return "".join(parts)

@@ -574,7 +574,7 @@ class BaseResultsPage(StepPage):
         worked = None
         if self._inputs is not None and self._design is not None:
             worked = self._worked(key)
-        self.detail.setHtml(explanation_html(key, worked, heading=False, math=True))
+        self.detail.setHtml(explanation_html(key, worked, heading=False, math=True, full_refs=True))
 
     def initializePage(self) -> None:
         try:

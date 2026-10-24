@@ -27,6 +27,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Install: install.md
+  - References: references.md
   - User guide:
       - How to read the results: guide/concepts.md
       - Photovoltaic: guide/pv.md

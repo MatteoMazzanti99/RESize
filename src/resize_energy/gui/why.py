@@ -21,7 +21,7 @@ class WhyDialog(QDialog):
         self.resize(580, 480)
         browser = FormulaBrowser()
         browser.document().setDefaultStyleSheet(SCREEN_DOC_CSS)
-        browser.setHtml(explanation_html(key, worked, math=True))
+        browser.setHtml(explanation_html(key, worked, math=True, full_refs=True))
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)
         layout = QVBoxLayout(self)

@@ -23,11 +23,26 @@ class Row:
     label: str
     text: str
     status: str            # "default", "changed" or the name of a data source
+    basis: str = ""        # who the typical value comes from, e.g. "Reich et al. (2012)"
 
 
 def _unit(field) -> str:
     labels = [w.text() for w in field.findChildren(QLabel) if w.text()]
     return labels[0] if labels else ""
+
+
+def _basis(field) -> str:
+    """The publications behind the typical value of a field (from its 'Why?' topic)."""
+    from resize_energy.gui.why import WhyButton
+    from resize_energy.tutor.bibliography import REFS
+    from resize_energy.tutor.sources import SOURCES
+
+    for button in field.findChildren(WhyButton):
+        entry = SOURCES.get(button.key)
+        if entry:
+            keys = [k for k, _note in entry["values"]] or [k for k, _note in entry["formula"]]
+            return "; ".join(dict.fromkeys(REFS[k].short for k in keys))
+    return ""
 
 
 def collect(pages: list[StepPage]) -> list[Row]:
@@ -48,7 +63,7 @@ def collect(pages: list[StepPage]) -> list[Row]:
                 label = label_item.widget().text() if label_item.widget() else ""
                 unit = _unit(field)
                 rows.append(Row(step, label, f"{field.edit.text()} {unit}".strip(),
-                                field.provenance()))
+                                field.provenance(), _basis(field)))
     return rows
 
 
@@ -79,7 +94,9 @@ def section_html(rows: list[Row]) -> str:
                      "result):</p><ul>")
         for step, items in steps.items():
             parts.append("<li><i>" + escape(step) + ":</i> "
-                         + "; ".join(f"{escape(r.label)} = {escape(r.text)}" for r in items)
+                         + "; ".join(f"{escape(r.label)} = {escape(r.text)}"
+                                     + (f" (see {escape(r.basis)})" if r.basis else "")
+                                     for r in items)
                          + "</li>")
         parts.append("</ul>")
     return "".join(parts)

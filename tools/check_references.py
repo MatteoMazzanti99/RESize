@@ -1,0 +1,61 @@
+"""Checks the bibliography against Crossref (needs internet; run it on your own computer).
+
+For every reference with a DOI it fetches the record and compares the title, year and journal.
+References without a DOI are listed so you can check them by hand.
+
+    PYTHONPATH=src python tools/check_references.py
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+
+from resize_energy.tutor.bibliography import REFS
+
+
+def words(text: str) -> set[str]:
+    return set(re.findall(r"[a-z0-9]+", text.lower()))
+
+
+def fetch(doi: str) -> dict | None:
+    url = "https://api.crossref.org/works/" + urllib.parse.quote(doi)
+    request = urllib.request.Request(url, headers={"User-Agent": "RESize-reference-check"})
+    try:
+        with urllib.request.urlopen(request, timeout=20) as reply:
+            return json.load(reply)["message"]
+    except (urllib.error.URLError, OSError, KeyError, ValueError):
+        return None
+
+
+def main() -> int:
+    problems = 0
+    for key, ref in REFS.items():
+        if not ref.doi:
+            if ref.kind == "article":
+                print(f"?  {key}: no DOI, check by hand: {ref.short}, {ref.container} {ref.detail}")
+            continue
+        record = fetch(ref.doi)
+        if record is None:
+            print(f"!! {key}: DOI {ref.doi} not found or Crossref unreachable")
+            problems += 1
+            continue
+        title = " ".join(record.get("title", [""]))
+        year = str((record.get("issued", {}).get("date-parts") or [[""]])[0][0])
+        ok_title = len(words(ref.title) & words(title)) >= 0.7 * len(words(ref.title))
+        ok_year = not ref.year or year == ref.year
+        if ok_title and ok_year:
+            print(f"ok {key}")
+        else:
+            print(f"!! {key}: ours '{ref.title}' ({ref.year}); Crossref '{title}' ({year})")
+            problems += 1
+    print("\nAll DOI records match." if not problems else f"\n{problems} problem(s).")
+    return 1 if problems else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
