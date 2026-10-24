@@ -68,9 +68,15 @@ def wind_picture(inp: WindInputs, d: WindDesign) -> Picture:
     return nodes + tail, flows + tail_flows
 
 
+def _source_icon(use_pv: bool, use_wind: bool) -> str:
+    if use_pv and use_wind:
+        return "sun_turbine"
+    return "sun" if use_pv or not use_wind else "turbine"
+
+
 def battery_picture(inp: BatteryInputs, d: BatteryDesign) -> Picture:
     stored = d.battery_kwh + d.loss_kwh
-    nodes = [Node("sun" if inp.use_pv else "turbine", "Production", energy(d.generation_kwh),
+    nodes = [Node(_source_icon(inp.use_pv, inp.use_wind), "Production", energy(d.generation_kwh),
                   "per year", "sun"),
              Node("house", "Used at once", energy(d.direct_kwh),
                   f"self-consumption {100 * d.self_consumption:.0f} %", "orange", -1),

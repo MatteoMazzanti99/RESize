@@ -100,6 +100,21 @@ def _bolt(t, c):
             f'stroke-width="3" stroke-linejoin="round"/>')
 
 
+def _sun_turbine(t, c):
+    """Sun and wind together, for plants that use both."""
+    rays = "".join(
+        f'<line x1="{15 * math.cos(a) - 24:.1f}" y1="{15 * math.sin(a) - 16:.1f}" '
+        f'x2="{23 * math.cos(a) - 24:.1f}" y2="{23 * math.sin(a) - 16:.1f}" stroke="{c}" '
+        f'stroke-width="3.5" stroke-linecap="round"/>'
+        for a in (i * math.pi / 4 for i in range(8)))
+    blades = "".join(
+        f'<path d="M0,-4 L-2.4,-30 L2.4,-30 Z" fill="{t["blue"]}" transform="translate(22,-6) rotate({a} 0 -4)"/>'
+        for a in (0, 120, 240))
+    return (f'<circle cx="-24" cy="-16" r="11" fill="{c}"/>{rays}'
+            f'<path d="M20,-6 L18,36 L26,36 L24,-6 Z" fill="{t["grey"]}"/>{blades}'
+            f'<circle cx="22" cy="-10" r="4" fill="{t["text"]}"/>')
+
+
 def _battery(t, c):
     return (f'<rect x="-34" y="-20" width="62" height="40" rx="7" fill="none" stroke="{c}" stroke-width="4"/>'
             f'<rect x="28" y="-8" width="8" height="16" rx="2" fill="{c}"/>'
@@ -164,7 +179,7 @@ def _hot_tank(t, c):
 
 
 ICONS = {"hot_tank": _hot_tank, "engine": _engine, "digester": _digester, "sun": _sun, "panels": _panels, "inverter": _inverter, "house": _house, "grid": _grid,
-         "turbine": _turbine, "bolt": _bolt, "wind": _wind, "battery": _battery, "tank": _tank, "electrolyser": _electrolyser,
+         "turbine": _turbine, "sun_turbine": _sun_turbine, "bolt": _bolt, "wind": _wind, "battery": _battery, "tank": _tank, "electrolyser": _electrolyser,
          "flame": _flame, "collector": _collector, "tap": _tap, "snow": _snow}
 
 

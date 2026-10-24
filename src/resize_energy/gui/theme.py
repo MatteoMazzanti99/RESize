@@ -104,7 +104,10 @@ QLineEdit, QComboBox { background-color: {surface}; color: {text}; border: 1px s
 QLineEdit:focus, QComboBox:focus { border: 1px solid {accent}; }
 QComboBox::drop-down { border: none; width: 22px; }
 QComboBox QAbstractItemView { background-color: {surface}; color: {text}; border: 1px solid {border}; selection-background-color: {surface2}; selection-color: {text}; }
-QCheckBox { background: transparent; spacing: 8px; }
+QCheckBox { background: transparent; spacing: 10px; }
+QCheckBox::indicator { width: 18px; height: 18px; border: 2px solid {muted}; border-radius: 5px; background-color: {surface}; }
+QCheckBox::indicator:hover { border-color: {accent}; }
+QCheckBox::indicator:checked { background-color: {accent}; border-color: {accent}; __CHECK__ }
 
 QGroupBox { background: transparent; border: 1px solid {border}; border-radius: 14px; margin-top: 14px; padding: 14px 10px 8px 10px; }
 QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 14px; padding: 0 6px; color: {muted}; font-weight: 700; }
@@ -128,9 +131,28 @@ QMessageBox { background-color: {bg}; }
 """
 
 
-def build_stylesheet() -> str:
+CHECK_SVG = ('<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">'
+             '<path d="M4.5 9.5 L7.5 12.5 L13.5 5.5" fill="none" stroke="#FFFFFF" stroke-width="2.4" '
+             'stroke-linecap="round" stroke-linejoin="round"/></svg>')
+
+
+def _check_icon_file() -> str | None:
+    """Write the tick image once and return its path (QSS needs a file), or None."""
+    import tempfile
+    from pathlib import Path
+
+    try:
+        path = Path(tempfile.gettempdir()) / "resize_energy_check.svg"
+        path.write_text(CHECK_SVG, encoding="utf-8")
+        return path.as_posix()
+    except OSError:
+        return None
+
+
+def build_stylesheet(check_icon: str | None = None) -> str:
     """The application style sheet with every colour placeholder filled in."""
     qss = _QSS.replace("__FONT__", FONT_FAMILY)
+    qss = qss.replace("__CHECK__", f'image: url("{check_icon}");' if check_icon else "")
     for name, value in COLORS.items():
         qss = qss.replace("{" + name + "}", value)
     return qss
@@ -175,4 +197,4 @@ def apply_theme(app) -> None:
     for role, color in roles.items():
         palette.setColor(role, QColor(color))
     app.setPalette(palette)
-    app.setStyleSheet(build_stylesheet())
+    app.setStyleSheet(build_stylesheet(_check_icon_file()))

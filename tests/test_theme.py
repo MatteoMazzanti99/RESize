@@ -62,3 +62,10 @@ def test_screen_report_matches_the_light_window_and_pdf_stays_printable():
     assert "Design checks" in dark and "Design checks" in light
     # unknown theme falls back to the printable one
     assert "background: #eee" in build_pv_report(inp, design, findings, theme="nope")
+
+
+def test_check_boxes_have_a_visible_box_and_tick():
+    qss = theme.build_stylesheet("/tmp/tick.svg")
+    assert "QCheckBox::indicator" in qss and "__CHECK__" not in qss
+    assert 'url("/tmp/tick.svg")' in qss
+    assert "__CHECK__" not in theme.build_stylesheet()
