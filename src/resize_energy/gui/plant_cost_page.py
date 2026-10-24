@@ -11,7 +11,7 @@ from resize_energy.gui.wizard import NumberField, _hint, first_error
 
 # Round placeholder values (euro, 2025-26 order of magnitude): replace them with quotes.
 _DEFAULTS = {
-    "pv": dict(capex=1100.0, om=15.0, life=25.0, lifecycle=45.0, unit="kWp",
+    "pv": dict(capex=1100.0, om=15.0, life=30.0, lifecycle=45.0, unit="kWp",
                text="Rooftop plants cost about 900-2,000 euro/kWp installed (Italy, residential: "
                     "1.2-1.6 euro/W), large ground-mounted ones 700-900 (Fraunhofer ISE 2024, "
                     "IEA PVPS 2024). Maintenance is mostly cleaning and the inverter reserve."),

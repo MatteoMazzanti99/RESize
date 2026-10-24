@@ -39,7 +39,7 @@ class CostAssumptions:
 
     pv_capex_eur_per_kwp: float = 1000.0
     pv_om_eur_per_kwp_year: float = 15.0
-    pv_lifetime_years: float = 25.0
+    pv_lifetime_years: float = 30.0
     pv_lifecycle_g_per_kwh: float = 45.0
     wind_capex_eur_per_kw: float = 1500.0
     wind_om_eur_per_kw_year: float = 45.0
@@ -56,7 +56,7 @@ class CostAssumptions:
     bio_lifetime_years: float = 20.0
     bio_lifecycle_g_per_kwh: float = 100.0
     # green hydrogen (the renewable plant uses the PV and wind costs above)
-    h2_electrolyser_capex_eur_per_kw: float = 1800.0
+    h2_electrolyser_capex_eur_per_kw: float = 1000.0
     h2_reference_price_eur_per_kg: float = 3.5      # hydrogen from natural gas
     h2_reference_kg_co2_per_kg: float = 9.0
 

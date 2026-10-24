@@ -43,11 +43,11 @@ COSTS: dict[str, CostBasis] = {c.key: c for c in (
     CostBasis("pv_om", "PV operation and maintenance", "euro per kWp per year", (15.0,),
               "Germany 2024, fixed OPEX: small rooftop 26, large rooftop 21.5, utility-scale 13.3 "
               "euro/kW per year. USA 2022, utility-scale: 24 USD/kW(AC) per year.",
-              (("fraunhofer2024", "Table 2"), ("nrel_atb2024", "fixed O&M")), "below",
-              "Right for a large ground-mounted plant, low for a rooftop one."),
-    CostBasis("pv_life", "PV plant life", "years", (25.0,),
+              (("fraunhofer2024", "Table 2"), ("nrel_atb2024", "fixed O&M")), "within",
+              "Inside the range 13-26, towards the low end (large plants)."),
+    CostBasis("pv_life", "PV plant life", "years", (30.0,),
               "Germany 2024 and USA 2022: 30 years.", (("fraunhofer2024", "Table 2"), ("nrel_atb2024", "lifetime")),
-              "below", "A cautious value."),
+              "within"),
     CostBasis("wind_capex", "Onshore wind turbines, installed", "euro per kW", (1700.0, 1500.0),
               "Germany 2024: onshore wind 1,300-1,900 euro/kW.", (("fraunhofer2024", "Table 1"),),
               "within", "Small wind turbines cost much more per kW and are not in this range."),
@@ -70,18 +70,19 @@ COSTS: dict[str, CostBasis] = {c.key: c for c in (
               "plant 450-800; with a utility-scale plant 400-600 euro/kWh. USA 2022, 4-hour "
               "utility-scale system: 482 USD/kWh.",
               (("fraunhofer2024", "Table 1"), ("cole2023", "2022 base year")), "within"),
-    CostBasis("batt_kw", "Battery power electronics", "euro per kW", (100.0,),
-              "The sources give the whole system per kWh, not a separate cost per kW.", (), "none"),
-    CostBasis("batt_om", "Battery operation and maintenance", "percent of CAPEX per year", (1.5,),
+    CostBasis("batt_kw", "Battery power electronics", "euro per kW", (0.0,),
+              "The sources price the whole system per kWh, inverter included: no separate cost per "
+              "kW is added.", (("fraunhofer2024", "Table 1"),), "within"),
+    CostBasis("batt_om", "Battery operation and maintenance", "percent of CAPEX per year", (2.0,),
               "Germany 2024: about 2 % of the battery investment for utility-scale systems.",
-              (("fraunhofer2024", "Table 2"),), "below", "Slightly low."),
+              (("fraunhofer2024", "Table 2"),), "within"),
     CostBasis("batt_life", "Battery calendar life", "years", (15.0,), "Germany 2024: 15 years for PV battery systems.",
               (("fraunhofer2024", "Table 2"),), "within"),
-    CostBasis("h2_capex", "Electrolyser system, installed", "euro per kW", (1800.0,),
+    CostBasis("h2_capex", "Electrolyser system, installed", "euro per kW", (1000.0,),
               "IRENA 2020, installed system above 10 MW: alkaline 500-1,000, PEM 700-1,400 USD/kW "
-              "(2020 values).", (("irena_h2_2020", "Table ES1, p. 12"),), "above",
-              "A cautious value for a small plant with everything included; the large-plant range of "
-              "IRENA is lower. Replace it with a quote."),
+              "(2020 values).", (("irena_h2_2020", "Table ES1, p. 12"),), "within",
+              "Inside the range (alkaline and PEM together: 500-1,400 USD/kW, 2020 values); a small "
+              "plant can cost more, so use a quote."),
     CostBasis("h2_stack_hours", "Electrolyser stack life", "hours", (60000.0,),
               "Alkaline 60,000; PEM 50,000-80,000 hours (2020 values).",
               (("irena_h2_2020", "Table ES1, p. 12"),), "within"),
@@ -101,8 +102,10 @@ COSTS: dict[str, CostBasis] = {c.key: c for c in (
     CostBasis("solar_flat", "Flat-plate solar collector, installed", "euro per m2 of aperture", (380.0,),
               "Germany, small systems: domestic hot water for one house 940 euro/m2 (average 5.2 m2), "
               "combi systems 680 euro/m2 (13.4 m2); about 800 euro/m2 over all surveyed countries "
-              "and system types.", (("mugnier2018", "Fig. 1 and text"),), "below",
-              "The default fits large collector fields, not a house; for a house use a quote."),
+              "and system types.", (("mugnier2018", "Fig. 1 and text"),), "within",
+              "The sources give total system prices. The program adds tank and fixed costs to the "
+              "collector: for 5 m2 and a 300 litre tank, (5 x 380 + 300 x 1.8 + 1500) / 5 is about "
+              "790 euro/m2 (RESize's arithmetic)."),
     CostBasis("solar_other", "Evacuated-tube and unglazed collectors, storage tank, fixed costs, "
               "adsorption chiller", "euro per m2, per litre, euro, per kW", (520.0, 120.0, 1.8, 1500.0, 1100.0),
               "No document with numbers for these items was found.", (), "none",

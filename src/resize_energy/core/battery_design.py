@@ -53,8 +53,8 @@ class BatteryInputs:
     calendar_life_years: float = 15.0
     # --- costs and prices ---
     capex_per_kwh: float = 550.0
-    capex_per_kw: float = 100.0
-    om_fraction: float = 0.015           # of the CAPEX per year
+    capex_per_kw: float = 0.0
+    om_fraction: float = 0.02           # of the CAPEX per year
     retail_price: float = 0.25           # euro/kWh bought from the grid
     export_price: float = 0.08           # euro/kWh sold to the grid
     discount_rate: float = 0.05

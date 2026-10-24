@@ -10,7 +10,7 @@ reasoning, so you learn *why* a choice is made, not just the number that comes o
 
 **User guide:** <https://matteomazzanti99.github.io/RESize/> (one page per technology, with screenshots).
 
-![RESize home screen](docs/images/home.png)
+![RESize: every step explains the formula, the assumptions and your numbers](docs/images/pv_why.png)
 
 ## Download
 
@@ -24,18 +24,6 @@ Get the installer for your system from the
 | Linux | `RESize-linux.tar.gz` | Extract, run `RESize/RESize`. Needs the usual Qt libraries (e.g. `libxkbcommon-x11-0`, `libxcb-cursor0`). |
 
 Prefer Python? See *Quick start* below.
-
-## How it looks
-
-| Photovoltaic: every step explains itself | Results with the energy-flow picture |
-|---|---|
-| ![Photovoltaic first step](docs/images/pv_start.png) | ![Photovoltaic results](docs/images/pv_results.png) |
-| **Wind** | **Green hydrogen** |
-| ![Wind results](docs/images/wind_results.png) | ![Hydrogen results](docs/images/hydrogen_results.png) |
-| **Battery storage** | **Solar thermal** |
-| ![Battery results](docs/images/battery_results.png) | ![Solar thermal results](docs/images/solar_results.png) |
-| **Why? Formula, reasoning and your numbers** | **Wind: the same, for another technology** |
-| ![Why panel, photovoltaic](docs/images/pv_why.png) | ![Why panel, wind](docs/images/wind_why.png) |
 
 Validation against PVGIS, independent integrations and hand calculations:
 [docs/validation](docs/validation/README.md).

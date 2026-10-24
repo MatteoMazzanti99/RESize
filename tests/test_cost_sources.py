@@ -18,7 +18,7 @@ def _code_values():
     return {
         "pv_capex": {c.pv_capex_eur_per_kwp, h.pv_capex_per_kwp, 1100.0},   # 1,100: the PV cost step
         "pv_om": {c.pv_om_eur_per_kwp_year, h.pv_om_per_kwp, 15.0},
-        "pv_life": {EconomicInputs().life_years},
+        "pv_life": {c.pv_lifetime_years},
         "wind_capex": {c.wind_capex_eur_per_kw, h.wind_capex_per_kw, 1700.0},  # 1,700: the wind cost step
         "wind_om": {c.wind_om_eur_per_kw_year, h.wind_om_per_kw},
         "wind_life": {EconomicInputs().life_years},

@@ -59,7 +59,7 @@ def test_both_plants_cover_the_demand_and_numbers_are_consistent():
     c = inp.costs
     assert r.pv.capex_eur == pytest.approx(r.pv.installed_kw * c.pv_capex_eur_per_kwp)
     assert r.pv.lcoe_eur_per_kwh == pytest.approx(
-        eco.lcoe(r.pv.capex_eur, r.pv.om_eur_per_year, r.pv.energy_kwh, c.discount_rate, 25))
+        eco.lcoe(r.pv.capex_eur, r.pv.om_eur_per_year, r.pv.energy_kwh, c.discount_rate, c.pv_lifetime_years))
     assert r.wind.co2_avoided_lifetime_t == pytest.approx(r.wind.co2_avoided_t_per_year * 25)
     assert r.lowest_lcoe in {"Photovoltaic", "Wind"}
 

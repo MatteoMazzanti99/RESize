@@ -61,7 +61,7 @@ class HydrogenInputs:
     storage_mode: str = "days"             # "days" of autonomy, or "hourly" from the production
     cheapest_hours_first: bool = False     # buy grid electricity in the cheapest hours
     # --- costs (euro) ---
-    electrolyser_capex_per_kw: float = 1800.0
+    electrolyser_capex_per_kw: float = 1000.0
     electrolyser_om_fraction: float = 0.03   # of CAPEX per year
     stack_hours: float = 60_000.0
     stack_cost_fraction: float = 0.40        # of the electrolyser CAPEX
