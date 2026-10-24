@@ -315,7 +315,7 @@ class BiomassResultsPage(BaseResultsPage):
                  plant: BiomassPlantPage) -> None:
         self.demand, self.fuel_page, self.plant = demand, fuel, plant
         super().__init__()
-        self.setTitle("5. Results and design checks")
+        self.setTitle("4. Results and design checks")
 
     def initializePage(self) -> None:
         self.topic_order = topics_for(self.demand.pathway())
