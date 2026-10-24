@@ -619,7 +619,8 @@ class BaseResultsPage(StepPage):
         try:
             wb = self._workbook()
         except ImportError:
-            QMessageBox.information(self, "RESize", "Excel export needs the openpyxl package: "
+            QMessageBox.information(self, "RESize", "Excel export needs the openpyxl package.\n\n"
+                                    "Close RESize and run, in the same Python environment:\n"
                                     "pip install openpyxl")
             return
         path, _ = QFileDialog.getSaveFileName(

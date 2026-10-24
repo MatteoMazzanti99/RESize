@@ -22,13 +22,14 @@ classifiers = [
 dependencies = [
     "numpy>=1.24",
     "pandas>=2.0",
+    "openpyxl>=3.1",   # Excel export of every design
 ]
 
 [project.optional-dependencies]
-gui = ["PySide6>=6.6", "openpyxl>=3.1"]
+gui = ["PySide6>=6.6"]
 pv = ["pvlib>=0.10"]
 ai = ["keyring>=24"]  # optional: remember the API key in the system keyring
-dev = ["pytest>=8", "ruff>=0.5", "openpyxl>=3.1"]
+dev = ["pytest>=8", "ruff>=0.5"]
 
 [project.scripts]
 resize-cli = "resize_energy.cli:main"
