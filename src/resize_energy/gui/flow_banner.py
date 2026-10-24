@@ -16,7 +16,7 @@ from resize_energy.report.flow_art import Flow, Node, flow_svg, picture_size
 
 LAP_MS = 7000
 FRAME_MS = 60
-SCALE = 0.85            # height of the banner on screen relative to the picture's own size
+SCALE = 0.62            # height of the banner on screen relative to the picture's own size
 
 Picture = tuple[list[Node], list[Flow]]
 

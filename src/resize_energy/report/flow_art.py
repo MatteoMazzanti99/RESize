@@ -87,6 +87,13 @@ def _turbine(t, c):
             f'<circle cx="0" cy="-8" r="5" fill="{t["text"]}"/>')
 
 
+def _wind(t, c):
+    """Wind itself: three streaks, the outer two curling away from each other."""
+    return (f'<path d="M-40,-14 H14 q16,0 16,-10 q0,-9 -11,-8" fill="none" stroke="{c}" stroke-width="4.5" stroke-linecap="round"/>'
+            f'<path d="M-30,2 H34" fill="none" stroke="{c}" stroke-width="4.5" stroke-linecap="round"/>'
+            f'<path d="M-40,18 H8 q16,0 16,10 q0,9 -11,8" fill="none" stroke="{c}" stroke-width="4.5" stroke-linecap="round"/>')
+
+
 def _battery(t, c):
     return (f'<rect x="-34" y="-20" width="62" height="40" rx="7" fill="none" stroke="{c}" stroke-width="4"/>'
             f'<rect x="28" y="-8" width="8" height="16" rx="2" fill="{c}"/>'
@@ -151,7 +158,7 @@ def _hot_tank(t, c):
 
 
 ICONS = {"hot_tank": _hot_tank, "engine": _engine, "digester": _digester, "sun": _sun, "panels": _panels, "inverter": _inverter, "house": _house, "grid": _grid,
-         "turbine": _turbine, "battery": _battery, "tank": _tank, "electrolyser": _electrolyser,
+         "turbine": _turbine, "wind": _wind, "battery": _battery, "tank": _tank, "electrolyser": _electrolyser,
          "flame": _flame, "collector": _collector, "tap": _tap, "snow": _snow}
 
 

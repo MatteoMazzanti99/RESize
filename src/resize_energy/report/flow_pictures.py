@@ -57,7 +57,7 @@ def pv_picture(inp: PVInputs, d: PVDesign) -> Picture:
 
 
 def wind_picture(inp: WindInputs, d: WindDesign) -> Picture:
-    nodes = [Node("turbine", "Wind at hub height", f"{d.mean_speed_hub_ms:.1f} m/s", "mean speed",
+    nodes = [Node("wind", "Wind at hub height", f"{d.mean_speed_hub_ms:.1f} m/s", "mean speed",
                   "blue"),
              Node("turbine", "Turbines", f"{d.n_turbines} x {inp.turbine.rated_power_kw:,.0f} kW",
                   f"capacity factor {100 * d.capacity_factor_net:.0f} %", "green"),
