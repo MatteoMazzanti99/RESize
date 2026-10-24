@@ -53,7 +53,7 @@ class ChartSpec:
     vlines: tuple[tuple[float, str], ...] = ()  # (value on the value axis, label)
     hlines: tuple[tuple[float, str], ...] = ()  # lines charts only
     decimals: int = 0
-    width: int = 560
+    width: int = 460
     height: int = 270
 
 
