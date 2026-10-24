@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSplitter,
-    QTextBrowser,
     QVBoxLayout,
     QWidget,
 )
@@ -31,6 +30,7 @@ from resize_energy.core.pv_extra import shading_loss
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.gui.chart_render import render_chart
 from resize_energy.gui.flow_banner import FlowBanner, picture_image
+from resize_energy.gui.formula_image import FormulaBrowser, formula_image
 from resize_energy.gui.numparse import format_number, parse_in_range
 from resize_energy.gui.provenance import insert_before_formulas, provenance_section
 from resize_energy.gui.theme import COLORS, SCREEN_DOC_CSS
@@ -47,7 +47,7 @@ from resize_energy.tutor.why_html import explanation_html
 from resize_energy.tutor.worked import worked_example
 
 
-class ReportBrowser(QTextBrowser):
+class ReportBrowser(FormulaBrowser):
     """Shows the report; ``<img src="chart:NAME">`` is answered with the drawn chart."""
 
     def __init__(self) -> None:
@@ -67,7 +67,7 @@ class ReportDocument(QTextDocument):
         self.images = images
 
     def loadResource(self, rtype, url):
-        image = self.images.get(url.toString())
+        image = self.images.get(url.toString()) or formula_image(url.toString())
         return image if image is not None else super().loadResource(rtype, url)
 
 
@@ -419,7 +419,7 @@ class BaseResultsPage(StepPage):
         for key in self.topic_order:
             self.topics.addItem(EXPLANATIONS[key]["title"])
         self.topics.currentRowChanged.connect(self._show_topic)
-        self.detail = QTextBrowser()
+        self.detail = FormulaBrowser()
         self.detail.document().setDefaultStyleSheet(SCREEN_DOC_CSS)
         self.browser.document().setDefaultStyleSheet(SCREEN_DOC_CSS)
         self.detail.setHtml("<p><i>Why?</i> Select a step above to see its formula, the "
@@ -539,7 +539,7 @@ class BaseResultsPage(StepPage):
         worked = None
         if self._inputs is not None and self._design is not None:
             worked = self._worked(key)
-        self.detail.setHtml(explanation_html(key, worked, heading=False))
+        self.detail.setHtml(explanation_html(key, worked, heading=False, math=True))
 
     def initializePage(self) -> None:
         try:

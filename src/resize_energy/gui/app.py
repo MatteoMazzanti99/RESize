@@ -43,6 +43,9 @@ def _walk_through(window, app) -> int:
         if not results.chart_images or any(i.isNull() for i in results.chart_images.values()):
             print(f"self-test: the {tech} charts were not drawn", flush=True)
             return 1
+        if not _formulas_drawn(results):
+            print(f"self-test: the {tech} formulas were not drawn", flush=True)
+            return 1
         window._restart()
     # the comparison of all four technologies, as started from the Compare zone
     window._start_compare(["pv", "wind", "biomass", "hydrogen"])
@@ -109,6 +112,25 @@ def _solar_cooling_check(window, app) -> int:
         print("self-test: the solar cooling comparison did not appear", flush=True)
         return 1
     return 0
+
+
+def _formulas_drawn(results) -> bool:
+    """Every 'Why?' topic of the results page gives a formula picture that can be loaded."""
+    import re
+
+    from resize_energy.gui.formula_image import formula_image
+    from resize_energy.tutor.why_html import explanation_html
+
+    for key in results.topic_order:
+        html = explanation_html(key, None, math=True)
+        names = re.findall(r'src="(chart:fx_[0-9a-f]+)"', html)
+        if not names:
+            return False
+        for name in names:
+            image = formula_image(name)
+            if image is None or image.isNull() or image.width() < 10:
+                return False
+    return True
 
 
 def _country_check(window, app) -> int:
@@ -201,7 +223,8 @@ def _settle(app, seconds: float = 0.6) -> None:
 
 
 def _screenshots(window, app, folder: str) -> None:
-    """Save a picture of the home page and of the first and last step of every flow."""
+    """Save a picture of the home page and of the first and last step of every flow, and of
+    the 'Why?' panel with a formula."""
     from pathlib import Path
 
     out = Path(folder)
@@ -226,6 +249,11 @@ def _screenshots(window, app, folder: str) -> None:
                 window.grab().save(str(out / f"{tech}_middle.png"))
         _settle(app, 1.0)
         window.grab().save(str(out / f"{tech}_results.png"))
+        topics = getattr(window.pages[-1], "topics", None)
+        if topics is not None and topics.count() > 2:
+            topics.setCurrentRow(2)                  # a topic with a formula, in the Why? panel
+            _settle(app, 0.5)
+            window.grab().save(str(out / f"{tech}_why.png"))
         window._restart()
 
 

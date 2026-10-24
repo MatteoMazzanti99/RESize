@@ -59,7 +59,7 @@ EXPLANATIONS: dict[str, dict[str, str]] = {
     },
     "pv.max_modules_per_string": {
         "title": "Maximum modules per string",
-        "formula": "N_max = floor(Vdc,max / Voc(T_min)),  Voc(T) = Voc,stc * (1 + beta * (T - 25))",
+        "formula": "N_max = floor(V_dc,max / V_oc(T_min)),  V_oc(T) = V_oc,stc * (1 + beta * (T - 25))",
         "why": (
             "Voc rises as the cell gets colder. On the coldest morning, with no load, the "
             "string voltage must remain below the inverter's absolute maximum DC voltage "
@@ -70,7 +70,7 @@ EXPLANATIONS: dict[str, dict[str, str]] = {
     },
     "pv.min_modules_per_string": {
         "title": "Minimum modules per string",
-        "formula": "N_min = ceil(V_mppt,min / Vmp(T_cell,max))",
+        "formula": "N_min = ceil(V_mppt,min / V_mp(T_cell,max))",
         "why": (
             "Vmp drops when cells are hot. At the hottest operating point the string must "
             "still sit inside the inverter's MPPT window, otherwise it loses tracking and energy."
@@ -79,7 +79,7 @@ EXPLANATIONS: dict[str, dict[str, str]] = {
     },
     "pv.mppt_window_cold": {
         "title": "MPPT window at low temperature",
-        "formula": "N_max,mppt = floor(V_mppt,max / Vmp(T_min))",
+        "formula": "N_max,mppt = floor(V_mppt,max / V_mp(T_min))",
         "why": (
             "Vmp is higher on cold days too. If the string's working voltage rises above the "
             "top of the MPPT window the inverter cannot track the maximum power point and "
@@ -90,7 +90,7 @@ EXPLANATIONS: dict[str, dict[str, str]] = {
     "pv.string_layout": {
         "title": "String layout (series and parallel)",
         "formula": (
-            "strings per MPPT = floor(I_max,MPPT / Isc);   N_modules = N_series * N_parallel"
+            "strings per MPPT = floor(I_max,MPPT / I_sc);   N_modules = N_series * N_parallel"
         ),
         "why": (
             "Modules in series add their voltages (limited by the window above); strings in "

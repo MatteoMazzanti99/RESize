@@ -242,7 +242,7 @@ def build_pv_report(
 
 
     why = "".join(
-        explanation_html(key, worked_example(key, inp, design))
+        explanation_html(key, worked_example(key, inp, design), math=True)
         for key in TOPIC_ORDER
         if key in EXPLANATIONS
     )
@@ -337,7 +337,7 @@ def build_wind_report(
         _row("Land for the array", f"{design.array_area_km2:.2f} km2"),
     ]) + _economics_rows(inp.economics, design.economics)[1]
     why = "".join(
-        explanation_html(key, wind_worked_example(key, inp, design))
+        explanation_html(key, wind_worked_example(key, inp, design), math=True)
         for key in WIND_TOPIC_ORDER
         if key in EXPLANATIONS
     )
@@ -482,7 +482,7 @@ def build_comparison_report(
         f"<li>Highest net present value: <b>{escape(r.highest_npv)}</b></li>"
         f"<li>Most CO2 avoided per year: <b>{escape(r.most_co2)}</b></li></ul>")
     why = "".join(
-        explanation_html(key, compare_worked_example(key, inp, r))
+        explanation_html(key, compare_worked_example(key, inp, r), math=True)
         for key in COMPARE_TOPIC_ORDER
         if key in EXPLANATIONS
     )
@@ -586,7 +586,7 @@ def build_biomass_report(
             _row("CO2 avoided", f"{d.co2_avoided_t_per_year:,.0f} t per year"),
         ]
     why = "".join(
-        explanation_html(key, biomass_worked_example(key, inp, d))
+        explanation_html(key, biomass_worked_example(key, inp, d), math=True)
         for key in topics_for(d.pathway)
         if key in EXPLANATIONS
     )
@@ -697,7 +697,7 @@ def build_hydrogen_report(
         f"</tr></table></td></tr>"
         for n, v in parts if v > 0)
     why = "".join(
-        explanation_html(key, hydrogen_worked_example(key, inp, d))
+        explanation_html(key, hydrogen_worked_example(key, inp, d), math=True)
         for key in HYDROGEN_TOPIC_ORDER
         if key in EXPLANATIONS
     )
@@ -781,7 +781,7 @@ def build_battery_report(
         _row("CO2 avoided", f"{d.co2_avoided_t_per_year:,.2f} t per year"),
     ])
     why = "".join(
-        explanation_html(key, battery_worked_example(key, inp, d))
+        explanation_html(key, battery_worked_example(key, inp, d), math=True)
         for key in BATTERY_TOPIC_ORDER
         if key in EXPLANATIONS
     )
@@ -880,7 +880,7 @@ def build_solar_report(
             f"{o.cooling_fraction:.0%} of the cooling, COP {o.mean_cop:.2f}, NPV {o.npv:,.0f} euro"
             for o in d.cooling_options))
     why = "".join(
-        explanation_html(key, solar_worked_example(key, inp, d))
+        explanation_html(key, solar_worked_example(key, inp, d), math=True)
         for key in SOLAR_TOPIC_ORDER
         if key in EXPLANATIONS
     )

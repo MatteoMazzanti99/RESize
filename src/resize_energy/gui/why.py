@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QPushButton, QTextBrowser, QVBoxLayout
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QPushButton, QVBoxLayout
 
+from resize_energy.gui.formula_image import FormulaBrowser
 from resize_energy.gui.theme import SCREEN_DOC_CSS
 from resize_energy.tutor.why_html import explanation_html
 
@@ -18,9 +19,9 @@ class WhyDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Why?")
         self.resize(580, 480)
-        browser = QTextBrowser()
+        browser = FormulaBrowser()
         browser.document().setDefaultStyleSheet(SCREEN_DOC_CSS)
-        browser.setHtml(explanation_html(key, worked))
+        browser.setHtml(explanation_html(key, worked, math=True))
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)
         layout = QVBoxLayout(self)
