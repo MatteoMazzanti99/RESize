@@ -34,6 +34,8 @@ Prefer Python? See *Quick start* below.
 | ![Wind results](docs/images/wind_results.png) | ![Hydrogen results](docs/images/hydrogen_results.png) |
 | **Battery storage** | **Solar thermal** |
 | ![Battery results](docs/images/battery_results.png) | ![Solar thermal results](docs/images/solar_results.png) |
+| **Why? Formula, reasoning and your numbers** | **Wind: the same, for another technology** |
+| ![Why panel, photovoltaic](docs/images/pv_why.png) | ![Why panel, wind](docs/images/wind_why.png) |
 
 Validation against PVGIS, independent integrations and hand calculations:
 [docs/validation](docs/validation/README.md).
