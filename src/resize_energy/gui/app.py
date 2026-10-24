@@ -237,7 +237,7 @@ def _screenshots(window, app, folder: str) -> None:
     window.home.hero.set_height(330)
     _settle(app, 0.3)
     window.grab().save(str(out / "home_half.png"))
-    window.home.hero.set_height(440)
+    window.home.hero.set_height(520)
     _settle(app, 0.3)
     window.grab().save(str(out / "home_open.png"))
     window.home.hero.set_height(210)

@@ -211,7 +211,7 @@ class HeroArt(QWidget):
             return
         p.save()
         p.setOpacity(alpha)
-        for row, (y, scale) in enumerate(((352, 0.8), (385, 1.0), (418, 1.2))):
+        for row, (y, scale) in enumerate(((340, 0.8), (372, 1.0), (404, 1.2))):
             pw, ph = 46 * scale, 20 * scale
             count = 4
             gap = 10 * scale
