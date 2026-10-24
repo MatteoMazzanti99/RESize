@@ -231,12 +231,22 @@ def collector(phase: float) -> str:
 
 
 def tap(phase: float) -> str:
+    """A hot-water tap with a falling drop, and the sun that heats the water."""
     t = _t()
-    flow = 40 * (phase % 1.0)
-    return _wrap(f'<path d="M60,34 h56 a22,22 0 0 1 22,22 v6" fill="none" stroke="{t["red"]}" stroke-width="9" stroke-linecap="round"/>'
-                 f'<rect x="54" y="26" width="14" height="16" rx="3" fill="{t["red"]}"/>'
-                 f'<path d="M138,70 q-9,12 0,18 q9,-6 0,-18z" fill="{t["blue"]}" opacity="{1 - flow / 80:.2f}" transform="translate(0,{flow / 3:.1f})"/>'
-                 f'<text x="60" y="104" font-size="10" fill="{t["muted"]}">Hot water from the sun</text>')
+    u = phase % 1.0
+    drop = (f'<path d="M138,0 q-6,9 0,13 q6,-4 0,-13z" fill="{t["blue"]}" opacity="{1 - u ** 3:.2f}" '
+            f'transform="translate(0,{66 + 24 * u * u:.1f})"/>')
+    sun = (f'<circle cx="176" cy="26" r="9" fill="{t["sun"]}"/>' + "".join(
+        f'<line x1="{176 + 13 * math.cos(k * math.pi / 4):.1f}" y1="{26 + 13 * math.sin(k * math.pi / 4):.1f}" '
+        f'x2="{176 + 18 * math.cos(k * math.pi / 4):.1f}" y2="{26 + 18 * math.sin(k * math.pi / 4):.1f}" '
+        f'stroke="{t["sun"]}" stroke-width="2.5" stroke-linecap="round"/>' for k in range(8)))
+    steam = "".join(
+        f'<path d="M{40 + 14 * k},{44 - 14 * ((u + k / 3) % 1):.1f} q4,-6 0,-11" fill="none" stroke="{t["grey"]}" '
+        f'stroke-width="2.5" stroke-linecap="round" opacity="{0.6 * (1 - (u + k / 3) % 1):.2f}"/>' for k in range(3))
+    return _wrap(f'<path d="M60,48 h56 a22,22 0 0 1 22,22 v-6" fill="none" stroke="{t["red"]}" stroke-width="9" stroke-linecap="round"/>'
+                 f'<rect x="54" y="40" width="14" height="16" rx="3" fill="{t["red"]}"/>'
+                 f'{drop}{sun}{steam}'
+                 f'<line x1="104" y1="104" x2="172" y2="104" stroke="{t["grey"]}" stroke-width="3" stroke-linecap="round"/>')
 
 
 def target(phase: float) -> str:
