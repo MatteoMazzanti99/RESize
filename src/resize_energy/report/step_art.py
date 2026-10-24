@@ -194,12 +194,25 @@ def electrolyser(phase: float) -> str:
 
 
 def flame(phase: float) -> str:
+    """A pile of logs with a little steam rising from it: the fuel."""
     t = _t()
-    s = 1.0 + 0.06 * math.sin(2 * math.pi * phase * 3)
-    return _wrap(f'<g transform="translate(110,60) scale({s:.3f},{1.0 + 0.5 * (s - 1):.3f}) translate(-110,-60)">'
-                 f'<path d="M110,10 C128,38 150,52 140,80 C132,100 88,100 80,80 C72,58 98,44 110,10 Z" fill="{t["red"]}"/>'
-                 f'<path d="M110,52 C120,66 128,76 120,90 C114,98 100,96 100,86 C100,74 106,70 110,52 Z" fill="{t["sun"]}"/></g>'
-                 f'<line x1="60" y1="102" x2="160" y2="102" stroke="{t["grey"]}" stroke-width="3" stroke-linecap="round"/>')
+    wood, ring = "#B9824A", "#8A5A2B"
+    pile = []
+    for row, count in enumerate((4, 3, 2)):
+        for k in range(count):
+            x = 110 + (k - (count - 1) / 2) * 34
+            y = 90 - row * 29
+            pile.append(f'<circle cx="{x:.1f}" cy="{y}" r="16" fill="{wood}" stroke="{ring}" stroke-width="2"/>'
+                        f'<circle cx="{x:.1f}" cy="{y}" r="9.5" fill="none" stroke="{ring}" stroke-width="1.5" opacity="0.7"/>'
+                        f'<circle cx="{x:.1f}" cy="{y}" r="3.5" fill="{ring}" opacity="0.8"/>')
+    steam = []
+    for k in range(3):
+        u = (phase + k / 3) % 1.0
+        x = 86 + 24 * k + 5 * math.sin(2 * math.pi * (u + k / 3))
+        steam.append(f'<circle cx="{x:.1f}" cy="{30 - 22 * u:.1f}" r="{4 + 3 * u:.1f}" fill="{t["grey"]}" '
+                     f'opacity="{0.45 * (1 - u):.2f}"/>')
+    return _wrap("".join(steam) + '<g transform="translate(24,22) scale(0.78)">' + "".join(pile) +
+                 f'<line x1="40" y1="107" x2="180" y2="107" stroke="{t["grey"]}" stroke-width="3" stroke-linecap="round"/></g>')
 
 
 def collector(phase: float) -> str:
@@ -237,12 +250,27 @@ def target(phase: float) -> str:
 
 
 def leaf(phase: float) -> str:
+    """Chimney puffs of CO2 drifting to a tree that takes them back: the biogenic cycle."""
     t = _t()
-    sway = 3 * math.sin(2 * math.pi * phase)
-    return _wrap(f'<g transform="rotate({sway:.2f} 110 100)">'
-                 f'<path d="M110,100 C60,86 64,34 118,16 C150,40 148,86 110,100 Z" fill="{t["green"]}" opacity="0.9"/>'
-                 f'<path d="M110,100 C112,72 116,50 118,16" fill="none" stroke="{t["bg"]}" stroke-width="2.5"/></g>'
-                 f'<text x="150" y="86" font-size="14" font-weight="700" fill="{t["muted"]}">CO2</text>')
+    sway = 2.5 * math.sin(2 * math.pi * phase)
+    plant = (f'<rect x="18" y="62" width="58" height="40" rx="4" fill="{t["orange"]}" opacity="0.9"/>'
+             f'<rect x="54" y="30" width="14" height="34" fill="{t["grey"]}"/>'
+             f'<rect x="28" y="74" width="12" height="12" rx="2" fill="{t["bg"]}" opacity="0.8"/>')
+    puffs = []
+    for k in range(3):
+        u = (phase + k / 3) % 1.0
+        x = 66 + 78 * u
+        y = 24 - 8 * math.sin(math.pi * u)
+        puffs.append(f'<g opacity="{min(1.0, 3 * (1 - u)):.2f}"><circle cx="{x:.1f}" cy="{y:.1f}" r="11" '
+                     f'fill="{t["panel"]}" stroke="{t["grey"]}" stroke-width="2"/>'
+                     f'<text x="{x:.1f}" y="{y + 3.5:.1f}" text-anchor="middle" font-size="9" font-weight="700" '
+                     f'fill="{t["muted"]}">CO2</text></g>')
+    tree = (f'<g transform="rotate({sway:.2f} 168 102)"><rect x="164" y="64" width="8" height="38" rx="2" fill="#8A5A2B"/>'
+            f'<circle cx="168" cy="48" r="24" fill="{t["green"]}" opacity="0.92"/>'
+            f'<circle cx="150" cy="62" r="15" fill="{t["green"]}" opacity="0.85"/>'
+            f'<circle cx="186" cy="62" r="15" fill="{t["green"]}" opacity="0.85"/></g>')
+    return _wrap(plant + tree + "".join(puffs) +
+                 f'<line x1="8" y1="102" x2="212" y2="102" stroke="{t["grey"]}" stroke-width="3" stroke-linecap="round"/>')
 
 
 ARTS = {"sun_path": sun_path, "load_profile": load_profile, "modules": modules, "coins": coins, "sun_wind": sun_wind,
