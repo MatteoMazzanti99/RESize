@@ -62,19 +62,6 @@ class HeroArt(QWidget):
         running = self._opening.state() == QVariantAnimation.State.Running
         if not running and self.height() > MIN_H:   # already open: follow the room available
             self.setFixedHeight(self._max)
-        self._opening.setEndValue(float(MAX_H))
-        self._opening.setDuration(3200)
-        self._opening.setEasingCurve(QEasingCurve.Type.InOutCubic)
-        self._opening.valueChanged.connect(lambda v: self.set_height(float(v)))
-        self._opened = False
-        self._max = MAX_H                      # how far it can open (set by the page)
-
-    def set_limit(self, pixels: float) -> None:
-        """Do not open further than ``pixels`` (the page lines it up with the Compare box)."""
-        self._max = round(max(MIN_H + 60, min(LIMIT_H, pixels)))
-        if self.height() > self._max or (self._opening.state() == QVariantAnimation.State.Stopped
-                                         and self.height() == self._max):
-            self.setFixedHeight(self._max)
         self._opening.setEndValue(float(self._max))
 
     def _open_by_itself(self) -> None:
