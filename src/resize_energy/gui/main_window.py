@@ -137,6 +137,12 @@ class MainWindow(QMainWindow):
         self.cmp_results = CompareResultsPage(self.cmp_site, self.cmp_plant, self.cmp_costs,
                                               self.cmp_selection)
 
+        # the country drop-down of each cost page checks the coordinates of its site step
+        for costs, site in ((self.pv_costs, self.site), (self.wind_costs, self.wind_site),
+                            (self.h2_costs, self.h2_site), (self.bat_costs, self.bat_site),
+                            (self.sol_costs, self.sol_site), (self.cmp_costs, self.cmp_site)):
+            costs.country_bar.site = (site.lat, site.lon)
+
         self.flows: dict[str, tuple[list[str], list[StepPage]]] = {
             "pv": (STEP_NAMES, [self.site, self.load, self.comp, self.pv_costs,
                                 self.results]),

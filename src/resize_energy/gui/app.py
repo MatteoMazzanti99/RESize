@@ -126,6 +126,13 @@ def _country_check(window, app) -> int:
     ok = (abs(costs.retail.value() - italy.electricity_eur_kwh) < 1e-6
           and abs(costs.ef.value() - italy.grid_kg_co2_kwh) < 1e-6
           and "Italy" in costs.retail.provenance())
+    # coordinates of Turin agree with Italy; those of Sydney do not
+    ok = ok and costs.country_bar.check_site() == ""
+    window.site.lat.set_value(-33.9)
+    window.site.lon.set_value(151.2)
+    ok = ok and "Australia" in costs.country_bar.check_site() and costs.country_bar.warning.isVisibleTo(costs)
+    window.site.lat.set_value(45.07)
+    window.site.lon.set_value(7.69)
     # the choice follows to the battery page, which was still on its own defaults
     window._start("battery")
     battery = window.bat_costs

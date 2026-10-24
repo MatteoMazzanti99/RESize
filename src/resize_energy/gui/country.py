@@ -10,7 +10,9 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
+from resize_energy.core import geo
 from resize_energy.core.countries import COUNTRIES, DATA_YEAR, get_country
+from resize_energy.gui.theme import COLORS
 from resize_energy.gui.wizard import NumberField
 
 CUSTOM = "Custom values (type your own)"
@@ -45,6 +47,11 @@ class CountryBar(QWidget):
                            f"emissions ({DATA_YEAR}). You can edit any value afterwards.")
         self.note.setObjectName("hint")
         self.note.setWordWrap(True)
+        self.site: tuple[NumberField, NumberField] | None = None   # latitude and longitude fields
+        self.warning = QLabel()
+        self.warning.setWordWrap(True)
+        self.warning.setStyleSheet(f"color: {COLORS['warning']}; font-weight: 600;")
+        self.warning.hide()
         row = QHBoxLayout()
         row.addWidget(QLabel("Country"))
         row.addWidget(self.combo, 1)
@@ -52,11 +59,36 @@ class CountryBar(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(row)
         layout.addWidget(self.note)
+        layout.addWidget(self.warning)
+
+    def check_site(self) -> str:
+        """Warn when the coordinates typed in the site step are not in the chosen country.
+
+        Returns the warning text ('' when there is nothing to say)."""
+        text = ""
+        code = str(self.combo.currentData() or "")
+        if code and self.site is not None:
+            try:
+                lat, lon = self.site[0].value(), self.site[1].value()
+            except ValueError:
+                lat = lon = None
+            if lat is not None and geo.in_country(code, lat, lon) is False:
+                where = [get_country(c).name for c in geo.countries_at(lat, lon)
+                         if any(x.code == c for x in COUNTRIES)]
+                hint = f" They look like {' or '.join(where)}." if where else ""
+                text = (f"Check the country: the site coordinates ({lat:.2f}, {lon:.2f}) do not "
+                        f"look like {get_country(code).name}.{hint} The prices and the grid "
+                        "emission factor may not match your site (this check is approximate "
+                        "near borders).")
+        self.warning.setText(text)
+        self.warning.setVisible(bool(text))
+        return text
 
     def _picked(self, _index: int) -> None:
         global _chosen
         _chosen = str(self.combo.currentData() or "")
         self.apply(_chosen)
+        self.check_site()
 
     def apply(self, code: str) -> None:
         """Fill the fields from the country ``code`` ('' leaves the numbers as they are)."""
@@ -79,3 +111,4 @@ class CountryBar(QWidget):
             if index > 0:
                 self.combo.setCurrentIndex(index)
                 self.apply(_chosen)
+        self.check_site()
