@@ -1,6 +1,6 @@
-"""Home-page illustration: a sun over a landscape that grows when you pull it down.
+"""Home-page illustration: a sun over a landscape that unrolls by itself.
 
-Closed it shows the sun and a green ridge. Pulling the grip at the bottom reveals, in turn, a
+At first it shows the sun and a green ridge. The picture then grows downwards, once, revealing a
 wind turbine that rises from the ridge and a solar farm on the plain below. Drawn in code (no
 image files). The rotation runs only while the widget is visible.
 """
@@ -19,7 +19,6 @@ SUN = "#F5B941"
 BLADE_STEP_DEG = 120.0  # three blades: one third of a turn looks identical, so the loop is seamless
 MIN_H, MAX_H = 210, 440   # MAX_H: the height the landscape is drawn for
 LIMIT_H = 520               # the tallest the picture may ever be
-GRIP = 26               # height of the strip at the bottom that can be dragged
 RADIUS = 26
 PANEL = "#2F5FA8"
 
@@ -35,14 +34,11 @@ def reveal(height: float, start: float, span: float) -> float:
 
 
 class HeroArt(QWidget):
-    """The home-page illustration; its height can be dragged between MIN_H and MAX_H."""
+    """The home-page illustration; it opens once and then keeps its height."""
 
     def __init__(self, width: int = 300, height: int = MIN_H) -> None:
         super().__init__()
         self.setFixedSize(width, height)
-        self.setMouseTracking(True)
-        self.setToolTip("Drag the bottom edge down to see more of the landscape")
-        self._drag: tuple[float, int] | None = None
         self._angle = 0.0
         self._anim = QVariantAnimation(self)
         self._anim.setStartValue(0.0)
@@ -63,56 +59,37 @@ class HeroArt(QWidget):
     def set_limit(self, pixels: float) -> None:
         """Do not open further than ``pixels`` (the page lines it up with the Compare box)."""
         self._max = round(max(MIN_H + 60, min(LIMIT_H, pixels)))
+        running = self._opening.state() == QVariantAnimation.State.Running
+        if not running and self.height() > MIN_H:   # already open: follow the room available
+            self.setFixedHeight(self._max)
+        self._opening.setEndValue(float(MAX_H))
+        self._opening.setDuration(3200)
+        self._opening.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        self._opening.valueChanged.connect(lambda v: self.set_height(float(v)))
+        self._opened = False
+        self._max = MAX_H                      # how far it can open (set by the page)
+
+    def set_limit(self, pixels: float) -> None:
+        """Do not open further than ``pixels`` (the page lines it up with the Compare box)."""
+        self._max = round(max(MIN_H + 60, min(LIMIT_H, pixels)))
         if self.height() > self._max or (self._opening.state() == QVariantAnimation.State.Stopped
                                          and self.height() == self._max):
             self.setFixedHeight(self._max)
         self._opening.setEndValue(float(self._max))
 
     def _open_by_itself(self) -> None:
-        if not self._opened and self._drag is None and self.height() == MIN_H:
+        if not self._opened and self.height() == MIN_H:
             self._opening.start()
         self._opened = True
 
     def stop_opening(self) -> None:
-        """Stop the automatic opening (the user took over, or a test wants a fixed size)."""
+        """Stop the automatic opening (a test wants a fixed size)."""
         self._opening.stop()
         self._opened = True
 
     # --- size ----------------------------------------------------------------------------
     def set_height(self, height: float) -> None:
         self.setFixedHeight(round(max(MIN_H, min(self._max, height))))
-
-    def _in_grip(self, y: float) -> bool:
-        return y >= self.height() - GRIP
-
-    def mousePressEvent(self, event) -> None:
-        if event.button() == Qt.MouseButton.LeftButton and self._in_grip(event.position().y()):
-            self.stop_opening()
-            self._drag = (event.globalPosition().y(), self.height())
-            event.accept()
-            return
-        super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event) -> None:
-        if self._drag is not None:
-            start_y, start_h = self._drag
-            self.set_height(start_h + event.globalPosition().y() - start_y)
-            event.accept()
-            return
-        self.setCursor(Qt.CursorShape.SizeVerCursor if self._in_grip(event.position().y())
-                       else Qt.CursorShape.ArrowCursor)
-        super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event) -> None:
-        self._drag = None
-        super().mouseReleaseEvent(event)
-
-    def mouseDoubleClickEvent(self, event) -> None:
-        if self._in_grip(event.position().y()):    # open fully, or close again
-            self.stop_opening()
-            self.set_height(MIN_H if self.height() > MIN_H else self._max)
-            return
-        super().mouseDoubleClickEvent(event)
 
     # --- animation -----------------------------------------------------------------------
     def _on_value(self, value) -> None:
@@ -186,7 +163,6 @@ class HeroArt(QWidget):
         self._solar_farm(p, w, reveal(grow, 300, 110))
         p.restore()
         self._turbine(p, QPointF(peak.x(), peak.y() * k), reveal(h, MIN_H, 70))
-        self._grip(p, w, h)
         p.end()
 
     def _turbine(self, p: QPainter, base: QPointF, grow: float) -> None:
@@ -231,11 +207,3 @@ class HeroArt(QWidget):
                 p.drawLine(QPointF(x + pw / 2, y), QPointF(x + pw / 2, y + 4 * scale))
                 x += pw + gap
         p.restore()
-
-    @staticmethod
-    def _grip(p: QPainter, w: float, h: float) -> None:
-        p.setPen(Qt.PenStyle.NoPen)
-        colour = QColor(COLORS["text"])
-        colour.setAlpha(70)
-        p.setBrush(QBrush(colour))
-        p.drawRoundedRect(QRectF(w / 2 - 17, h - 11, 34, 4.5), 2.2, 2.2)
