@@ -229,6 +229,8 @@ def _screenshots(window, app, folder: str) -> None:
 
     out = Path(folder)
     out.mkdir(parents=True, exist_ok=True)
+    window.home.hero.stop_opening()      # fixed sizes for the pictures
+    window.home.hero.set_height(210)
     window.resize(1240, 820)
     _settle(app)
     window.grab().save(str(out / "home.png"))

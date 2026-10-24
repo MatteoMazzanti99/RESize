@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import math
 
-from PySide6.QtCore import QPointF, QRectF, Qt, QVariantAnimation
+from PySide6.QtCore import QEasingCurve, QPointF, QRectF, Qt, QTimer, QVariantAnimation
 from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPen, QPolygonF
 from PySide6.QtWidgets import QWidget
 
@@ -49,6 +49,24 @@ class HeroArt(QWidget):
         self._anim.setDuration(5000)  # one third of a turn per 5 s: calm, not distracting
         self._anim.setLoopCount(-1)
         self._anim.valueChanged.connect(self._on_value)
+        # the first time the home page is shown the landscape unrolls by itself
+        self._opening = QVariantAnimation(self)
+        self._opening.setStartValue(float(MIN_H))
+        self._opening.setEndValue(float(MAX_H))
+        self._opening.setDuration(3200)
+        self._opening.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        self._opening.valueChanged.connect(lambda v: self.set_height(float(v)))
+        self._opened = False
+
+    def _open_by_itself(self) -> None:
+        if not self._opened and self._drag is None and self.height() == MIN_H:
+            self._opening.start()
+        self._opened = True
+
+    def stop_opening(self) -> None:
+        """Stop the automatic opening (the user took over, or a test wants a fixed size)."""
+        self._opening.stop()
+        self._opened = True
 
     # --- size ----------------------------------------------------------------------------
     def set_height(self, height: float) -> None:
@@ -59,6 +77,7 @@ class HeroArt(QWidget):
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton and self._in_grip(event.position().y()):
+            self.stop_opening()
             self._drag = (event.globalPosition().y(), self.height())
             event.accept()
             return
@@ -80,6 +99,7 @@ class HeroArt(QWidget):
 
     def mouseDoubleClickEvent(self, event) -> None:
         if self._in_grip(event.position().y()):    # open fully, or close again
+            self.stop_opening()
             self.set_height(MIN_H if self.height() > MIN_H else MAX_H)
             return
         super().mouseDoubleClickEvent(event)
@@ -91,6 +111,8 @@ class HeroArt(QWidget):
 
     def showEvent(self, event) -> None:
         self._anim.start()
+        if not self._opened:
+            QTimer.singleShot(700, self._open_by_itself)
         super().showEvent(event)
 
     def hideEvent(self, event) -> None:
