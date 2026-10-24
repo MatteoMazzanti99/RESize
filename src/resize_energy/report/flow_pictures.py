@@ -85,9 +85,11 @@ def battery_picture(inp: BatteryInputs, d: BatteryDesign) -> Picture:
 
 
 def hydrogen_picture(inp: HydrogenInputs, d: HydrogenDesign) -> Picture:
-    source = "turbine" if (inp.use_wind and not inp.use_pv) else "sun"
-    nodes = [Node(source, "Electricity used", energy(d.electricity_kwh),
-                  f"{100 * d.grid_share:.0f} % from the grid", "sun"),
+    used = [name for name, on in (("PV", inp.use_pv), ("wind", inp.use_wind)) if on]
+    where = (" + ".join(used) if used else "grid only")
+    if used and inp.use_grid:
+        where += f" + grid ({100 * d.grid_share:.0f} %)"
+    nodes = [Node("bolt", "Electricity used", energy(d.electricity_kwh), where, "sun"),
              Node("electrolyser", "Electrolyser", power(d.electrolyser_kw),
                   f"{100 * d.efficiency_lhv:.0f} % efficient (LHV)", "blue"),
              Node("tank", "Storage", f"{d.storage_kg:,.0f} kg", f"{inp.storage_bar:.0f} bar",

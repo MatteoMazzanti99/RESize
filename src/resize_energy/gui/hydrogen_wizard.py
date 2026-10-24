@@ -474,6 +474,7 @@ class HydrogenResultsPage(BaseResultsPage):
                  plant: HydrogenPlantPage, costs: HydrogenCostPage) -> None:
         self.goal, self.site, self.plant, self.costs = goal, site, plant, costs
         super().__init__()
+        self.setTitle("5. Results and design checks")
 
     def _compute(self) -> tuple[object, object, list[Finding], str, str]:
         g, p, c = self.goal, self.plant, self.costs
