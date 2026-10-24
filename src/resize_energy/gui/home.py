@@ -70,7 +70,8 @@ class HomePage(StepPage):
         top = QHBoxLayout()
         top.setSpacing(28)
         top.addLayout(text, 1)
-        top.addWidget(HeroArt(), 0, Qt.AlignmentFlag.AlignTop)
+        self.hero = HeroArt()
+        top.addWidget(self.hero, 0, Qt.AlignmentFlag.AlignTop)
         root.addLayout(top)
         root.addSpacing(26)
 

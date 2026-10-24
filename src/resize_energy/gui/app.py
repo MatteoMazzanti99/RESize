@@ -232,6 +232,14 @@ def _screenshots(window, app, folder: str) -> None:
     window.resize(1240, 820)
     _settle(app)
     window.grab().save(str(out / "home.png"))
+    window.home.hero.set_height(330)
+    _settle(app, 0.3)
+    window.grab().save(str(out / "home_half.png"))
+    window.home.hero.set_height(440)
+    _settle(app, 0.3)
+    window.grab().save(str(out / "home_open.png"))
+    window.home.hero.set_height(210)
+    _settle(app, 0.3)
     zone = window.home.zone
     for key in ("pv", "hydrogen", "biomass"):
         zone.add(key)
