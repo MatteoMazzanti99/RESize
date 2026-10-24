@@ -230,9 +230,6 @@ REFS: dict[str, Ref] = {
     "irena_storage2017": _r("IRENA (2017)", "International Renewable Energy Agency", "2017",
                             "Electricity Storage and Renewables: Costs and Markets to 2030",
                             "IRENA, Abu Dhabi", kind="report"),
-    "iea_pvps_trends": _r("IEA PVPS (2024)", "IEA Photovoltaic Power Systems Programme", "2024",
-                          "Trends in Photovoltaic Applications", "IEA PVPS", "latest edition: check",
-                          kind="report"),
     "vdew1999": _r("VDEW (1999)", "VDEW", "1999", "Repräsentative VDEW-Lastprofile",
                    "VDEW-Materialien M-32/99, Frankfurt", kind="report"),
     # --- biomass --------------------------------------------------------------------------------
@@ -282,6 +279,35 @@ REFS: dict[str, Ref] = {
     "iea_shc": _r("IEA SHC Tasks", "IEA Solar Heating and Cooling Programme", "",
                   "Task reports of the IEA SHC Programme (Tasks 26, 32, 38, 44, 53)",
                   "IEA SHC", url="https://www.iea-shc.org/", kind="report"),
+    # --- cost data ------------------------------------------------------------------------------
+    "fraunhofer2024": _r("Kost et al. (2024)",
+                         "Kost, C., Müller, P., Sepúlveda Schweiger, J., Fluri, V., Thomsen, J.", "2024",
+                         "Levelized Cost of Electricity: Renewable Energy Technologies",
+                         "Fraunhofer Institute for Solar Energy Systems ISE, Freiburg", "July 2024",
+                         url="https://www.ise.fraunhofer.de/en/publications/studies/cost-of-electricity.html",
+                         kind="report"),
+    "iea_pvps_italy2024": _r("IEA PVPS (2024), Italy", "IEA Photovoltaic Power Systems Programme", "2024",
+                             "National Survey Report of PV Power Applications in Italy 2024", "IEA PVPS",
+                             url="https://iea-pvps.org/national_survey/nsr-italy-2024/", kind="report"),
+    "nrel_atb2024": _r("NREL ATB (2024)", "National Renewable Energy Laboratory", "2024",
+                       "Annual Technology Baseline: the 2024 electricity update, utility-scale PV",
+                       "NREL, Golden", url="https://atb.nrel.gov/electricity/2024/utility-scale_pv",
+                       kind="dataset"),
+    "cole2023": _r("Cole & Karmakar (2023)", "Cole, W., Karmakar, A.", "2023",
+                   "Cost Projections for Utility-Scale Battery Storage: 2023 Update",
+                   "National Renewable Energy Laboratory, Golden", "NREL/TP-6A40-85332",
+                   url="https://www.nrel.gov/docs/fy23osti/85332.pdf", kind="report"),
+    "baldwin2014": _r("Baldwin (2014)", "Baldwin, D. (Hexagon Lincoln)", "2014",
+                      "Development of High Pressure Hydrogen Storage Tank for Storage and Gaseous Truck "
+                      "Delivery", "U.S. DOE Hydrogen and Fuel Cells Program Annual Merit Review, project "
+                      "PD021, 17 June 2014",
+                      url="https://www.hydrogen.energy.gov/pdfs/review14/pd021_baldwin_2014_o.pdf",
+                      kind="report"),
+    "mugnier2018": _r("Mugnier et al. (2018)", "Mugnier, D., Saile, S., Philippen, D.", "2018",
+                      "Review of installation costs. Info Sheet D1, IEA SHC Task 54 Price Reduction of "
+                      "Solar Thermal Systems", "IEA Solar Heating and Cooling Programme", "15 September 2018",
+                      url="https://mobile.iea-shc.org/Data/Sites/1/publications/D01-Info-Sheet--Review-of-Installation-Costs.pdf",
+                      kind="report"),
 }
 
 

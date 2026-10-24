@@ -5,6 +5,7 @@ from __future__ import annotations
 from html import escape
 
 from resize_energy.report.formula_art import register, worked_html
+from resize_energy.tutor.cost_sources import costs_html
 from resize_energy.tutor.explanations import EXPLANATIONS
 from resize_energy.tutor.sources import SOURCES, sources_html
 
@@ -39,6 +40,7 @@ def explanation_html(key: str, worked: str | None = None, heading: bool = True,
     elif worked:
         parts.append(f"<p><b>With your numbers</b><br><code>{_multiline(worked)}</code></p>")
     parts.append(f"<p><i>Assumptions: {escape(entry['assumptions'])}</i></p>")
+    parts.append(costs_html(key))
     if key in SOURCES:
         parts.append(sources_html(key, full=full_refs))
     elif entry.get("reference"):

@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 
 from resize_energy.tutor.bibliography import REFS, full_citation
+from resize_energy.tutor.cost_sources import COSTS, _VERDICTS
 from resize_energy.tutor.explanations import EXPLANATIONS
 from resize_energy.tutor.sources import SOURCES
 
@@ -31,6 +32,15 @@ def main() -> None:
              "", "## Bibliography", ""]
     for key in sorted(REFS, key=lambda k: REFS[k].short.lower()):
         lines.append(f"- {md(full_citation(key))}")
+    lines += ["", "## Default costs and where they come from", "",
+              "Orders of magnitude from the literature, not quotes: prices change every year and with "
+              "size and country. Replace the defaults with your own quotes.", "",
+              "| Component | Default | Literature | Source | Assessment |", "|---|---|---|---|---|"]
+    for c in COSTS.values():
+        defaults = " / ".join(f"{v:,.4g}" for v in c.defaults)
+        cites = "; ".join(REFS[k].short + (f", {w}" if w else "") for k, w in c.refs) or "none found"
+        note = _VERDICTS[c.verdict] + (f" {c.comment}" if c.comment else "")
+        lines.append(f"| {c.component} | {defaults} {c.unit} | {c.literature} | {cites} | {note} |")
     lines += ["", "## Sources by topic", ""]
     for topic, entry in SOURCES.items():
         title = EXPLANATIONS[topic]["title"]

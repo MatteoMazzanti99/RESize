@@ -8,12 +8,14 @@ Standards and reports are revised: use the current edition when you cite them. W
 
 - Armijo, J., Philibert, C. (2020). Flexible production of green hydrogen and ammonia from variable solar and wind energy: case study of Chile and Argentina. *International Journal of Hydrogen Energy* 45(3):1541-1558.
 - ASHRAE. *ASHRAE Handbook: HVAC Applications, chapter 'Service Water Heating'*, use the current edition. ASHRAE, Atlanta. <https://www.ashrae.org/>
+- Baldwin, D. (Hexagon Lincoln) (2014). *Development of High Pressure Hydrogen Storage Tank for Storage and Gaseous Truck Delivery*. U.S. DOE Hydrogen and Fuel Cells Program Annual Merit Review, project PD021, 17 June 2014. <https://www.hydrogen.energy.gov/pdfs/review14/pd021_baldwin_2014_o.pdf>
 - Betz, A. (1926). *Wind-Energie und ihre Ausnutzung durch Windmühlen*. Vandenhoeck & Ruprecht, Göttingen.
 - Bliss, R.W. (1959). The derivations of several 'plate-efficiency factors' useful in the design of flat-plate solar heat collectors. *Solar Energy* 3(4):55-64.
 - Brauns, J., Turek, T. (2020). Alkaline water electrolysis powered by renewable energy: a review. *Processes* 8(2):248.
 - Burton, T., Jenkins, N., Sharpe, D., Bossanyi, E. (2011). *Wind Energy Handbook*, 2nd ed. Wiley, Chichester.
 - Buttler, A., Spliethoff, H. (2018). Current status of water electrolysis for energy storage, grid balancing and sector coupling via power-to-gas and power-to-liquids: a review. *Renewable and Sustainable Energy Reviews* 82:2440-2454. doi:<https://doi.org/10.1016/j.rser.2017.09.003>
 - Carmo, M., Fritz, D.L., Mergel, J., Stolten, D. (2013). A comprehensive review on PEM water electrolysis. *International Journal of Hydrogen Energy* 38(12):4901-4934. doi:<https://doi.org/10.1016/j.ijhydene.2013.01.151>
+- Cole, W., Karmakar, A. (2023). *Cost Projections for Utility-Scale Battery Storage: 2023 Update*. National Renewable Energy Laboratory, Golden, NREL/TP-6A40-85332. <https://www.nrel.gov/docs/fy23osti/85332.pdf>
 - Davis, N.N., et al. (2023). The Global Wind Atlas: a high-resolution dataset of climatologies and associated web-based application. *Bulletin of the American Meteorological Society* 104(8):E1507-E1525. <https://globalwindatlas.info/>
 - European Parliament and Council (2023). *Directive (EU) 2023/2413 amending Directive (EU) 2018/2001 (RED III)*. Official Journal of the European Union.
 - Duffie, J.A., Beckman, W.A. (2013). *Solar Engineering of Thermal Processes*, 4th ed. Wiley, Hoboken.
@@ -34,7 +36,7 @@ Standards and reports are revised: use the current edition when you cite them. W
 - International Energy Agency, Nuclear Energy Agency (2020). *Projected Costs of Generating Electricity, 2020 edition*. OECD Publishing, Paris.
 - International Energy Agency (2019). *The Future of Hydrogen*. IEA, Paris.
 - International Energy Agency (2024). *Global Hydrogen Review 2024*. IEA, Paris, latest edition: check.
-- IEA Photovoltaic Power Systems Programme (2024). *Trends in Photovoltaic Applications*. IEA PVPS, latest edition: check.
+- IEA Photovoltaic Power Systems Programme (2024). *National Survey Report of PV Power Applications in Italy 2024*. IEA PVPS. <https://iea-pvps.org/national_survey/nsr-italy-2024/>
 - IEA Solar Heating and Cooling Programme. *Task reports of the IEA SHC Programme (Tasks 26, 32, 38, 44, 53)*. IEA SHC. <https://www.iea-shc.org/>
 - International Electrotechnical Commission. *IEC 61400-1: Wind energy generation systems, design requirements*. IEC, Geneva, use the current edition.
 - International Electrotechnical Commission. *IEC 61400-12-1: Wind energy generation systems, power performance measurements of electricity producing wind turbines*. IEC, Geneva, use the current edition.
@@ -53,6 +55,7 @@ Standards and reports are revised: use the current edition when you cite them. W
 - Justus, C.G., Hargraves, W.R., Mikhail, A., Graber, D. (1978). Methods for estimating wind speed frequency distributions. *Journal of Applied Meteorology* 17(3):350-353.
 - Katić, I., Højstrup, J., Jensen, N.O. (1986). *A simple model for cluster efficiency*. Proceedings of the European Wind Energy Association Conference and Exhibition (EWEC'86), Rome, pp. 407-410.
 - Klein, S.A., Beckman, W.A. (1979). A general design method for closed-loop solar energy systems. *Solar Energy* 22(3):269-282.
+- Kost, C., Müller, P., Sepúlveda Schweiger, J., Fluri, V., Thomsen, J. (2024). *Levelized Cost of Electricity: Renewable Energy Technologies*. Fraunhofer Institute for Solar Energy Systems ISE, Freiburg, July 2024. <https://www.ise.fraunhofer.de/en/publications/studies/cost-of-electricity.html>
 - KTBL (2013). *Faustzahlen Biogas*. KTBL, Darmstadt, 3rd ed..
 - Lazard (2024). *Lazard's Levelized Cost of Energy+ (LCOE+)*. Lazard, New York, latest edition: check.
 - Luque, A., Hegedus, S. (eds.) (2011). *Handbook of Photovoltaic Science and Engineering*, 2nd ed. Wiley, Chichester.
@@ -61,8 +64,10 @@ Standards and reports are revised: use the current edition when you cite them. W
 - Masters, G.M. (2013). *Renewable and Efficient Electric Power Systems*, 2nd ed. Wiley, Hoboken.
 - McKendry, P. (2002). Energy production from biomass (part 1): overview of biomass. *Bioresource Technology* 83(1):37-46.
 - Mondol, J.D., Yohanis, Y.G., Norton, B. (2006). Optimal sizing of array and inverter for grid-connected photovoltaic systems. *Solar Energy* 80(12):1517-1539.
+- Mugnier, D., Saile, S., Philippen, D. (2018). *Review of installation costs. Info Sheet D1, IEA SHC Task 54 Price Reduction of Solar Thermal Systems*. IEA Solar Heating and Cooling Programme, 15 September 2018. <https://mobile.iea-shc.org/Data/Sites/1/publications/D01-Info-Sheet--Review-of-Installation-Costs.pdf>
 - NASA Langley Research Center. *Prediction Of Worldwide Energy Resources (POWER) Project*. <https://power.larc.nasa.gov/>
 - Linstrom, P.J., Mallard, W.G. (eds.). *NIST Chemistry WebBook, NIST Standard Reference Database Number 69*. NIST. doi:<https://doi.org/10.18434/T4D303>
+- National Renewable Energy Laboratory (2024). *Annual Technology Baseline: the 2024 electricity update, utility-scale PV*. NREL, Golden. <https://atb.nrel.gov/electricity/2024/utility-scale_pv>
 - National Renewable Energy Laboratory. *turbine-models: power curves and specifications of wind turbines*. <https://github.com/NREL/turbine-models>
 - Obernberger, I., Thek, G. (2010). *The Pellet Handbook: The Production and Thermal Utilization of Biomass Pellets*. Earthscan, London.
 - Peters, J.F., Baumann, M., Zimmermann, B., Braun, J., Weil, M. (2017). The environmental impact of Li-ion batteries and the role of key parameters: a review. *Renewable and Sustainable Energy Reviews* 67:491-506.
@@ -84,6 +89,33 @@ Standards and reports are revised: use the current edition when you cite them. W
 - Weiss, W., Spörk-Dür, M. (2024). *Solar Heat Worldwide*. AEE INTEC, for the IEA Solar Heating and Cooling Programme, latest edition: check.
 - Weniger, J., Tjaden, T., Quaschning, V. (2014). Sizing of residential PV battery systems. *Energy Procedia* 46:78-87.
 - Šúri, M., Huld, T.A., Dunlop, E.D., Ossenbrink, H.A. (2007). Potential of solar electricity generation in the European Union member states and candidate countries. *Solar Energy* 81(10):1295-1305. doi:<https://doi.org/10.1016/j.solener.2006.12.007>
+
+## Default costs and where they come from
+
+Orders of magnitude from the literature, not quotes: prices change every year and with size and country. Replace the defaults with your own quotes.
+
+| Component | Default | Literature | Source | Assessment |
+|---|---|---|---|---|
+| PV plant, installed | 1,100 / 1,000 euro per kWp | Germany 2024: rooftop up to 30 kWp 1,000-2,000; rooftop above 30 kWp 900-1,600; ground-mounted above 1 MWp 700-900 euro/kWp. Italy 2024: residential rooftop 1.20-1.60 euro/W. | Kost et al. (2024), Table 1; IEA PVPS (2024), Italy, key figures | Default inside the range of the sources. |
+| PV operation and maintenance | 15 euro per kWp per year | Germany 2024, fixed OPEX: small rooftop 26, large rooftop 21.5, utility-scale 13.3 euro/kW per year. USA 2022, utility-scale: 24 USD/kW(AC) per year. | Kost et al. (2024), Table 2; NREL ATB (2024), fixed O&M | Default below the range of the sources. Right for a large ground-mounted plant, low for a rooftop one. |
+| PV plant life | 25 years | Germany 2024 and USA 2022: 30 years. | Kost et al. (2024), Table 2; NREL ATB (2024), lifetime | Default below the range of the sources. A cautious value. |
+| Onshore wind turbines, installed | 1,700 / 1,500 euro per kW | Germany 2024: onshore wind 1,300-1,900 euro/kW. | Kost et al. (2024), Table 1 | Default inside the range of the sources. Small wind turbines cost much more per kW and are not in this range. |
+| Wind operation and maintenance | 45 euro per kW per year | Germany 2024, onshore: fixed 32 euro/kW per year plus 0.007 euro/kWh variable, which is about 47 euro/kW per year at a 25 % capacity factor (RESize's arithmetic). | Kost et al. (2024), Table 2 | Default inside the range of the sources. |
+| Wind plant life | 25 years | Germany 2024: 25 years for onshore wind. | Kost et al. (2024), Table 2 | Default inside the range of the sources. |
+| Biogas plant with CHP, installed | 4,500 euro per kW of electricity | Germany 2024: biogas 2,894-5,788 euro/kW; solid biomass 3,473-5,788 euro/kW. | Kost et al. (2024), Table 1 | Default inside the range of the sources. |
+| Biogas operation and maintenance | 250 euro per kW per year | Germany 2024: fixed OPEX 4 % of the investment plus 0.004 euro/kWh variable, about 210 euro/kW per year for a 4,500 euro/kW plant at 8,000 hours (RESize's arithmetic). | Kost et al. (2024), Table 2 | Default inside the range of the sources. Same order of magnitude. |
+| Lithium-ion battery, installed | 550 euro per kWh | Germany 2024: home battery with a small PV plant 500-1,000; with a large rooftop plant 450-800; with a utility-scale plant 400-600 euro/kWh. USA 2022, 4-hour utility-scale system: 482 USD/kWh. | Kost et al. (2024), Table 1; Cole & Karmakar (2023), 2022 base year | Default inside the range of the sources. |
+| Battery power electronics | 100 euro per kW | The sources give the whole system per kWh, not a separate cost per kW. | none found | No source found: the default is a round placeholder of RESize. |
+| Battery operation and maintenance | 1.5 percent of CAPEX per year | Germany 2024: about 2 % of the battery investment for utility-scale systems. | Kost et al. (2024), Table 2 | Default below the range of the sources. Slightly low. |
+| Battery calendar life | 15 years | Germany 2024: 15 years for PV battery systems. | Kost et al. (2024), Table 2 | Default inside the range of the sources. |
+| Electrolyser system, installed | 1,800 euro per kW | IRENA 2020, installed system above 10 MW: alkaline 500-1,000, PEM 700-1,400 USD/kW (2020 values). | IRENA (2020a), Table ES1, p. 12 | Default above the range of the sources. A cautious value for a small plant with everything included; the large-plant range of IRENA is lower. Replace it with a quote. |
+| Electrolyser stack life | 6e+04 hours | Alkaline 60,000; PEM 50,000-80,000 hours (2020 values). | IRENA (2020a), Table ES1, p. 12 | Default inside the range of the sources. |
+| Stack replacement cost | 0.4 fraction of the electrolyser CAPEX | From the same table: stack-only 270 (alkaline) and 400 (PEM) USD/kW against a system of 500-1,000 and 700-1,400 USD/kW: about 27-57 % (RESize's arithmetic). | IRENA (2020a), Table ES1, p. 12 | Default inside the range of the sources. |
+| Electrolyser energy per kg of hydrogen | 55 kWh per kg | System efficiency 2020: alkaline 50-78, PEM 50-83 kWh/kg. | IRENA (2020a), Table ES1, p. 12 | Default inside the range of the sources. |
+| Electrolyser operation and maintenance | 0.03 fraction of CAPEX per year | IRENA does not give O&M as a share of CAPEX. | none found | No source found: the default is a round placeholder of RESize. |
+| Compressed hydrogen storage | 600 euro per kg stored | About 500 USD/kg (2010) rising to about 800 USD/kg (2013) for a 250 bar tank module (Hexagon Lincoln, a DOE project); currencies are not converted. | Baldwin (2014), slides on cost | Default inside the range of the sources. |
+| Flat-plate solar collector, installed | 380 euro per m2 of aperture | Germany, small systems: domestic hot water for one house 940 euro/m2 (average 5.2 m2), combi systems 680 euro/m2 (13.4 m2); about 800 euro/m2 over all surveyed countries and system types. | Mugnier et al. (2018), Fig. 1 and text | Default below the range of the sources. The default fits large collector fields, not a house; for a house use a quote. |
+| Evacuated-tube and unglazed collectors, storage tank, fixed costs, adsorption chiller | 520 / 120 / 1.8 / 1,500 / 1,100 euro per m2, per litre, euro, per kW | No document with numbers for these items was found. | none found | No source found: the default is a round placeholder of RESize. Round placeholders: replace them with quotes. |
 
 ## Sources by topic
 
@@ -157,7 +189,7 @@ Standards and reports are revised: use the current edition when you cite them. W
 ### Costs, savings and payback
 
 - **Formula:** Short et al. (1995)
-- **Values and assumptions:** IRENA (2024), cost ranges
+- **Values and assumptions:** Kost et al. (2024), cost ranges; IEA PVPS (2024), Italy, Italian prices; NREL ATB (2024)
 
 ### Which assumption matters most?
 
@@ -231,7 +263,7 @@ Standards and reports are revised: use the current edition when you cite them. W
 ### Costs, savings and payback
 
 - **Formula:** Short et al. (1995)
-- **Values and assumptions:** IRENA (2024), cost ranges
+- **Values and assumptions:** Kost et al. (2024), cost ranges
 
 ### Which assumption matters most?
 
@@ -251,7 +283,7 @@ Standards and reports are revised: use the current edition when you cite them. W
 ### Levelised cost of energy (LCOE)
 
 - **Formula:** IEA & NEA (2020); IRENA (2024)
-- **Values and assumptions:** IRENA (2024), cost ranges
+- **Values and assumptions:** Kost et al. (2024), cost ranges
 
 ### Value of the energy: avoided purchases and exports
 
@@ -454,7 +486,7 @@ Standards and reports are revised: use the current edition when you cite them. W
 ### Savings, payback and net present value
 
 - **Formula:** Short et al. (1995)
-- **Values and assumptions:** IEA PVPS (2024), prices and costs
+- **Values and assumptions:** Kost et al. (2024), battery costs; Cole & Karmakar (2023), US utility-scale costs
 - **RESize's own choice:** Constant prices over the life.
 
 ### Levelised cost of storage (LCOS)
@@ -537,7 +569,7 @@ Standards and reports are revised: use the current edition when you cite them. W
 ### Costs, savings and payback of the solar plant
 
 - **Formula:** Short et al. (1995)
-- **Values and assumptions:** Weiss & Spörk-Dür (2024), cost ranges; IRENA (2024)
+- **Values and assumptions:** Mugnier et al. (2018), installed prices of small systems; Weiss & Spörk-Dür (2024), market overview
 
 ### Carbon avoided
 

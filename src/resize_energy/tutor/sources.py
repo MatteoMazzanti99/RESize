@@ -11,6 +11,7 @@ from __future__ import annotations
 from html import escape
 
 from resize_energy.tutor.bibliography import REFS, full_citation
+from resize_energy.tutor.cost_sources import cost_keys
 
 # topic: (formula, values and assumptions, RESize's own choice)
 _RAW: dict[str, tuple[str, str, str]] = {
@@ -29,7 +30,7 @@ _RAW: dict[str, tuple[str, str, str]] = {
     "pv.shading": ("quaschning1996", "duffie2013|sun position", "Flat obstacle band and a fixed diffuse share of 35 %: a RESize simplification."),
     "pv.monthly": ("duffie2013", "huld2012|PVGIS monthly outputs", "The monthly shape is typical of the latitude, not a measured year."),
     "pv.battery": ("luthander2015", "", "Typical home load shape and an invented production year: RESize defaults."),
-    "pv.economics": ("short1995", "irena_costs|cost ranges", ""),
+    "pv.economics": ("short1995", "fraunhofer2024|cost ranges; iea_pvps_italy2024|Italian prices; nrel_atb2024", ""),
     "pv.sensitivity": ("saltelli2008|ch. 2", "", "One input at a time, +/-20 %: a RESize choice."),
     # --- wind ---------------------------------------------------------------------------------
     "wind.resource": ("burton2011; iec61400_12", "gwa|Global Wind Atlas; nasa_power|WS50M", ""),
@@ -45,12 +46,12 @@ _RAW: dict[str, tuple[str, str, str]] = {
     "wind.spacing": ("burton2011|ch. 8; manwell2009", "", "Regular rectangular layout."),
     "wind.wake": ("jensen1983; katic1986", "burton2011|typical wake decay constant", "Generic thrust curve and one wind-speed distribution for all directions: RESize simplifications."),
     "wind.rose": ("burton2011|ch. 8", "gwa|wind roses", "A one-peak rose built from two numbers."),
-    "wind.economics": ("short1995", "irena_costs|cost ranges", ""),
+    "wind.economics": ("short1995", "fraunhofer2024|cost ranges", ""),
     "wind.sensitivity": ("saltelli2008|ch. 2", "", "One input at a time, +/-20 %: a RESize choice."),
     # --- economics common to the comparison -----------------------------------------------------
     "econ.same_demand": ("iea_projected|methodology", "", "Annual balance only."),
     "econ.crf": ("short1995", "", "One discount rate for all technologies, constant prices."),
-    "econ.lcoe": ("iea_projected; irena_costs", "irena_costs|cost ranges", ""),
+    "econ.lcoe": ("iea_projected; irena_costs", "fraunhofer2024|cost ranges", ""),
     "econ.savings": ("short1995", "", "Net-metering style balance: energy up to the demand is valued at the retail price."),
     "econ.payback": ("short1995", "", "Constant yearly benefit, no replacements."),
     "econ.co2": ("ipcc_ar5_annex3|life-cycle emissions of electricity supply", "ipcc_ar5_annex3|life-cycle factors; ispra|national grid factor", ""),
@@ -91,7 +92,7 @@ _RAW: dict[str, tuple[str, str, str]] = {
     "battery.efficiency": ("schimpe2018", "schimpe2018|efficiency and ageing of LFP cells", "Constant efficiency at any power and temperature."),
     "battery.diminishing": ("hoppmann2014", "", ""),
     "battery.life": ("wang2011", "wang2011|cycle life of LFP cells", "End of life taken at 70-80 % of the initial capacity."),
-    "battery.economics": ("short1995", "iea_pvps_trends|prices and costs", "Constant prices over the life."),
+    "battery.economics": ("short1995", "fraunhofer2024|battery costs; cole2023|US utility-scale costs", "Constant prices over the life."),
     "battery.lcos": ("schmidt2019; lazard", "lazard|cost ranges", ""),
     "battery.co2": ("peters2017", "peters2017|embodied emissions of Li-ion batteries", "Embodied carbon of the battery is not counted."),
     "battery.sensitivity": ("saltelli2008; iea_projected", "", "One input at a time: a RESize choice."),
@@ -107,7 +108,7 @@ _RAW: dict[str, tuple[str, str, str]] = {
     "solar.adsorption": ("henning2007", "iea_shc|Task 38", ""),
     "solar.chiller_cop": ("henning2007|ch. 4", "henning2007", "COP linear between minimum and nominal drive temperature."),
     "solar.chillers": ("henning2007", "iea_shc|Task 53", "Typical catalogue values for each family."),
-    "solar.economics": ("short1995", "weiss2024|cost ranges; irena_costs", ""),
+    "solar.economics": ("short1995", "mugnier2018|installed prices of small systems; weiss2024|market overview", ""),
     "solar.co2": ("ipcc_ar5_annex3", "ipcc_ar5_annex3|life-cycle factors; ispra|national grid factor", "Emissions of making the collectors are not counted."),
     "solar.sensitivity": ("saltelli2008", "", "One input at a time, +/-20 %."),
 }
@@ -142,6 +143,7 @@ def cited_keys(topic: str) -> list[str]:
     for key, _note in entry["formula"] + entry["values"]:
         if key not in seen:
             seen.append(key)
+    seen += [k for k in cost_keys(topic) if k not in seen]
     return seen
 
 
