@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPageSize, QPdfWriter, QTextDocument
 from PySide6.QtWidgets import (
@@ -46,17 +48,33 @@ from resize_energy.tutor.explanations import EXPLANATIONS, TOPIC_ORDER
 from resize_energy.tutor.why_html import explanation_html
 from resize_energy.tutor.worked import worked_example
 
+PRINT_SCALE = 3.0      # pixels per logical pixel for the PDF
+BANNER_WIDTH = 600     # logical width of the flow picture in the results text
+
 
 class ReportBrowser(FormulaBrowser):
     """Shows the report; ``<img src="chart:NAME">`` is answered with the drawn chart."""
 
     def __init__(self) -> None:
         super().__init__()
-        self.images: dict[str, QImage] = {}
+        self.makers: dict[str, Callable[[float], QImage]] = {}
+        self._drawn: dict[tuple[str, float], QImage] = {}
+
+    def set_makers(self, makers: dict[str, Callable[[float], QImage]]) -> None:
+        self.makers = makers
+        self._drawn = {}
 
     def loadResource(self, rtype, url):
-        image = self.images.get(url.toString())
-        return image if image is not None else super().loadResource(rtype, url)
+        name = url.toString()
+        maker = self.makers.get(name)
+        if maker is None:
+            return super().loadResource(rtype, url)
+        ratio = max(1.0, self.devicePixelRatioF())
+        if (name, ratio) not in self._drawn:
+            image = maker(ratio)
+            image.setDevicePixelRatio(ratio)
+            self._drawn[(name, ratio)] = image
+        return self._drawn[(name, ratio)]
 
 
 class ReportDocument(QTextDocument):
@@ -67,7 +85,7 @@ class ReportDocument(QTextDocument):
         self.images = images
 
     def loadResource(self, rtype, url):
-        image = self.images.get(url.toString()) or formula_image(url.toString())
+        image = self.images.get(url.toString()) or formula_image(url.toString(), PRINT_SCALE)
         return image if image is not None else super().loadResource(rtype, url)
 
 
@@ -498,8 +516,12 @@ class BaseResultsPage(StepPage):
         return None
 
     def _draw_charts(self) -> None:
-        self.chart_images = {f"chart:{name}": render_chart(spec)
-                             for name, spec in self._charts().items()}
+        specs = self._charts()
+        self.chart_images = {f"chart:{name}": render_chart(spec, PRINT_SCALE)
+                             for name, spec in specs.items()}
+        makers: dict[str, Callable[[float], QImage]] = {
+            f"chart:{name}": (lambda ratio, spec=spec: render_chart(spec, ratio))
+            for name, spec in specs.items()}
         try:
             picture = self._flow()
         except Exception:  # noqa: BLE001 - a picture must never stop the report
@@ -508,9 +530,11 @@ class BaseResultsPage(StepPage):
         self._banner_ratio = 0.0
         if picture is not None:
             self.chart_images["chart:flow_banner"] = picture_image(picture)
+            makers["chart:flow_banner"] = (
+                lambda ratio, picture=picture: picture_image(picture, round(BANNER_WIDTH * ratio)))
             w, h = picture_size(picture[0])
             self._banner_ratio = h / w
-        self.browser.images = self.chart_images
+        self.browser.set_makers(makers)
 
     # --- shared behaviour ----------------------------------------------------------------
     def _open_tutor(self, question: str | None = None) -> None:
@@ -579,8 +603,8 @@ class BaseResultsPage(StepPage):
         ratio = getattr(self, "_banner_ratio", 0.0)
         if not ratio or "chart:flow_banner" not in self.chart_images or "</h1>" not in html:
             return html
-        tag = (f'<p align="center"><img src="chart:flow_banner" width="600" '
-               f'height="{int(600 * ratio)}"></p>')
+        tag = (f'<p align="center"><img src="chart:flow_banner" width="{BANNER_WIDTH}" '
+               f'height="{int(BANNER_WIDTH * ratio)}"></p>')
         return html.replace("</h1>", "</h1>" + tag, 1)
 
     def _keep_version(self) -> None:
