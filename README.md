@@ -27,11 +27,13 @@ Prefer Python? See *Quick start* below.
 
 ## How it looks
 
-| 1. Site and solar resource | 2. Electricity demand |
+| Photovoltaic: every step explains itself | Results with the energy-flow picture |
 |---|---|
-| ![Site step](docs/images/step1-site.png) | ![Demand step](docs/images/step2-demand.png) |
-| **3. Module and inverter** | **4. Results, checks and Why?** |
-| ![Components step](docs/images/step3-components.png) | ![Results step](docs/images/step4-results.png) |
+| ![Photovoltaic first step](docs/images/pv_start.png) | ![Photovoltaic results](docs/images/pv_results.png) |
+| **Wind** | **Green hydrogen** |
+| ![Wind results](docs/images/wind_results.png) | ![Hydrogen results](docs/images/hydrogen_results.png) |
+| **Battery storage** | **Solar thermal** |
+| ![Battery results](docs/images/battery_results.png) | ![Solar thermal results](docs/images/solar_results.png) |
 
 Validation against PVGIS, independent integrations and hand calculations:
 [docs/validation](docs/validation/README.md).

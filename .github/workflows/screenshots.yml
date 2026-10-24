@@ -1,0 +1,38 @@
+name: Update README screenshots
+
+# Takes the pictures of the real app (offscreen, same as the documentation site) and commits
+# them to docs/images, which the README shows. Run it by hand (Actions > Update README
+# screenshots > Run workflow) after the look of the app has changed.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0 libdbus-1-3
+      - run: pip install -e ".[gui]"
+      - name: Screenshots of the real app
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m resize_energy.gui.app --self-test --screenshots "$RUNNER_TEMP/shots"
+      - name: Copy the ones the README uses
+        run: |
+          git rm -q --ignore-unmatch docs/images/step*.png
+          for name in home pv_start pv_results wind_results hydrogen_results battery_results solar_results biomass_results compare_results; do
+            cp "$RUNNER_TEMP/shots/$name.png" "docs/images/$name.png"
+          done
+      - name: Commit
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add docs/images
+          git commit -m "Update README screenshots" || echo "nothing to commit"
+          git push
