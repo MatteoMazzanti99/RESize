@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 
 from resize_energy.tutor.bibliography import REFS, full_citation
-from resize_energy.tutor.cost_sources import COSTS, _VERDICTS
+from resize_energy.tutor.cost_sources import _VERDICTS, COSTS
 from resize_energy.tutor.explanations import EXPLANATIONS
 from resize_energy.tutor.sources import SOURCES
 
