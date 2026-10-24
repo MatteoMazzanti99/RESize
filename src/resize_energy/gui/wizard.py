@@ -453,7 +453,6 @@ class BaseResultsPage(StepPage):
         self.why_split.setStretchFactor(1, 3)
         self.why_split.setSizes([170, 420])
         self.topics.setMinimumHeight(135)
-        self.topics.setWordWrap(True)
         for view in (self.topics, self.detail, self.browser):  # never scroll sideways
             view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         why_layout.addWidget(self.why_split, 1)
