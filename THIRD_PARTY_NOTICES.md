@@ -45,3 +45,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 copyright 2020 The Poppins Project Authors (<https://github.com/itfoundry/Poppins>),
 licensed under the SIL Open Font License 1.1. The licence text is in
 `src/resize_energy/data/fonts/OFL.txt`.
+
+## DejaVu Sans (Greek letters in formulas)
+
+The outlines of the Greek letters used in the formula pictures
+(`src/resize_energy/report/_poppins_widths.py`) come from DejaVu Sans, derived from Bitstream
+Vera, which is free to use, copy, modify and distribute (<https://dejavu-fonts.github.io/License.html>).
+Copyright (c) 2003 Bitstream, Inc.; DejaVu changes are in the public domain.

@@ -24,7 +24,7 @@ def test_every_formula_is_drawn(key):
 def test_a_fraction_is_vertical_and_a_subscript_is_smaller():
     f = _svg_of("PR = E_ac / (P_dc,kWp * H)")
     assert "<line" in f.svg                    # the fraction bar
-    sizes = set(re.findall(r'font-size="([\d.]+)"', f.svg))
+    sizes = set(re.findall(r'data-size="([\d.]+)"', f.svg))
     assert len(sizes) == 2                     # normal and subscript size
     assert "dc,kWp" in f.svg and "E_ac" not in f.svg
 
@@ -37,9 +37,9 @@ def test_powers_greek_and_roots():
 
 def test_floor_ceil_and_tall_parentheses_use_drawn_brackets():
     tall = _svg_of("N = floor(V_dc / V_oc)")
-    assert "<path" in tall.svg
+    assert "stroke-linecap" in tall.svg
     flat = _svg_of("y = (a + b)")
-    assert "<path" not in flat.svg and "(" in flat.svg
+    assert "stroke-linecap" not in flat.svg and "(" in flat.svg
 
 
 def test_denominator_ends_at_the_next_product_sign():
@@ -62,7 +62,7 @@ def test_statements_and_notes_are_stacked():
 
 def test_exponent_notation_and_chemicals():
     assert "10" in _svg_of("p = 2.5e-5 * z").svg
-    assert _svg_of("2 H2O -> 2 H2 + O2").svg.count("font-size") > 4
+    assert _svg_of("2 H2O -> 2 H2 + O2").svg.count("data-size") > 4
 
 
 def test_html_uses_a_picture_only_when_asked():

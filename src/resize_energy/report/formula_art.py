@@ -26,11 +26,12 @@ import re
 from dataclasses import dataclass
 from html import escape
 
-from resize_energy.report._poppins_widths import ADVANCE
+from resize_energy.report._poppins_widths import ADVANCE, PATHS
 
 INK = "#0F1B2D"
 MUTED = "#556377"
 SIZE = 15.0                 # font size of the main line, in pixels
+SPACE = 0.267             # one space, in em: the gap around every operator and between factors
 MAX_WIDTH = 380.0           # wider lines are wrapped after an operator
 PAD = 3.0
 
@@ -75,8 +76,19 @@ def _at(box: Box, dx: float, dy: float = 0.0) -> str:
 
 
 def T(s: str, size: float, fill: str = INK) -> Box:
-    """A run of text."""
-    svg = (f'<text x="0" y="0" font-size="{size:.2f}" fill="{fill}">{escape(s)}</text>')
+    """A run of text, drawn from the glyph outlines (so it looks the same on every computer)."""
+    k = size / 1000.0
+    x = 0.0
+    parts = []
+    for c in s:
+        d = PATHS.get(c)
+        if d:
+            parts.append(f'<path transform="translate({x * k:.2f},0) scale({k:.5f},{-k:.5f})" d="{d}"/>')
+        elif not c.isspace():                      # a glyph that was not converted
+            parts.append(f'<text x="{x * k:.2f}" y="0" font-size="{size:.2f}">{escape(c)}</text>')
+        x += ADVANCE.get(c, 640)
+    svg = (f'<g fill="{fill}" data-size="{size:.2f}" aria-label="{escape(s)}">'
+           f'{"".join(parts)}</g>')
     return Box(text_width(s, size), 0.72 * size, 0.2 * size, svg)
 
 
@@ -101,7 +113,7 @@ def script(base: Box, sub: Box | None, sup: Box | None, size: float) -> Box:
     parts = [_at(base, 0)]
     w = base.w
     asc, desc = base.asc, base.desc
-    extra = 0.04 * size
+    extra = 0.03 * size
     if sup is not None:
         dy = -(0.36 * size + 0.0)
         parts.append(_at(sup, base.w + extra, dy))
@@ -112,7 +124,7 @@ def script(base: Box, sub: Box | None, sup: Box | None, size: float) -> Box:
         parts.append(_at(sub, base.w + extra, dy))
         w = max(w, base.w + extra + sub.w)
         desc = max(desc, sub.desc + dy)
-    return Box(w + extra, asc, desc, "".join(parts))
+    return Box(w, asc, desc, "".join(parts))
 
 
 def frac(num: Box, den: Box, size: float) -> Box:
@@ -251,6 +263,12 @@ class Parser:
                 self.i += 1
         return items
 
+    def _is_times(self, tk: Tok, factors: list) -> bool:
+        """A lone ``x`` between two factors is a multiplication sign."""
+        nxt = self.t[self.i + 1] if self.i + 1 < len(self.t) else None
+        return (tk.kind == "word" and tk.val == "x" and bool(factors) and tk.sp
+                and nxt is not None and nxt.sp and nxt.kind in ("word", "num", "lp"))
+
     def term(self):
         factors: list[tuple[str, tuple, bool]] = []     # join, node, in denominator
         den = False
@@ -259,7 +277,7 @@ class Parser:
             tk = self.peek()
             if tk is None or tk.kind == "rp":
                 break
-            if tk.kind == "op" and tk.val == "*":
+            if tk.kind == "op" and tk.val in ("*", "×") or self._is_times(tk, factors):
                 self.i += 1
                 den, join = False, "·"
                 continue
@@ -368,14 +386,14 @@ class Render:
             m = re.fullmatch(r"([\d.,]+)e(-?\d+)", n[1])
             if m:                                        # 2.5e-5 is drawn as 2.5 · 10^-5
                 ten = script(self.text("10", size), None, self.text(m.group(2).replace("-", "−"), size * 0.72), size)
-                return H([self.text(m.group(1), size), GAP(0.18 * size), self.text("·", size), GAP(0.18 * size), ten])
+                return H([self.text(m.group(1), size), GAP(SPACE * size), self.text("·", size), GAP(SPACE * size), ten])
             return self.text(n[1], size)
         if kind == "word":
             return self.word(n[1], size)
         if kind == "sym":
             return self.text(n[1], size)
         if kind == "note":
-            return T(n[1].replace(" * ", " · "), size * 0.86, MUTED)
+            return T(n[1].replace(" * ", " · ").replace(" x ", " · "), size * 0.86, MUTED)
         if kind == "neg":
             return H([self.text("−", size), self.node(n[1], size)])
         if kind == "sup":
@@ -400,11 +418,13 @@ class Render:
         for k, (join, node, _den) in enumerate(factors):
             if k == 0 and join == "−":
                 parts.append(self.text("−", size))
+                if node[0] != "num":                 # -CAPEX gets a space, -20 % does not
+                    parts.append(GAP(SPACE * size))
             elif k > 0:
                 if join == "·":
-                    parts += [GAP(0.18 * size), self.text("·", size), GAP(0.18 * size)]
+                    parts += [GAP(SPACE * size), self.text("·", size), GAP(SPACE * size)]
                 else:
-                    parts.append(GAP(0.22 * size))
+                    parts.append(GAP(SPACE * size))
             parts.append(self.node(node, size))
         return H(parts)
 
@@ -430,11 +450,11 @@ class Render:
 
     def op(self, o: str, size: float) -> Box:
         if o == "→":
-            return H([GAP(0.3 * size), arrow(size), GAP(0.3 * size)])
+            return H([GAP(SPACE * size), arrow(size), GAP(SPACE * size)])
         if o in (",", ":"):
-            return H([self.text(o, size), GAP(0.3 * size)])
+            return H([self.text(o, size), GAP(SPACE * size)])
         sign = "−" if o == "-" else o
-        return H([GAP(0.3 * size), self.text(sign, size), GAP(0.3 * size)])
+        return H([GAP(SPACE * size), self.text(sign, size), GAP(SPACE * size)])
 
     def row(self, items: list, size: float) -> Box:
         parts = []
@@ -457,9 +477,11 @@ class Render:
                 pieces = []
                 if k == 0 and join == "−":
                     pieces.append(self.text("−", size))
+                    if node[0] != "num":
+                        pieces.append(GAP(SPACE * size))
                 elif k > 0:
-                    pieces += ([GAP(0.18 * size), self.text("·", size), GAP(0.18 * size)]
-                               if join == "·" else [GAP(0.22 * size)])
+                    pieces += ([GAP(SPACE * size), self.text("·", size), GAP(SPACE * size)]
+                               if join == "·" else [GAP(SPACE * size)])
                 pieces.append(self.node(node, size))
                 out.append((H(pieces), k > 0 and join == " "))
         return out
@@ -520,7 +542,7 @@ def typeset(text: str, size: float = SIZE, max_width: float = MAX_WIDTH) -> Form
     gaps: list[float] = []
     for statement in split_statements(text):
         if _is_note(statement):
-            lines.append(T(statement.replace(" * ", " · "), size * 0.86, MUTED))
+            lines.append(T(statement.replace(" * ", " · ").replace(" x ", " · "), size * 0.86, MUTED))
             gaps.append(0.55 * size)
             continue
         render = Render()
