@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QVBoxLayout
 
 from resize_energy.gui.compare_zone import CompareZone, TechCard
@@ -42,6 +42,22 @@ class HomePage(StepPage):
     cards into the Compare zone and press Compare (``on_compare([keys])``)."""
 
     show_header = False
+
+    def _fit_hero(self) -> None:
+        """The illustration may open down to the bottom edge of the Compare box, no further."""
+        if not hasattr(self, "hero") or not hasattr(self, "zone"):
+            return
+        top = self.hero.mapTo(self, self.hero.rect().topLeft()).y()
+        bottom = self.zone.mapTo(self, self.zone.rect().bottomLeft()).y()
+        self.hero.set_limit(bottom - top)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        QTimer.singleShot(0, self._fit_hero)
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        QTimer.singleShot(0, self._fit_hero)
 
     def __init__(self, on_start: Callable[[str], None],
                  on_compare: Callable[[list[str]], None]) -> None:

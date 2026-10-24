@@ -17,7 +17,8 @@ from resize_energy.gui.theme import COLORS
 
 SUN = "#F5B941"
 BLADE_STEP_DEG = 120.0  # three blades: one third of a turn looks identical, so the loop is seamless
-MIN_H, MAX_H = 210, 440
+MIN_H, MAX_H = 210, 440   # MAX_H: the height the landscape is drawn for
+LIMIT_H = 520               # the tallest the picture may ever be
 GRIP = 26               # height of the strip at the bottom that can be dragged
 RADIUS = 26
 PANEL = "#2F5FA8"
@@ -57,6 +58,15 @@ class HeroArt(QWidget):
         self._opening.setEasingCurve(QEasingCurve.Type.InOutCubic)
         self._opening.valueChanged.connect(lambda v: self.set_height(float(v)))
         self._opened = False
+        self._max = MAX_H                      # how far it can open (set by the page)
+
+    def set_limit(self, pixels: float) -> None:
+        """Do not open further than ``pixels`` (the page lines it up with the Compare box)."""
+        self._max = round(max(MIN_H + 60, min(LIMIT_H, pixels)))
+        if self.height() > self._max or (self._opening.state() == QVariantAnimation.State.Stopped
+                                         and self.height() == self._max):
+            self.setFixedHeight(self._max)
+        self._opening.setEndValue(float(self._max))
 
     def _open_by_itself(self) -> None:
         if not self._opened and self._drag is None and self.height() == MIN_H:
@@ -70,7 +80,7 @@ class HeroArt(QWidget):
 
     # --- size ----------------------------------------------------------------------------
     def set_height(self, height: float) -> None:
-        self.setFixedHeight(round(max(MIN_H, min(MAX_H, height))))
+        self.setFixedHeight(round(max(MIN_H, min(self._max, height))))
 
     def _in_grip(self, y: float) -> bool:
         return y >= self.height() - GRIP
@@ -100,7 +110,7 @@ class HeroArt(QWidget):
     def mouseDoubleClickEvent(self, event) -> None:
         if self._in_grip(event.position().y()):    # open fully, or close again
             self.stop_opening()
-            self.set_height(MIN_H if self.height() > MIN_H else MAX_H)
+            self.set_height(MIN_H if self.height() > MIN_H else self._max)
             return
         super().mouseDoubleClickEvent(event)
 
@@ -138,6 +148,10 @@ class HeroArt(QWidget):
         p.setBrush(QBrush(QColor(SUN)))
         p.drawEllipse(QPointF(w * 0.74, 59), 27, 27)
         accent = QColor(COLORS["accent"])
+        k = self._max / MAX_H                       # the landscape is squeezed to fit the room
+        grow = h / k
+        p.save()
+        p.scale(1.0, k)
         peak = QPointF(w * 0.36, 150)
         # the mountain with the turbine on its ridge
         mountain = QPainterPath()
@@ -169,8 +183,9 @@ class HeroArt(QWidget):
         foot.closeSubpath()
         p.setBrush(QBrush(accent.lighter(185)))
         p.drawPath(foot)
-        self._solar_farm(p, w, reveal(h, 300, 110))
-        self._turbine(p, peak, reveal(h, MIN_H, 70))
+        self._solar_farm(p, w, reveal(grow, 300, 110))
+        p.restore()
+        self._turbine(p, QPointF(peak.x(), peak.y() * k), reveal(h, MIN_H, 70))
         self._grip(p, w, h)
         p.end()
 
