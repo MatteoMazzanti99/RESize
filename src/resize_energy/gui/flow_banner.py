@@ -8,7 +8,7 @@ image of the same picture.
 from __future__ import annotations
 
 from PySide6.QtCore import QByteArray, QElapsedTimer, QRectF, Qt, QTimer
-from PySide6.QtGui import QColor, QImage, QPainter
+from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath, QPen
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
@@ -85,6 +85,14 @@ class FlowBanner(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        card = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        clip = QPainterPath()
+        clip.addRoundedRect(card, 12, 12)
+        painter.setClipPath(clip)
         painter.setPen(Qt.PenStyle.NoPen)
         _draw(painter, self.picture, phase, QRectF(self.rect()))
+        painter.setClipping(False)
+        painter.setPen(QPen(QColor("#D5DEE9"), 1.0))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRoundedRect(card, 12, 12)
         painter.end()

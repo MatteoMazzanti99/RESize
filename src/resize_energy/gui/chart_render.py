@@ -46,11 +46,11 @@ class _Canvas:
         self.p.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
         self.base = QFont()
-        self.base.setPointSizeF(8.5)
+        self.base.setPointSizeF(9)
         self.small = QFont(self.base)
-        self.small.setPointSizeF(7.5)
+        self.small.setPointSizeF(8)
         self.bold = QFont(self.base)
-        self.bold.setPointSizeF(10)
+        self.bold.setPointSizeF(11)
         self.bold.setBold(True)
 
     def text(self, x: float, y: float, s: str, align: str = "l", font: QFont | None = None,
@@ -91,6 +91,9 @@ class _Canvas:
             x += 15 + self.width_of(s.name) + 18
 
     def done(self) -> QImage:
+        self.p.setPen(QPen(QColor("#D5DEE9"), 1.0))
+        self.p.setBrush(Qt.BrushStyle.NoBrush)
+        self.p.drawRoundedRect(QRectF(0.5, 0.5, self.spec.width - 1, self.spec.height - 1), 8, 8)
         self.p.end()
         return self.image
 

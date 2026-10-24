@@ -417,7 +417,7 @@ class BaseResultsPage(StepPage):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setMinimumHeight(640)
+        self.setMinimumHeight(520)
         self.setTitle("4. Results and design checks")
         self.setSubTitle("Your results first, then charts and checks. Use the list on the right to see why each number is what it is.")
         self.browser = ReportBrowser()
@@ -446,8 +446,14 @@ class BaseResultsPage(StepPage):
         why_layout = QVBoxLayout(why_panel)
         why_layout.setContentsMargins(14, 0, 0, 0)  # air between report and Why? panel
         why_layout.addWidget(make_label("Why? Understand each step", "sectionTitle", wrap=False))
-        why_layout.addWidget(self.topics, 1)
-        why_layout.addWidget(self.detail, 2)
+        self.why_split = QSplitter(Qt.Orientation.Vertical)  # drag the handle to give the list more room
+        self.why_split.addWidget(self.topics)
+        self.why_split.addWidget(self.detail)
+        self.why_split.setStretchFactor(0, 1)
+        self.why_split.setStretchFactor(1, 3)
+        self.why_split.setSizes([170, 420])
+        self.topics.setMinimumHeight(90)
+        why_layout.addWidget(self.why_split, 1)
         ask_step = QPushButton("Ask the tutor about this step...")
         ask_step.clicked.connect(self._ask_about_step)
         why_layout.addWidget(ask_step)
@@ -473,7 +479,8 @@ class BaseResultsPage(StepPage):
                                        "see what each input did to the results.")
         self.explain_button.clicked.connect(self._explain_version)
         self.explain_button.setEnabled(False)
-        buttons = QVBoxLayout()  # two rows: one row of five buttons is wider than the window
+        buttons = QVBoxLayout()
+        buttons.setSpacing(10)  # two rows: one row of five buttons is wider than the window
         versions = QHBoxLayout()
         buttons.addLayout(versions)
         versions.addWidget(keep)
@@ -491,9 +498,6 @@ class BaseResultsPage(StepPage):
         actions.addWidget(ask)
         actions.addWidget(export)
         layout = QVBoxLayout(self)
-        layout.addWidget(make_label(
-            "Left: your results, the charts and the design checks (start from 'In short'). "
-            "Right: pick a step to see its formula with your own numbers.", "hint"), 0)
         layout.addWidget(self.banner)
         layout.addWidget(splitter, 1)  # the report takes all the spare height
         layout.addLayout(buttons)

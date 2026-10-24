@@ -98,13 +98,20 @@ def _checks_html(findings: list[Finding], colors: dict[str, str]) -> str:
 
 
 def _kpi_html(items: list[tuple[str, str]]) -> str:
-    """A row of big numbers with a plain-language label under each."""
-    width = 100 // max(1, len(items))
-    cells = "".join(
-        f'<td align="center" bgcolor="#E6F5EE" width="{width}%">'
-        f'<span style="font-size:16pt; color:#085F43"><b>{escape(v)}</b></span><br>'
-        f'<span style="color:#556377">{escape(label)}</span></td>' for v, label in items)
-    return f'<table width="100%" cellspacing="6" cellpadding="9"><tr>{cells}</tr></table>'
+    """Big numbers with a plain-language label under each: equal cells, at most four a row."""
+    per_row = 4 if len(items) > 3 else max(1, len(items))
+    width = 100 // per_row
+    rows = []
+    for start in range(0, len(items), per_row):
+        chunk = items[start:start + per_row]
+        cells = "".join(
+            f'<td align="center" bgcolor="#E6F5EE" width="{width}%">'
+            f'<span style="font-size:17pt; color:#085F43"><b>{escape(v)}</b></span><br>'
+            f'<span style="color:#556377; font-size:9pt">{escape(label)}</span></td>'
+            for v, label in chunk)
+        cells += f'<td width="{width}%"></td>' * (per_row - len(chunk))
+        rows.append(f"<tr>{cells}</tr>")
+    return f'<table width="100%" cellspacing="8" cellpadding="12">{"".join(rows)}</table>'
 
 
 def _charts_html(charts: dict[str, ChartSpec]) -> str:
