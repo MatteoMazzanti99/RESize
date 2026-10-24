@@ -452,7 +452,7 @@ class BaseResultsPage(StepPage):
         self.why_split.setStretchFactor(0, 1)
         self.why_split.setStretchFactor(1, 3)
         self.why_split.setSizes([170, 420])
-        self.topics.setMinimumHeight(90)
+        self.topics.setMinimumHeight(135)
         why_layout.addWidget(self.why_split, 1)
         ask_step = QPushButton("Ask the tutor about this step...")
         ask_step.clicked.connect(self._ask_about_step)
