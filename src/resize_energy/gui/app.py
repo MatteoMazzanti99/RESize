@@ -187,6 +187,19 @@ def _project_roundtrip(window, app) -> int:
     return 0
 
 
+def _settle(app, seconds: float = 0.6) -> None:
+    """Let fades and pending deletions finish, so that a picture shows the page at rest."""
+    import time
+
+    from PySide6.QtCore import QEvent
+
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        app.processEvents()
+        app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        time.sleep(0.02)
+
+
 def _screenshots(window, app, folder: str) -> None:
     """Save a picture of the home page and of the first and last step of every flow."""
     from pathlib import Path
@@ -194,25 +207,24 @@ def _screenshots(window, app, folder: str) -> None:
     out = Path(folder)
     out.mkdir(parents=True, exist_ok=True)
     window.resize(1240, 820)
-    app.processEvents()
+    _settle(app)
     window.grab().save(str(out / "home.png"))
     zone = window.home.zone
     for key in ("pv", "hydrogen", "biomass"):
         zone.add(key)
-    for _ in range(25):  # let the icons drift for a moment
-        app.processEvents()
+    _settle(app, 0.5)  # let the icons drift for a moment
     window.grab().save(str(out / "home_compare.png"))
     zone.clear()
     for tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "compare"):
         window._start(tech)
-        app.processEvents()
+        _settle(app)
         window.grab().save(str(out / f"{tech}_start.png"))
         for _ in range(len(window.pages) - 2):
             window._next()
-            app.processEvents()
+            _settle(app, 0.4)
             if window.index == 3:
                 window.grab().save(str(out / f"{tech}_middle.png"))
-        app.processEvents()
+        _settle(app, 1.0)
         window.grab().save(str(out / f"{tech}_results.png"))
         window._restart()
 
