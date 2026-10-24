@@ -73,13 +73,15 @@ class CountryBar(QWidget):
             except ValueError:
                 lat = lon = None
             if lat is not None and geo.in_country(code, lat, lon) is False:
-                where = [get_country(c).name for c in geo.countries_at(lat, lon)
-                         if any(x.code == c for x in COUNTRIES)]
-                hint = f" They look like {' or '.join(where)}." if where else ""
-                text = (f"Check the country: the site coordinates ({lat:.2f}, {lon:.2f}) do not "
-                        f"look like {get_country(code).name}.{hint} The prices and the grid "
-                        "emission factor may not match your site (this check is approximate "
-                        "near borders).")
+                here = geo.country_near(lat, lon)
+                where = f"in {geo.country_name(here)}" if here else "not in any country (open sea?)"
+                text = (f"Check the country: the site coordinates ({lat:.4f}, {lon:.4f}) are "
+                        f"{where}, not in {get_country(code).name}. The prices and the grid "
+                        "emission factor may not match your site.")
+                if geo.distance_to_country_km(code, lat, lon, 3.0) < 3.0:
+                    text += (" The site is within about 3 km of the border, and the border data "
+                             "is accurate to 1-2 km: if the plant is on the "
+                             f"{get_country(code).name} side, ignore this note.")
         self.warning.setText(text)
         self.warning.setVisible(bool(text))
         return text

@@ -1,56 +1,140 @@
-"""A coarse, offline answer to "is this latitude/longitude in that country?".
+"""Which country is a latitude/longitude in? An offline answer from real borders.
 
-Each country is a few latitude/longitude boxes that follow its shape roughly (mainland and
-islands). The check is meant to catch clearly wrong choices, such as a site in Italy with the
-country set to Australia. Near a border the boxes of two countries overlap, so a site close to
-a border may pass for either: do not use it for anything else.
+The borders come from Natural Earth (1:10 million, public domain), simplified to about 200 m
+and stored in ``data/borders.json.gz`` (see ``tools/build_borders.py``). On land a point is in
+the country whose polygon contains it, exactly up to the accuracy of the data (a few hundred
+metres). Near the coast, or at sea, the data is not that exact, so a point up to
+``SEA_KM`` from the coast of a country still counts as being in it (offshore plants).
+The data is accurate to about 1-2 km along borders (it was drawn for 1:10 million maps), so
+:func:`distance_to_country_km` lets callers tell "clearly elsewhere" from "right at the border".
+Natural Earth draws borders the way they are in practice; it takes no position on disputes.
 """
 
 from __future__ import annotations
 
-Box = tuple[float, float, float, float]   # south, north, west, east (degrees)
+import gzip
+import json
+import math
+from functools import lru_cache
+from importlib.resources import files
 
-MARGIN_DEG = 0.25   # about 25 km: a site just outside a box still counts as inside
+SEA_KM = 25.0      # a site in the sea within this distance of the coast belongs to that country
+_KM_PER_DEG = 111.2
 
-BOXES: dict[str, tuple[Box, ...]] = {
-    "AU": ((-44.0, -10.0, 112.0, 154.0),),
-    "BR": ((-34.0, 5.5, -74.0, -34.0),),
-    "CA": ((41.6, 83.2, -141.0, -52.0),),
-    "CN": ((18.0, 53.6, 73.5, 135.1),),
-    "FR": ((42.3, 51.1, -5.2, 2.6), (42.4, 46.2, 2.6, 7.1), (46.2, 49.5, 2.6, 8.3),
-           (49.5, 51.1, 2.6, 6.2), (43.2, 44.2, 7.1, 7.8), (41.3, 43.1, 8.5, 9.6)),
-    "DE": ((47.2, 55.1, 5.8, 15.1),),
-    "IN": ((6.7, 35.7, 68.0, 97.5),),
-    "IT": ((43.7, 47.1, 6.6, 13.9), (41.2, 43.7, 10.0, 14.2), (40.8, 41.4, 12.4, 14.2),
-           (37.9, 41.4, 14.0, 18.6), (36.6, 38.4, 12.3, 15.7), (38.8, 41.3, 8.1, 9.9),
-           (35.4, 35.7, 12.4, 12.8)),
-    "JP": ((24.0, 45.6, 122.9, 146.0),),
-    "MX": ((14.5, 32.8, -118.5, -86.7),),
-    "NL": ((50.7, 53.6, 3.3, 7.3),),
-    "PL": ((49.0, 54.9, 14.1, 24.2),),
-    "ZA": ((-35.0, -22.0, 16.4, 33.0),),
-    "KR": ((33.0, 38.7, 124.5, 131.9),),
-    "ES": ((36.0, 42.6, -9.4, 3.4), (42.6, 43.8, -9.4, -1.3), (38.6, 40.2, 1.1, 4.4),
-           (27.5, 29.5, -18.3, -13.3)),
-    "TR": ((35.8, 42.2, 25.6, 44.9),),
-    "GB": ((49.9, 58.7, -6.4, 1.8), (54.0, 55.3, -8.2, -5.4), (59.0, 60.9, -2.0, -0.7)),
-    "US": ((24.4, 49.5, -125.0, -66.9), (51.0, 71.5, -180.0, -129.0), (18.8, 22.4, -160.6, -154.7)),
-}
+Ring = list[tuple[float, float]]            # (lon, lat)
 
 
-def _inside(box: Box, lat: float, lon: float, margin: float) -> bool:
-    south, north, west, east = box
-    return south - margin <= lat <= north + margin and west - margin <= lon <= east + margin
+class _Polygon:
+    __slots__ = ("rings", "bbox")
+
+    def __init__(self, rings: list[Ring]) -> None:
+        self.rings = rings
+        lons = [p[0] for p in rings[0]]
+        lats = [p[1] for p in rings[0]]
+        self.bbox = (min(lons), min(lats), max(lons), max(lats))
+
+    def contains(self, lon: float, lat: float) -> bool:
+        w, s, e, n = self.bbox
+        if not (w <= lon <= e and s <= lat <= n):
+            return False
+        if not _in_ring(self.rings[0], lon, lat):
+            return False
+        return not any(_in_ring(hole, lon, lat) for hole in self.rings[1:])
 
 
-def in_country(code: str, lat: float, lon: float, margin: float = MARGIN_DEG) -> bool | None:
-    """True/False if the point is in the country; None when the country has no boxes."""
-    boxes = BOXES.get(code)
-    if boxes is None:
+def _in_ring(ring: Ring, lon: float, lat: float) -> bool:
+    inside = False
+    j = len(ring) - 1
+    for i in range(len(ring)):
+        xi, yi = ring[i]
+        xj, yj = ring[j]
+        if (yi > lat) != (yj > lat) and lon < (xj - xi) * (lat - yi) / (yj - yi) + xi:
+            inside = not inside
+        j = i
+    return inside
+
+
+@lru_cache(maxsize=1)
+def _load() -> dict[str, tuple[str, list[_Polygon]]]:
+    raw = files("resize_energy").joinpath("data", "borders.json.gz").read_bytes()
+    data = json.loads(gzip.decompress(raw))
+    scale = data["scale"]
+    out: dict[str, tuple[str, list[_Polygon]]] = {}
+    for code, entry in data["countries"].items():
+        polys = []
+        for rings in entry["polys"]:
+            decoded: list[Ring] = []
+            for flat in rings:
+                x = y = 0
+                ring: Ring = []
+                for k in range(0, len(flat), 2):
+                    x += flat[k]
+                    y += flat[k + 1]
+                    ring.append((x / scale, y / scale))
+                ring.append(ring[0])
+                decoded.append(ring)
+            polys.append(_Polygon(decoded))
+        out[code] = (entry["name"], polys)
+    return out
+
+
+def _distance_km(polys: list[_Polygon], lon: float, lat: float, limit_km: float) -> float:
+    """Distance from the point to the outline of the polygons (inf if farther than the limit)."""
+    kx = _KM_PER_DEG * math.cos(math.radians(lat))
+    ky = _KM_PER_DEG
+    margin = limit_km / min(kx, ky) if kx > 1e-6 else 360.0
+    best = math.inf
+    for poly in polys:
+        w, s, e, n = poly.bbox
+        if not (w - margin <= lon <= e + margin and s - margin <= lat <= n + margin):
+            continue
+        ring = poly.rings[0]
+        for (x1, y1), (x2, y2) in zip(ring, ring[1:], strict=False):
+            ax, ay = (x1 - lon) * kx, (y1 - lat) * ky
+            bx, by = (x2 - lon) * kx, (y2 - lat) * ky
+            dx, dy = bx - ax, by - ay
+            norm = dx * dx + dy * dy
+            t = 0.0 if norm == 0 else max(0.0, min(1.0, -(ax * dx + ay * dy) / norm))
+            d = math.hypot(ax + t * dx, ay + t * dy)
+            best = min(best, d)
+    return best if best <= limit_km else math.inf
+
+
+def distance_to_country_km(code: str, lat: float, lon: float, limit_km: float = 5.0) -> float:
+    """Distance from the point to the outline of the country (inf if farther than the limit)."""
+    entry = _load().get(code)
+    return math.inf if entry is None else _distance_km(entry[1], lon, lat, limit_km)
+
+
+def country_at(lat: float, lon: float) -> str | None:
+    """Code of the country that contains the point (None at sea or when not found)."""
+    for code, (_name, polys) in _load().items():
+        if any(p.contains(lon, lat) for p in polys):
+            return code
+    return None
+
+
+def country_near(lat: float, lon: float) -> str | None:
+    """The country that contains the point, or else the nearest one within ``SEA_KM``."""
+    code = country_at(lat, lon)
+    if code is not None:
+        return code
+    best, best_code = math.inf, None
+    for c, (_name, polys) in _load().items():
+        d = _distance_km(polys, lon, lat, SEA_KM)
+        if d < best:
+            best, best_code = d, c
+    return best_code
+
+
+def country_name(code: str) -> str:
+    entry = _load().get(code)
+    return entry[0] if entry else code
+
+
+def in_country(code: str, lat: float, lon: float) -> bool | None:
+    """True/False if the point is in the country ``code``; None if the code is unknown."""
+    countries = _load()
+    if code not in countries:
         return None
-    return any(_inside(b, lat, lon, margin) for b in boxes)
-
-
-def countries_at(lat: float, lon: float) -> list[str]:
-    """Codes of the countries whose boxes contain the point (without any margin)."""
-    return [code for code, boxes in BOXES.items() if any(_inside(b, lat, lon, 0.0) for b in boxes)]
+    return country_near(lat, lon) == code

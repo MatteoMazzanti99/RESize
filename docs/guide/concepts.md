@@ -66,6 +66,11 @@ Eurostat and GlobalPetrolPrices, grid emissions from lowcarbonpower.org; the pri
 the surplus and some gas prices are rough estimates, flagged under the drop-down. Money is in
 euro (dollar prices converted at 1.17 USD/EUR). They are not your tariff: check it.
 
+If the country you pick is not the one where the coordinates of the site step are, a warning
+appears under the drop-down (the check uses real country borders, drawn from Natural Earth,
+public domain, and works offline). Borders are accurate to about 1-2 km, so right at a border
+the warning says so and lets you ignore it.
+
 ## Report
 
 **Save the report as PDF** writes the page you see, in a light version, with the charts and
