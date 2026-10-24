@@ -155,10 +155,10 @@ class HeroArt(QWidget):
     def _turbine(self, p: QPainter, base: QPointF, grow: float) -> None:
         if grow <= 0.0:
             return
-        hub = QPointF(base.x(), base.y() - 105 * grow)
+        hub = QPointF(base.x(), base.y() - 88 * grow)
         p.setPen(QPen(QColor(COLORS["text"]), 3.2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         p.drawLine(hub, base)
-        blade = 63 * grow
+        blade = 50 * grow
         p.setPen(QPen(QColor(COLORS["accent"]), 4.2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
         for k in range(3):
             a = math.radians(self._angle + 120.0 * k - 90.0)
