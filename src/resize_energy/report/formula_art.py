@@ -31,7 +31,7 @@ from resize_energy.report._poppins_widths import ADVANCE
 INK = "#0F1B2D"
 MUTED = "#556377"
 SIZE = 15.0                 # font size of the main line, in pixels
-MAX_WIDTH = 500.0           # wider lines are wrapped after an operator
+MAX_WIDTH = 380.0           # wider lines are wrapped after an operator
 PAD = 3.0
 
 GREEK = {"alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "Delta": "Δ", "epsilon": "ε",
