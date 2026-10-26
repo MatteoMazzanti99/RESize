@@ -58,7 +58,7 @@ for that input.
 
 On every cost page the **Country** drop-down fills the price you pay for electricity, the
 price paid for the surplus, the heat price (gas boiler) and the grid emission factor with
-typical values of 18 countries (Italy, Spain, Germany, France, USA, China, India, Brazil...).
+typical values of 61 countries (all the EU, Norway, Switzerland, the UK, the Balkans, Ukraine and the main ones elsewhere: Italy, Spain, Germany, France, USA, China, India, Brazil...).
 The choice follows you to the cost pages of the other technologies. Every number stays
 editable, and the report's *Which values to check* list marks the ones that came from a
 preset. The values are indicative (about 2025): household electricity and gas prices from

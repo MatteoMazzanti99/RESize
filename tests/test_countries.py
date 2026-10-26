@@ -23,3 +23,14 @@ def test_conversions_and_note():
 
 def test_italy_and_france_differ_on_carbon():
     assert get_country("FR").grid_g_co2_kwh < get_country("IT").grid_g_co2_kwh / 4
+
+
+def test_all_of_the_eu_is_there():
+    eu = "AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE".split()
+    assert set(eu) <= {c.code for c in COUNTRIES}
+    assert {"NO", "CH", "IS", "GB", "UA", "RS"} <= {c.code for c in COUNTRIES}
+
+
+def test_the_list_is_sorted_by_name():
+    names = [c.name for c in COUNTRIES]
+    assert names == sorted(names)

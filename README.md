@@ -36,7 +36,7 @@ curve, cost build-up, hydrogen per month, comparison of cost, payback, cash flow
 design checks sorted by importance, and finally the detailed tables and the formulas.
 
 On the cost pages, a **Country** drop-down fills the electricity and heat prices, the price of
-the surplus and the grid emission factor with typical values of 18 countries (editable). If the country does not match the site coordinates, the app warns you.
+the surplus and the grid emission factor with typical values of 61 countries (all of Europe except Russia and Belarus and the micro-states, plus the main ones elsewhere) (editable). If the country does not match the site coordinates, the app warns you.
 
 For every technology (not the comparison), **Export to Excel (live formulas)** writes a workbook in which every
 step is a formula with named inputs (change a cell, watch the results move) plus a *Check*
