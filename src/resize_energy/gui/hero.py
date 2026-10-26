@@ -116,7 +116,10 @@ class HeroArt(QWidget):
         grow = h / k
         p.save()
         p.scale(1.0, k)
+        lower = 35.0                                 # the mountain sits low: the blades stay in the picture
         peak = QPointF(w * 0.36, 150)
+        p.save()
+        p.translate(0, lower)
         # the mountain with the turbine on its ridge
         mountain = QPainterPath()
         mountain.moveTo(0, 190)
@@ -138,6 +141,7 @@ class HeroArt(QWidget):
         shade_colour.setAlpha(150)
         p.setBrush(QBrush(shade_colour))
         p.drawPath(shade)
+        p.restore()
         # foothills and the plain
         foot = QPainterPath()
         foot.moveTo(0, 318)
@@ -149,7 +153,9 @@ class HeroArt(QWidget):
         p.drawPath(foot)
         self._solar_farm(p, w, reveal(grow, 300, 110))
         p.restore()
-        self._turbine(p, QPointF(peak.x(), peak.y() * k), reveal(h, MIN_H, 70))
+        top = (peak.y() + lower) * k                 # where the turbine stands, in pixels
+        fit = min(1.0, (top - 10.0) / 138.0)         # tower 88 + blade 50, and a margin above
+        self._turbine(p, QPointF(peak.x(), top), reveal(h, MIN_H, 70) * fit)
         p.end()
 
     def _turbine(self, p: QPainter, base: QPointF, grow: float) -> None:
