@@ -108,7 +108,7 @@ def layout_svg(title: str, positions: Sequence[tuple[float, float]], rotor_d: fl
 
     aerial = satellite is not None and satellite.ok
     line = "#FFFFFF" if aerial else MUTED
-    body = [_text(12, 20, title, 14, INK, weight="700")]
+    body = []
     body.append(f'<defs><clipPath id="mapclip"><rect x="{left}" y="{top}" '
                 f'width="{right - left}" height="{bottom - top}"/></clipPath></defs>')
     if aerial:
@@ -140,6 +140,15 @@ def layout_svg(title: str, positions: Sequence[tuple[float, float]], rotor_d: fl
         body.append(f'<polygon points="{a[0]:.1f},{a[1]:.1f} {d[0]:.1f},{d[1]:.1f} '
                     f'{c[0]:.1f},{c[1]:.1f} {b[0]:.1f},{b[1]:.1f}" fill="{BLUE}" opacity="{0.35 if aerial else 0.10}"/>')
     body.append('</g>')
+    # QtSvg does not always honour clip-path: mask whatever the picture or the cones draw
+    # outside the map with opaque white, then write the title and the legend on it
+    for x, y, w, h in ((0, 0, width, top), (0, bottom, width, height - bottom),
+                       (0, top, left, bottom - top), (right, top, width - right, bottom - top)):
+        body.append(f'<rect x="{x}" y="{y:.1f}" width="{w}" height="{h:.1f}" fill="white"/>')
+    body.append(_text(12, 20, title, 14, INK, weight="700"))
+    if aerial:
+        body.append(f'<rect x="{left}" y="{top}" width="{right - left}" height="{bottom - top}" '
+                    f'fill="none" stroke="{GRID}"/>')
     show_numbers = len(pts) <= 14
     for i, ((e, n), eff) in enumerate(zip(pts, efficiencies, strict=True)):
         x, y = px(e, n)

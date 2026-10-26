@@ -133,6 +133,11 @@ def _satellite_render_failed() -> bool:
     renderer = QSvgRenderer(svg.encode())
     renderer.render(painter)
     painter.end()
+    foot = img.pixelColor(300, 380)          # the legend strip must stay white
+    if foot.green() < 240 or foot.red() < 240:
+        print(f"self-test: the satellite picture spills over the legend (pixel {foot.name()})",
+              flush=True)
+        return True
     px = img.pixelColor(60, 60)
     if not (px.green() > px.red() + 40 and px.green() > px.blue() + 40):
         print(f"self-test: the satellite tile was not drawn by QtSvg (pixel {px.name()})",

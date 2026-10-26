@@ -92,3 +92,14 @@ def test_map_with_satellite_embeds_the_tiles_and_the_credit(tmp_path):
     assert "</svg>" in aerial and aerial.count("<svg") == 1
     x_lo, x_hi, y_lo, y_hi = layout_window(pos, 100.0, outline, 270.0)
     assert x_lo < -600 and x_hi > 600 and y_lo < -400 and y_hi > 400
+
+
+def test_the_picture_never_shows_in_the_legend_strip(tmp_path):
+    """Whatever the renderer does with clip-path, white masks keep the legend readable."""
+    s = sat.fetch_satellite(45.07, 7.69, WINDOW, urlopen=lambda r, timeout=0: _Resp(_jpeg()),
+                            cache_dir=tmp_path)
+    svg = layout_svg("t", [(0.0, 0.0)], 100.0, [0.95], None, 270.0, 0.075, satellite=s)
+    last_image = svg.rindex("<image")
+    legend = svg.index("keeps its energy")
+    masks = [m.start() for m in re.finditer(r'fill="white"/>', svg)]
+    assert len([m for m in masks if m > last_image]) >= 4 and last_image < legend
