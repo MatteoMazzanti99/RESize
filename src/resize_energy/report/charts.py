@@ -188,7 +188,7 @@ def _wake_charts(inp: WindInputs, d: WindDesign) -> dict[str, ChartSpec]:
                     "grid of the same turbines.")
     outline = d.site.corners() if d.site else None
     map_spec = ChartSpec(
-        "svg", layout_title, caption=caption, width=520, height=420,
+        "svg", layout_title, caption=caption, width=460, height=390,
         svg=layout_svg(layout_title, w.positions, t.rotor_diameter_m, w.turbine_efficiency,
                        outline, prevailing, inp.wake_decay))
     rose_title = "Wind rose of the site" + (" (measured)" if rose else " (assumed shape)")
@@ -196,7 +196,7 @@ def _wake_charts(inp: WindInputs, d: WindDesign) -> dict[str, ChartSpec]:
         f"Hourly data of {', '.join(str(y) for y in rose.years)} ({rose.source}, 50 m)."
         if rose else "The shape comes from the prevailing direction and concentration you typed."))
     rose_spec = ChartSpec(
-        "svg", rose_title, caption=rose_caption, width=460, height=330,
+        "svg", rose_title, caption=rose_caption, width=460, height=360,
         svg=rose_svg(rose_title, w.sector_weights, energy,
                      tuple(1.0 - x for x in w.sector_efficiency)))
     return {

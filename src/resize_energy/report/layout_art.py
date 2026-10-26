@@ -45,7 +45,7 @@ def _scale_bar_m(span_m: float) -> float:
 
 def layout_svg(title: str, positions: Sequence[tuple[float, float]], rotor_d: float,
                efficiencies: Sequence[float], outline: Sequence[tuple[float, float]] | None,
-               wind_from_deg: float, decay: float, width: int = 520, height: int = 420) -> str:
+               wind_from_deg: float, decay: float, width: int = 460, height: int = 390) -> str:
     """Top view of the farm: site outline, rotors to scale, wake cones of the prevailing wind,
     each turbine coloured by the share of a free turbine's energy it keeps. North is up."""
     pts = list(positions)
@@ -106,7 +106,7 @@ def layout_svg(title: str, positions: Sequence[tuple[float, float]], rotor_d: fl
     body.append(f'<path d="M{bx:.1f},{by - 4} v8 M{bx:.1f},{by} h{bar_m * k:.1f} '
                 f'm0,-4 v8" stroke="{INK}" stroke-width="1.6" fill="none"/>'
                 + _text(bx + bar_m * k + 8, by + 4, f"{bar_m:,.0f} m", 10, MUTED))
-    wx, wy = width - 150, by
+    wx, wy = width - 135, by
     ax, ay = dx * 22, -dy * 22                                  # screen: y points down
     body.append(f'<path d="M{wx - ax / 2:.1f},{wy - ay / 2:.1f} L{wx + ax / 2:.1f},{wy + ay / 2:.1f}" '
                 f'stroke="{BLUE}" stroke-width="2.4" marker-end="none"/>'
@@ -115,19 +115,19 @@ def layout_svg(title: str, positions: Sequence[tuple[float, float]], rotor_d: fl
     ky = height - 14
     for j, (eff, label) in enumerate(((0.98, "keeps its energy"), (0.92, "some shading"),
                                       (0.85, "shaded"))):
-        kx = left + 4 + j * 150
+        kx = left + 4 + j * 135
         body.append(f'<circle cx="{kx}" cy="{ky - 3}" r="5" fill="{efficiency_color(eff)}"/>'
                     + _text(kx + 10, ky, label, 10, MUTED))
     return _svg(width, height, "".join(body))
 
 
 def rose_svg(title: str, frequency: Sequence[float], energy_share: Sequence[float],
-             loss: Sequence[float] | None = None, width: int = 460, height: int = 330) -> str:
+             loss: Sequence[float] | None = None, width: int = 460, height: int = 360) -> str:
     """A wind rose: petal length = share of the hours (blue), amber outline = share of the
     wind energy, red figure = wake loss when the wind comes from that sector."""
     n = len(frequency)
-    cx, cy = width / 2, 190.0
-    big = 118.0
+    cx, cy = width / 2, 188.0
+    big = 112.0
     top = max(max(frequency), max(energy_share), 1e-9)
     ring_max = math.ceil(top * 100 / 5.0) * 5.0 / 100.0          # to the next 5 %
     body = [_text(12, 20, title, 14, INK, weight="700")]
