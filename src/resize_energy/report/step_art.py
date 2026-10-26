@@ -305,7 +305,7 @@ def river(phase: float) -> str:
         f'<path d="M{8 - 32 + 32 * phase:.1f},{44 + 11 * k} q8,-8 16,0 t16,0 t16,0 t16,0 t16,0 t16,0" '
         f'fill="none" stroke="{t["blue"]}" stroke-width="3.5" stroke-linecap="round" '
         f'opacity="{0.95 - 0.2 * k:.2f}"/>' for k in range(3))
-    clip = '<clipPath id="rv"><rect x="8" y="0" width="76" height="110"/></clipPath>'
+    clip = '<defs><clipPath id="rv"><rect x="8" y="0" width="76" height="110"/></clipPath></defs>'
     pipe = (f'<path d="M84,56 L142,88" fill="none" stroke="{t["blue"]}" stroke-width="12" '
             f'stroke-linecap="round" opacity="0.85"/>'
             f'<path d="M84,56 L142,88" fill="none" stroke="{t["panel"]}" stroke-width="4" stroke-linecap="round"/>')
