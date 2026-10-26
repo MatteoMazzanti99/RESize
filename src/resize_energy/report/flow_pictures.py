@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from resize_energy.core.battery_design import BatteryDesign, BatteryInputs
 from resize_energy.core.biomass_design import BiomassDesign, BiomassInputs
+from resize_energy.core.geothermal_design import GeothermalDesign, GeothermalInputs
+from resize_energy.core.hydro_design import HydroDesign, HydroInputs
 from resize_energy.core.hydrogen_design import HydrogenDesign, HydrogenInputs
 from resize_energy.core.pv_design import PVDesign, PVInputs
 from resize_energy.core.solar_thermal_design import SolarThermalDesign, SolarThermalInputs
@@ -153,3 +155,39 @@ def biomass_picture(inp: BiomassInputs, d: BiomassDesign) -> Picture:
                           "blue", 1))
         flows.append(Flow(src, src + 2, max(_share(el, total), 0.1), "blue"))
     return nodes, flows
+
+
+def _tail(produced: float, demand: float, src: int) -> tuple[list[Node], list[Flow]]:
+    """Used on site and sent to the grid, or everything to the grid when there is no demand."""
+    if demand > 0:
+        return _to_house_and_grid(produced, demand, src)
+    return ([Node("grid", "Sold to the grid", energy(produced), "all of it", "green")],
+            [Flow(src, src + 1, 0.9, "green")])
+
+
+def hydro_picture(inp: HydroInputs, d: HydroDesign) -> Picture:
+    nodes = [Node("river", "River", f"{inp.mean_flow_m3s:.2f} m3/s", "mean flow", "blue"),
+             Node("penstock", "Penstock", f"{d.net_head_m:.0f} m", f"{d.design_flow_m3s:.2f} m3/s "
+                  "design flow", "blue"),
+             Node("runner", d.turbine_name.split(" (")[0], power(d.rated_kw), "rated power",
+                  "green")]
+    flows = [Flow(0, 1, max(d.water_used_fraction, 0.2), "blue"), Flow(1, 2, 0.9, "blue")]
+    tail, tail_flows = _tail(d.energy_kwh, inp.annual_demand_kwh, 2)
+    return nodes + tail, flows + tail_flows
+
+
+def geothermal_picture(inp: GeothermalInputs, d: GeothermalDesign) -> Picture:
+    nodes = [Node("wells", "Wells", f"{inp.reservoir_temp_c:.0f} degC",
+                  f"{d.wells_pairs} pair(s), {d.flow_total_kg_s:,.0f} kg/s, {d.depth_m / 1000:.1f} km",
+                  "red")]
+    if d.pathway == "heat":
+        nodes += [Node("hot_tank", "Heat exchanger", power(d.wells_pairs * d.heat_per_pair_kw),
+                       "heat to the network", "red"),
+                  Node("house", "Heat delivered", energy(d.heat_kwh),
+                       f"{100 * d.coverage:.0f} % of the demand", "orange")]
+        return nodes, [Flow(0, 1, 1.0, "red"), Flow(1, 2, max(d.coverage, 0.2), "red")]
+    nodes.append(Node("engine", f"{d.plant.capitalize()} plant", power(d.net_kw), "net power",
+                      "blue"))
+    flows = [Flow(0, 1, 1.0, "red")]
+    tail, tail_flows = _tail(d.electricity_kwh, inp.annual_electricity_demand_kwh, 1)
+    return nodes + tail, flows + tail_flows

@@ -106,6 +106,40 @@ COSTS: dict[str, CostBasis] = {c.key: c for c in (
               "The sources give total system prices. The program adds tank and fixed costs to the "
               "collector: for 5 m2 and a 300 litre tank, (5 x 380 + 300 x 1.8 + 1500) / 5 is about "
               "790 euro/m2 (RESize's arithmetic)."),
+    CostBasis("hydro_capex", "Run-of-river hydropower, installed", "euro per kW", (6600.0,),
+              "USA, 2024 ATB: new stream-reach development 6,574-8,611 USD/kW; the eight reference "
+              "plants on existing non-powered dams 3,045-20,043 USD/kW.",
+              (("nrel_atb2024_hydro", "capital expenditure"),), "within",
+              "Dollars are not converted. The cost changes by a factor of two or three with the "
+              "site (intake, penstock, access, grid connection): ask for quotes."),
+    CostBasis("hydro_om", "Hydropower operation and maintenance", "percent of CAPEX per year", (2.5,),
+              "USA, 2024 ATB: the yearly O&M is the lesser of 227,000 x P^0.547 USD (P in MW) and "
+              "2.5 % of the CAPEX.", (("nrel_atb2024_hydro", "fixed O&M"),), "within",
+              "At the upper limit of the formula, for small plants."),
+    CostBasis("hydro_life", "Hydropower plant life", "years", (40.0,),
+              "The ATB gives no number for the technical lifetime.", (), "none",
+              "A round placeholder: civil works last much longer, machines are refurbished."),
+    CostBasis("geo_capex_el", "Geothermal power plant with wells, installed", "euro per kW of net power",
+              (6300.0,),
+              "USA, 2024 ATB, hydrothermal plants: flash (200 degC and above) 3,091-5,922 USD/kW, "
+              "average 4,350; binary (150 to below 200 degC) average 9,483, representative plant "
+              "6,349, lowest case 4,882 USD/kW.",
+              (("nrel_atb2024_geo", "capital cost"),), "within",
+              "Includes exploration, wells and plant. Dollars are not converted."),
+    CostBasis("geo_life", "Geothermal plant life", "years", (30.0,),
+              "USA, 2024 ATB: 30 years for the plant and the reservoir.",
+              (("nrel_atb2024_geo", "lifetime"),), "within"),
+    CostBasis("geo_om", "Geothermal operation and maintenance", "fraction of CAPEX per year", (0.03,),
+              "The ATB page gives no O&M value in a form that can be quoted.", (), "none",
+              "A round placeholder."),
+    CostBasis("geo_drill", "Geothermal well, drilled and cased", "euro per metre", (1500.0,),
+              "MIT study, 2004 US dollars: 2.3 million for 1,500 m, 4.0 million for 3,000 m, 6.7-8.3 "
+              "million for 5,000 m, 9.2-12.3 million for 6,000 m, that is about 1,300-2,000 per metre.",
+              (("mit2006", "chapter 6, table 6.1"),), "within",
+              "2004 values, not updated for inflation: today's wells cost more."),
+    CostBasis("geo_surface", "Surface equipment of a geothermal heat plant", "euro per kW of heat",
+              (250.0,), "No document with numbers for the heat exchangers, pumps and network "
+              "connection was found.", (), "none", "A round placeholder: replace it with a quote."),
     CostBasis("solar_other", "Evacuated-tube and unglazed collectors, storage tank, fixed costs, "
               "adsorption chiller", "euro per m2, per litre, euro, per kW", (520.0, 120.0, 1.8, 1500.0, 1100.0),
               "No document with numbers for these items was found.", (), "none",
@@ -123,6 +157,9 @@ TOPIC_COSTS: dict[str, tuple[str, ...]] = {
     "hydrogen.storage": ("h2_storage",),
     "solar.economics": ("solar_flat", "solar_other"),
     "econ.lcoe": ("pv_capex", "wind_capex", "bio_capex", "h2_capex"),
+    "hydro.economics": ("hydro_capex", "hydro_om", "hydro_life"),
+    "geo.economics": ("geo_capex_el", "geo_drill", "geo_surface", "geo_om", "geo_life"),
+    "geo.wells": ("geo_drill",),
 }
 
 

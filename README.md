@@ -6,7 +6,7 @@ RESize guides MSc students (and engineers doing a first-pass design) through the
 renewable energy plants. At every step it shows the formula, the assumptions and the
 reasoning, so you learn *why* a choice is made, not just the number that comes out.
 
-> **Status:** early release. Photovoltaic, wind, biomass, green hydrogen, battery storage and solar thermal (with adsorption cooling) are available, plus a technology comparison. Interfaces and results may change.
+> **Status:** early release. Photovoltaic, wind, biomass, green hydrogen, battery storage, solar thermal (with adsorption cooling), run-of-river hydropower and geothermal are available, plus a technology comparison. Interfaces and results may change.
 
 **User guide:** <https://matteomazzanti99.github.io/RESize/> (one page per technology, with screenshots).
 
@@ -155,6 +155,14 @@ dumped by overheating, a winter and a summer week of the tank temperature, the s
 and the energy per m2 against the collector area, payback, NPV, cost of solar energy, CO2 and
 the sensitivity of the NPV. Prices and collector coefficients are round typical values: use
 the Solar Keymark certificate of your collector and the datasheet of the chiller.
+
+## Hydropower and geothermal modules
+
+**Hydropower** sizes a run-of-river plant: flow-duration curve from the mean flow and Q95,
+environmental flow, design flow, penstock, turbine type, yearly energy and cost. **Geothermal**
+sizes either a doublet for a heat network or a binary/flash power plant: wells, depth, pumping,
+net power, cost. Both are first-sizing tools with "Why?" explanations and sources; they are not
+in the technology comparison yet and have no Excel export.
 
 ## Technology comparison
 

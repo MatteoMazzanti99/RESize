@@ -111,6 +111,27 @@ _RAW: dict[str, tuple[str, str, str]] = {
     "solar.economics": ("short1995", "mugnier2018|installed prices of small systems; weiss2024|market overview", ""),
     "solar.co2": ("ipcc_ar5_annex3", "ipcc_ar5_annex3|life-cycle factors; ispra|national grid factor", "Emissions of making the collectors are not counted."),
     "solar.sensitivity": ("saltelli2008", "", "One input at a time, +/-20 %."),
+    # --- hydropower ---------------------------------------------------------------------------
+    "hydro.fdc": ("vogel1994", "esha2004|hydrology", "A log-normal curve fixed by the mean flow and Q95: a RESize simplification."),
+    "hydro.eco_flow": ("", "tennant1976|10 % and 30 % of the mean flow; wfd2000", "A constant flow all year: a RESize simplification."),
+    "hydro.design_flow": ("esha2004|ch. 3; paish2002", "", "A cost proportional to the rated power: a RESize simplification."),
+    "hydro.power": ("esha2004|ch. 3 and 6", "esha2004|tables 6.7 and 6.8; paish2002", ""),
+    "hydro.penstock": ("white2016|pipe flow; swamee1976", "esha2004|ch. 5", "One pipe of constant diameter; water hammer is not checked."),
+    "hydro.turbine": ("esha2004|section 6.2", "esha2004|tables 6.3 and 6.7; paish2002", "The flow rules that choose between overlapping types, and the crossflow figures, are RESize's own."),
+    "hydro.energy": ("esha2004|ch. 3", "nrel_atb2024_hydro|capacity factors of run-of-river plants", "Operating losses of 5 %: a RESize choice."),
+    "hydro.economics": ("short1995; iea_projected|methodology", "nrel_atb2024_hydro|costs of new stream-reach development", ""),
+    "hydro.co2": ("ipcc_ar5_annex3|life-cycle emissions of electricity supply", "ipcc_ar5_annex3|hydropower, median value; ispra|national grid factor", ""),
+    # --- geothermal ---------------------------------------------------------------------------
+    "geo.heat_power": ("dipippo2016; lund2021", "lund2021|direct use", "Constant flow and temperature for the whole life."),
+    "geo.coverage": ("quaschning2013; en15316", "", "Power-law shape of the duration curve; wells in whole pairs: RESize simplifications."),
+    "geo.wells": ("mit2006|ch. 6", "mit2006|cost of wells against depth, 2004 dollars", "A single cost per metre for every depth: a RESize simplification."),
+    "geo.pumping": ("white2016|pumps", "dipippo2016|well flow and pumping", "Typical pressure rise and pump efficiency: values of RESize."),
+    "geo.exergy": ("dipippo2016|exergy of geofluids; mit2006|ch. 7", "", ""),
+    "geo.binary": ("mit2006|ch. 7, fig. 7.2 and table 7.2; dipippo2016", "mit2006|ten operating binary plants, brine 103-166 degC", "The reinjection temperature is a typical value of RESize."),
+    "geo.flash": ("mit2006|section 7.2.2, table 7.5; dipippo2016", "mit2006|utilization efficiency 31 % at 200 degC, parasitic load 5 %", "One utilization efficiency for every temperature."),
+    "geo.net_power": ("dipippo2016; mit2006|ch. 7", "", "Identical wells, no decline of the reservoir; operating hours of RESize."),
+    "geo.economics": ("short1995; iea_projected|methodology", "nrel_atb2024_geo|cost of hydrothermal plants; mit2006|ch. 6", "Surface cost of the heat, drilling cost and O&M are placeholders of RESize."),
+    "geo.co2": ("ipcc_ar5_annex3|life-cycle emissions of electricity supply", "ipcc_ar5_annex3|geothermal, median value; ispra|national grid factor", ""),
 }
 
 

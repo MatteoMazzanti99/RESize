@@ -12,7 +12,7 @@ def _walk_through(window, app) -> int:
     if len(load_library()) < 10:
         print("self-test: the turbine library is missing from the build", flush=True)
         return 1
-    markers = {"pv": "Design checks", "wind": "Design checks", "biomass": "Design checks", "hydrogen": "Design checks", "battery": "Design checks", "solar": "Design checks", "compare": "Which is better"}
+    markers = {"pv": "Design checks", "wind": "Design checks", "biomass": "Design checks", "hydrogen": "Design checks", "battery": "Design checks", "solar": "Design checks", "hydro": "Design checks", "geothermal": "Design checks", "compare": "Which is better"}
     for tech, marker in markers.items():
         window._start(tech)
         for _ in range(len(window.pages) - 2):
@@ -248,7 +248,7 @@ def _screenshots(window, app, folder: str) -> None:
     _settle(app, 0.5)  # let the icons drift for a moment
     window.grab().save(str(out / "home_compare.png"))
     zone.clear()
-    for tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "compare"):
+    for tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "hydro", "geothermal", "compare"):
         window._start(tech)
         _settle(app)
         window.grab().save(str(out / f"{tech}_start.png"))

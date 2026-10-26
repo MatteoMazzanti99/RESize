@@ -116,6 +116,40 @@ def _solar_thermal() -> list[Shape]:
     ]
 
 
+def _wave(y: float, x0: float = 3.0, x1: float = 21.0, amp: float = 1.4) -> list[Point]:
+    pts = []
+    for i in range(25):
+        x = x0 + (x1 - x0) * i / 24
+        pts.append((x, y - amp * math.sin(2 * math.pi * 1.5 * i / 24)))
+    return pts
+
+
+def _hydropower() -> list[Shape]:
+    top = (12.0, 2.5)
+    drop = [top]
+    drop += cubic(top, (12.0, 2.5), (8.5, 6.5), (8.5, 9.0))
+    drop += cubic((8.5, 9.0), (8.5, 11.0), (10.0, 12.2), (12.0, 12.2))
+    drop += cubic((12.0, 12.2), (14.0, 12.2), (15.5, 11.0), (15.5, 9.0))
+    drop += cubic((15.5, 9.0), (15.5, 6.5), (12.0, 2.5), top)
+    return [
+        (drop, True, False),
+        (_wave(16.0), False, False),
+        (_wave(20.0), False, False),
+    ]
+
+
+def _geothermal() -> list[Shape]:
+    mound = [(3.0, 21.0), (8.0, 12.0), (16.0, 12.0), (21.0, 21.0)]
+    steam1 = [(10.5, 10.0), (9.0, 7.5), (10.5, 5.0), (9.0, 2.5)]
+    steam2 = [(14.0, 10.0), (12.5, 7.5), (14.0, 5.0), (12.5, 2.5)]
+    return [
+        (mound, True, False),
+        (steam1, False, False),
+        (steam2, False, False),
+        ([(3.0, 21.0), (21.0, 21.0)], False, False),
+    ]
+
+
 ICONS: dict[str, list[Shape]] = {
     "pv": _photovoltaic(),
     "wind": _wind(),
@@ -123,4 +157,6 @@ ICONS: dict[str, list[Shape]] = {
     "hydrogen": _hydrogen(),
     "battery": _battery(),
     "solar": _solar_thermal(),
+    "hydro": _hydropower(),
+    "geothermal": _geothermal(),
 }

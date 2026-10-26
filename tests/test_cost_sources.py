@@ -4,6 +4,8 @@ import pytest
 
 from resize_energy.core.battery_design import BatteryInputs
 from resize_energy.core.comparison import CostAssumptions
+from resize_energy.core.geothermal_design import GeothermalInputs
+from resize_energy.core.hydro_design import HydroInputs
 from resize_energy.core.hydrogen_design import HydrogenInputs
 from resize_energy.core.plant_economics import EconomicInputs
 from resize_energy.core.solar_thermal import COLLECTORS
@@ -15,7 +17,16 @@ from resize_energy.tutor.explanations import EXPLANATIONS
 
 def _code_values():
     b, c, h, s = BatteryInputs(), CostAssumptions(), HydrogenInputs(), SolarThermalInputs()
+    hy, g = HydroInputs(), GeothermalInputs()
     return {
+        "hydro_capex": {hy.capex_per_kw},
+        "hydro_om": {hy.om_fraction * 100},
+        "hydro_life": {hy.life_years},
+        "geo_capex_el": {g.capex_per_kw_el},
+        "geo_life": {g.life_years},
+        "geo_om": {g.om_fraction},
+        "geo_drill": {g.drilling_eur_per_m},
+        "geo_surface": {g.surface_eur_per_kw_th},
         "pv_capex": {c.pv_capex_eur_per_kwp, h.pv_capex_per_kwp, 1100.0},   # 1,100: the PV cost step
         "pv_om": {c.pv_om_eur_per_kwp_year, h.pv_om_per_kwp, 15.0},
         "pv_life": {c.pv_lifetime_years},

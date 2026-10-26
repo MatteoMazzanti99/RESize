@@ -178,7 +178,36 @@ def _hot_tank(t, c):
             f'<path d="M-24,10 q6,-6 12,0 t12,0 t12,0 t12,0" fill="none" stroke="{c}" stroke-width="3"/>')
 
 
-ICONS = {"hot_tank": _hot_tank, "engine": _engine, "digester": _digester, "sun": _sun, "panels": _panels, "inverter": _inverter, "house": _house, "grid": _grid,
+def _river(t, c):
+    waves = "".join(
+        f'<path d="M-36,{y} q9,-9 18,0 t18,0 t18,0 t18,0" fill="none" stroke="{c}" stroke-width="4" '
+        f'stroke-linecap="round" opacity="{o}"/>' for y, o in ((-14, 1.0), (2, 0.8), (18, 0.6)))
+    return waves
+
+
+def _penstock(t, c):
+    return (f'<path d="M-38,-26 L26,22" fill="none" stroke="{c}" stroke-width="12" stroke-linecap="round" opacity="0.85"/>'
+            f'<path d="M-38,-26 L26,22" fill="none" stroke="{t["panel"]}" stroke-width="4" stroke-linecap="round"/>'
+            f'<path d="M30,30 q-7,10 0,14 q7,-4 0,-14z" fill="{c}"/>')
+
+
+def _runner(t, c):
+    spokes = "".join(
+        f'<line x1="0" y1="0" x2="{26 * math.cos(a):.1f}" y2="{26 * math.sin(a):.1f}" stroke="{c}" '
+        f'stroke-width="5" stroke-linecap="round"/>' for a in (i * math.pi / 3 for i in range(6)))
+    return (f'<circle r="32" fill="none" stroke="{c}" stroke-width="4"/>' + spokes
+            + f'<circle r="6" fill="{c}"/>')
+
+
+def _wells(t, c):
+    return (f'<line x1="-44" y1="-22" x2="44" y2="-22" stroke="{t["grey"]}" stroke-width="4" stroke-linecap="round"/>'
+            f'<path d="M-22,-22 V26 M-14,-22 V26" stroke="{c}" stroke-width="3" fill="none"/>'
+            f'<path d="M14,-22 V26 M22,-22 V26" stroke="{c}" stroke-width="3" fill="none"/>'
+            f'<path d="M-18,26 q18,12 36,0" fill="none" stroke="{c}" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 7"/>'
+            f'<path d="M-18,6 q-9,-5 0,-10 M18,6 q9,-5 0,-10" fill="none" stroke="{c}" stroke-width="3" stroke-linecap="round" opacity="0.7"/>')
+
+
+ICONS = {"river": _river, "penstock": _penstock, "runner": _runner, "wells": _wells, "hot_tank": _hot_tank, "engine": _engine, "digester": _digester, "sun": _sun, "panels": _panels, "inverter": _inverter, "house": _house, "grid": _grid,
          "turbine": _turbine, "sun_turbine": _sun_turbine, "bolt": _bolt, "wind": _wind, "battery": _battery, "tank": _tank, "electrolyser": _electrolyser,
          "flame": _flame, "collector": _collector, "tap": _tap, "snow": _snow}
 

@@ -10,10 +10,13 @@ import math
 from dataclasses import dataclass
 
 from resize_energy.core import economics as eco
+from resize_energy.core import geothermal as _geo
 from resize_energy.core import wind
 from resize_energy.core.battery_design import BatteryDesign, BatteryInputs
 from resize_energy.core.biomass_design import BiomassDesign, BiomassInputs
 from resize_energy.core.comparison import ComparisonInputs, ComparisonResult
+from resize_energy.core.geothermal_design import GeothermalDesign, GeothermalInputs
+from resize_energy.core.hydro_design import HydroDesign, HydroInputs, exceedance_sweep
 from resize_energy.core.hydrogen_design import HydrogenDesign, HydrogenInputs
 from resize_energy.core.plant_economics import Economics
 from resize_energy.core.pv_design import PVDesign, PVInputs
@@ -27,7 +30,8 @@ from resize_energy.core.wind_design import WindDesign, WindInputs
 
 GREEN, BLUE, AMBER, PURPLE = "#0A7452", "#1F5FBF", "#C77700", "#7B3FB8"
 GREY, RED, TEAL, LIGHT = "#7C8AA0", "#B3261E", "#0E8C9B", "#9CC9B8"
-TECH_COLORS = {"pv": GREEN, "wind": BLUE, "biomass": AMBER, "hydrogen": PURPLE}
+TECH_COLORS = {"pv": GREEN, "wind": BLUE, "biomass": AMBER, "hydrogen": PURPLE, "hydro": TEAL,
+               "geothermal": RED}
 MONTHS = ("J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D")
 
 
@@ -477,8 +481,8 @@ def _all_finite_or_inf(spec: ChartSpec) -> bool:
 
 
 __all__ = [
-    "ChartSpec", "Series", "biomass_charts", "comparison_charts", "hydrogen_charts",
-    "nice_ticks", "pv_charts", "unit_for", "wind_charts",
+    "ChartSpec", "Series", "biomass_charts", "comparison_charts", "geothermal_charts",
+    "hydro_charts", "hydrogen_charts", "nice_ticks", "pv_charts", "unit_for", "wind_charts",
 ]
 
 # --- battery storage -----------------------------------------------------------------------
@@ -644,3 +648,94 @@ def solar_charts(inp: SolarThermalInputs, d: SolarThermalDesign) -> dict[str, Ch
         caption=f"Investment {d.capex:,.0f} euro; the line ends at the net present value, "
                 f"{d.npv:,.0f} euro.")
     return out | sensitivity_charts("solar", d.sensitivity)
+
+
+# --- hydropower ----------------------------------------------------------------------------
+def hydro_charts(inp: HydroInputs, d: HydroDesign) -> dict[str, ChartSpec]:
+    out: dict[str, ChartSpec] = {}
+    xs = tuple(100.0 * p for p, _, _ in d.curve)
+    out["hydro_fdc"] = ChartSpec(
+        "lines", "River flow through the year, from the wettest day to the driest", (),
+        (Series("river", tuple(q for _, q, _ in d.curve), BLUE, x=xs),
+         Series("through the turbine", tuple(t for _, _, t in d.curve), TEAL, x=xs, fill=True)),
+        x_label="Share of the time the flow is exceeded [%]", y_label="Flow [m3/s]", decimals=2,
+        hlines=((inp.eco_flow_m3s, "environmental flow"),
+                (d.design_flow_m3s + inp.eco_flow_m3s, "design flow + environmental")),
+        caption="The turbine takes what is above the environmental flow, up to its design flow, "
+                f"and stops below {d.min_flow_m3s:.2f} m3/s.")
+    total = sum(q for _, q, _ in d.curve) or 1.0
+    eco = sum(min(q, inp.eco_flow_m3s) for _, q, _ in d.curve) / total
+    used = d.water_used_fraction
+    rest = max(0.0, 1.0 - eco - used)
+    out["hydro_water"] = ChartSpec(
+        "hbars", "Where the water of the river goes",
+        ("Stays in the river (environmental flow)", "Goes through the turbine",
+         "Passes by (above the design flow or too little)"),
+        (Series("share of the water [%]", (eco * 100, used * 100, rest * 100),
+                colors=(GREEN, TEAL, GREY)),),
+        x_label="Share of the yearly volume of water [%]", decimals=0,
+        caption="A run-of-river plant has no reservoir: the water it cannot use goes by.")
+    sweep = exceedance_sweep(inp)
+    if len(sweep) > 2:
+        sx = tuple(100.0 * p for p, *_ in sweep)
+        scaled, unit, dec = _scaled([e for _, _, e, _ in sweep])
+        out["hydro_sweep"] = ChartSpec(
+            "lines", "Bigger or smaller turbine: energy and capacity factor", (),
+            (Series(f"energy [{unit}]", scaled, TEAL, x=sx),
+             Series("capacity factor [%]", tuple(c * 100 for *_, c in sweep), AMBER, x=sx)),
+            x_label="Design flow, exceeded this share of the time [%]", y_label="", decimals=dec,
+            vlines=((100.0 * inp.design_exceedance, "your choice"),), height=290,
+            caption="Moving to the left (a bigger turbine) the energy grows more and more "
+                    "slowly while the capacity factor, and the cost per kWh, get worse.")
+    return out
+
+
+# --- geothermal ----------------------------------------------------------------------------
+def geothermal_charts(inp: GeothermalInputs, d: GeothermalDesign) -> dict[str, ChartSpec]:
+    out: dict[str, ChartSpec] = {}
+    if d.pathway == "heat":
+        lf = max(d.load_factor, 1e-6)
+        n = 1.0 / lf - 1.0
+        xs = tuple(float(h) for h in range(0, 8761, 120))
+        curve = tuple(inp.peak_heat_kw * (1.0 - h / 8760.0) ** n for h in xs)
+        plant = d.wells_pairs * d.heat_per_pair_kw
+        out["geo_load"] = ChartSpec(
+            "lines", "Heat demand through the year, from the highest hour to the lowest", (),
+            (Series("heat demand", curve, RED, x=xs, fill=True),),
+            x_label="Hours of the year (sorted from the highest demand)",
+            y_label="Heat power [kW]", hlines=((plant, f"wells {plant:,.0f} kW"),),
+            caption=f"The wells give a nearly constant power and cover {d.coverage:.0%} of the "
+                    "heat: the part of the curve below the line. A boiler takes the peaks.")
+        vals = [inp.annual_heat_demand_kwh, d.heat_kwh]
+        scaled, unit, dec = _scaled(vals)
+        out["geo_energy"] = ChartSpec(
+            "hbars", "Yearly heat: demand and what the wells deliver",
+            ("Heat demand", "Heat from the wells"), (Series("energy", scaled, colors=(GREY, RED)),),
+            x_label=f"Energy per year [{unit}]", decimals=dec)
+        return out
+    gross = d.gross_kw
+    own = max(0.0, d.gross_kw - d.pumps_kw - d.net_kw)
+    scaled, unit, dec = _scaled([gross, own, d.pumps_kw, d.net_kw], "kW")
+    out["geo_power"] = ChartSpec(
+        "hbars", "From the turbine to the grid",
+        ("Gross power of the turbine", "Used by the plant itself", "Used by the pumps",
+         "Net power"), (Series("power", scaled, colors=(AMBER, GREY, GREY, GREEN)),),
+        x_label=f"Power [{unit}]", decimals=dec,
+        caption="What reaches the grid is what is left after the plant's own use and the pumps.")
+    m = inp.flow_per_well_kg_s
+    binary_t = tuple(float(t) for t in range(100, 201, 5))
+    flash_t = tuple(float(t) for t in range(160, 251, 5))
+    out["geo_temperature"] = ChartSpec(
+        "lines", "Power of one well against the brine temperature", (),
+        (Series("binary plant", tuple(
+            _geo.binary_cycle_efficiency(t) * _geo.thermal_power_kw(m, t, inp.reinjection_temp_c)
+            for t in binary_t if t > inp.reinjection_temp_c), BLUE,
+            x=tuple(t for t in binary_t if t > inp.reinjection_temp_c)),
+         Series("flash plant", tuple(
+             inp.flash_utilization * m * _geo.brine_exergy_kj_per_kg(t, inp.ambient_temp_c)
+             for t in flash_t), RED, x=flash_t)),
+        x_label="Brine temperature [degC]", y_label="Gross power [kW]",
+        vlines=((inp.reservoir_temp_c, "your reservoir"),), height=290,
+        caption="Hotter brine gives much more power from the same flow. The binary fit is "
+                "built on plants between 103 and 166 degC.")
+    return out

@@ -36,6 +36,8 @@ nav:
       - Green hydrogen: guide/hydrogen.md
       - Battery storage: guide/battery.md
       - Solar thermal and cooling: guide/solar-thermal.md
+      - Hydropower: guide/hydro.md
+      - Geothermal: guide/geothermal.md
       - Technology comparison: guide/compare.md
   - Validation:
       - Overview: validation/README.md

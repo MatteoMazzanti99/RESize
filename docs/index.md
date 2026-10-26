@@ -19,6 +19,8 @@ comes out.
 | [Green hydrogen](guide/hydrogen.md) | hydrogen demand or a plant you own | electrolyser, hours, storage, cost and carbon of hydrogen |
 | [Battery storage](guide/battery.md) | PV and/or wind plant, load | self-sufficiency, cycles, payback, best size |
 | [Solar thermal](guide/solar-thermal.md) | hot water and/or cooling demand | collectors, tank, adsorption chiller, solar fraction |
+| [Hydropower](guide/hydro.md) | head, river flows, penstock | flow-duration curve, turbine, yearly energy, cost |
+| [Geothermal](guide/geothermal.md) | well temperature and flow, heat or electricity demand | wells, net power or heat, pumping, cost |
 | [Comparison](guide/compare.md) | the same yearly energy | cost of energy, payback, NPV and CO2 side by side |
 
 ## Start here

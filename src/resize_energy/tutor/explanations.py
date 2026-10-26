@@ -191,3 +191,10 @@ EXPLANATIONS.update(WIND_ECON_EXPLANATIONS)
 from resize_energy.tutor.explanations_solar import SOLAR_EXPLANATIONS  # noqa: E402
 
 EXPLANATIONS.update(SOLAR_EXPLANATIONS)
+
+# And the hydropower and geothermal modules.
+from resize_energy.tutor.explanations_geothermal import GEOTHERMAL_EXPLANATIONS  # noqa: E402
+from resize_energy.tutor.explanations_hydro import HYDRO_EXPLANATIONS  # noqa: E402
+
+EXPLANATIONS.update(HYDRO_EXPLANATIONS)
+EXPLANATIONS.update(GEOTHERMAL_EXPLANATIONS)

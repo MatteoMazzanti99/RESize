@@ -298,7 +298,52 @@ def leaf(phase: float) -> str:
                  f'<line x1="8" y1="102" x2="212" y2="102" stroke="{t["grey"]}" stroke-width="3" stroke-linecap="round"/>')
 
 
-ARTS = {"sun_path": sun_path, "load_profile": load_profile, "modules": modules, "coins": coins, "sun_wind": sun_wind,
+def river(phase: float) -> str:
+    """A river drops into a penstock and turns a runner: the water that makes the power."""
+    t = _t()
+    waves = "".join(
+        f'<path d="M{8 - 32 + 32 * phase:.1f},{44 + 11 * k} q8,-8 16,0 t16,0 t16,0 t16,0 t16,0 t16,0" '
+        f'fill="none" stroke="{t["blue"]}" stroke-width="3.5" stroke-linecap="round" '
+        f'opacity="{0.95 - 0.2 * k:.2f}"/>' for k in range(3))
+    clip = '<clipPath id="rv"><rect x="8" y="0" width="76" height="110"/></clipPath>'
+    pipe = (f'<path d="M84,56 L142,88" fill="none" stroke="{t["blue"]}" stroke-width="12" '
+            f'stroke-linecap="round" opacity="0.85"/>'
+            f'<path d="M84,56 L142,88" fill="none" stroke="{t["panel"]}" stroke-width="4" stroke-linecap="round"/>')
+    blobs = "".join(
+        f'<circle cx="{84 + 58 * ((phase * 2 + k / 3) % 1):.1f}" cy="{56 + 32 * ((phase * 2 + k / 3) % 1):.1f}" '
+        f'r="3" fill="{t["blue"]}"/>' for k in range(3))
+    spokes = "".join(
+        f'<line x1="172" y1="78" x2="{172 + 22 * math.cos(2 * math.pi * phase + k * math.pi / 3):.1f}" '
+        f'y2="{78 + 22 * math.sin(2 * math.pi * phase + k * math.pi / 3):.1f}" stroke="{t["green"]}" '
+        f'stroke-width="4" stroke-linecap="round"/>' for k in range(6))
+    runner = (f'<circle cx="172" cy="78" r="26" fill="none" stroke="{t["green"]}" stroke-width="4"/>{spokes}'
+              f'<circle cx="172" cy="78" r="5" fill="{t["green"]}"/>')
+    return _wrap(f'{clip}<g clip-path="url(#rv)">{waves}</g>{pipe}{blobs}{runner}'
+                 f'<line x1="8" y1="104" x2="212" y2="104" stroke="{t["grey"]}" stroke-width="3" stroke-linecap="round"/>')
+
+
+def well(phase: float) -> str:
+    """Two wells reach hot rock; heat rises with the water and the thermometer follows."""
+    t = _t()
+    ground = f'<line x1="8" y1="30" x2="212" y2="30" stroke="{t["grey"]}" stroke-width="3" stroke-linecap="round"/>'
+    wells = "".join(
+        f'<path d="M{x},30 V96 M{x + 8},30 V96" stroke="{t["text"]}" stroke-width="2.5" fill="none"/>'
+        for x in (60, 120))
+    rock = f'<ellipse cx="94" cy="100" rx="60" ry="9" fill="{t["red"]}" opacity="0.35"/>'
+    up = "".join(
+        f'<circle cx="64" cy="{96 - 62 * ((phase + k / 4) % 1):.1f}" r="3.5" fill="{t["red"]}" '
+        f'opacity="{1 - 0.5 * ((phase + k / 4) % 1):.2f}"/>' for k in range(4))
+    down = "".join(
+        f'<circle cx="124" cy="{34 + 62 * ((phase + k / 4) % 1):.1f}" r="3.5" fill="{t["blue"]}" '
+        f'opacity="{1 - 0.5 * ((phase + k / 4) % 1):.2f}"/>' for k in range(4))
+    level = 14 + 50 * (0.5 + 0.5 * math.sin(2 * math.pi * phase))
+    thermo = (f'<rect x="170" y="14" width="12" height="70" rx="6" fill="{t["panel"]}" stroke="{t["grey"]}" stroke-width="2"/>'
+              f'<rect x="173" y="{98 - level:.1f}" width="6" height="{level - 12:.1f}" fill="{t["red"]}"/>'
+              f'<circle cx="176" cy="92" r="10" fill="{t["red"]}"/>')
+    return _wrap(ground + wells + rock + up + down + thermo)
+
+
+ARTS = {"river": river, "well": well, "sun_path": sun_path, "load_profile": load_profile, "modules": modules, "coins": coins, "sun_wind": sun_wind,
         "wind": wind, "weibull": weibull, "turbine_curve": turbine_curve, "battery": battery,
         "electrolyser": electrolyser, "flame": flame, "collector": collector, "tap": tap,
         "target": target, "leaf": leaf}

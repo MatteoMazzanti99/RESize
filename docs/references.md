@@ -17,11 +17,14 @@ Standards and reports are revised: use the current edition when you cite them. W
 - Carmo, M., Fritz, D.L., Mergel, J., Stolten, D. (2013). A comprehensive review on PEM water electrolysis. *International Journal of Hydrogen Energy* 38(12):4901-4934. doi:<https://doi.org/10.1016/j.ijhydene.2013.01.151>
 - Cole, W., Karmakar, A. (2023). *Cost Projections for Utility-Scale Battery Storage: 2023 Update*. National Renewable Energy Laboratory, Golden, NREL/TP-6A40-85332. <https://www.nrel.gov/docs/fy23osti/85332.pdf>
 - Davis, N.N., et al. (2023). The Global Wind Atlas: a high-resolution dataset of climatologies and associated web-based application. *Bulletin of the American Meteorological Society* 104(8):E1507-E1525. <https://globalwindatlas.info/>
+- DiPippo, R. (2016). *Geothermal Power Plants: Principles, Applications, Case Studies and Environmental Impact*, 4th ed. Butterworth-Heinemann, Oxford.
 - European Parliament and Council (2023). *Directive (EU) 2023/2413 amending Directive (EU) 2018/2001 (RED III)*. Official Journal of the European Union.
+- European Parliament and Council (2000). *Water Framework Directive*. Official Journal of the European Communities, L 327.
 - Duffie, J.A., Beckman, W.A. (2013). *Solar Engineering of Thermal Processes*, 4th ed. Wiley, Hoboken.
 - CEN. *EN 15316 series: Energy performance of buildings, method for calculation of system energy requirements and system efficiencies*. CEN, Brussels, use the current edition.
 - International Organization for Standardization (2021). *EN ISO 17225-1: Solid biofuels, fuel specifications and classes, Part 1: General requirements*. ISO, Geneva.
 - ENTSO-E. *ENTSO-E Transparency Platform (day-ahead prices)*. <https://transparency.entsoe.eu/>
+- European Small Hydropower Association (2004). *Guide on How to Develop a Small Hydropower Plant*. ESHA, Brussels, chapters 3, 5 and 6 (turbines).
 - European Commission (2023). *Commission Delegated Regulation (EU) 2023/1184 supplementing Directive (EU) 2018/2001 as regards a Union methodology for renewable fuels of non-biological origin*. Official Journal of the European Union, L 157, 20.6.2023.
 - European Wind Energy Association (2009). *Wind Energy: The Facts*. Earthscan, London.
 - Faiman, D. (2008). Assessing the outdoor operating temperature of photovoltaic modules. *Progress in Photovoltaics* 16(4):307-315. doi:<https://doi.org/10.1002/pip.813>
@@ -58,18 +61,23 @@ Standards and reports are revised: use the current edition when you cite them. W
 - Kost, C., Müller, P., Sepúlveda Schweiger, J., Fluri, V., Thomsen, J. (2024). *Levelized Cost of Electricity: Renewable Energy Technologies*. Fraunhofer Institute for Solar Energy Systems ISE, Freiburg, July 2024. <https://www.ise.fraunhofer.de/en/publications/studies/cost-of-electricity.html>
 - KTBL (2013). *Faustzahlen Biogas*. KTBL, Darmstadt, 3rd ed..
 - Lazard (2024). *Lazard's Levelized Cost of Energy+ (LCOE+)*. Lazard, New York, latest edition: check.
+- Lund, J.W., Toth, A.N. (2021). Direct utilization of geothermal energy 2020 worldwide review. *Geothermics* 90:101915. doi:<https://doi.org/10.1016/j.geothermics.2020.101915>
 - Luque, A., Hegedus, S. (eds.) (2011). *Handbook of Photovoltaic Science and Engineering*, 2nd ed. Wiley, Chichester.
 - Luthander, R., Widén, J., Nilsson, D., Palm, J. (2015). Photovoltaic self-consumption in buildings: a review. *Applied Energy* 142:80-94. doi:<https://doi.org/10.1016/j.apenergy.2014.12.028>
 - Manwell, J.F., McGowan, J.G., Rogers, A.L. (2009). *Wind Energy Explained: Theory, Design and Application*, 2nd ed. Wiley, Chichester.
 - Masters, G.M. (2013). *Renewable and Efficient Electric Power Systems*, 2nd ed. Wiley, Hoboken.
 - McKendry, P. (2002). Energy production from biomass (part 1): overview of biomass. *Bioresource Technology* 83(1):37-46.
+- Tester, J.W., et al. (2006). *The Future of Geothermal Energy: Impact of Enhanced Geothermal Systems (EGS) on the United States in the 21st Century*. Massachusetts Institute of Technology, chapters 6 (drilling) and 7 (energy conversion). <https://www1.eere.energy.gov/geothermal/pdfs/egs_chapter_7.pdf>
 - Mondol, J.D., Yohanis, Y.G., Norton, B. (2006). Optimal sizing of array and inverter for grid-connected photovoltaic systems. *Solar Energy* 80(12):1517-1539.
 - Mugnier, D., Saile, S., Philippen, D. (2018). *Review of installation costs. Info Sheet D1, IEA SHC Task 54 Price Reduction of Solar Thermal Systems*. IEA Solar Heating and Cooling Programme, 15 September 2018. <https://mobile.iea-shc.org/Data/Sites/1/publications/D01-Info-Sheet--Review-of-Installation-Costs.pdf>
 - NASA Langley Research Center. *Prediction Of Worldwide Energy Resources (POWER) Project*. <https://power.larc.nasa.gov/>
 - Linstrom, P.J., Mallard, W.G. (eds.). *NIST Chemistry WebBook, NIST Standard Reference Database Number 69*. NIST. doi:<https://doi.org/10.18434/T4D303>
 - National Renewable Energy Laboratory (2024). *Annual Technology Baseline: the 2024 electricity update, utility-scale PV*. NREL, Golden. <https://atb.nrel.gov/electricity/2024/utility-scale_pv>
+- National Renewable Energy Laboratory (2024). *Annual Technology Baseline: the 2024 electricity update, geothermal*. NREL, Golden. <https://atb.nrel.gov/electricity/2024/geothermal>
+- National Renewable Energy Laboratory (2024). *Annual Technology Baseline: the 2024 electricity update, hydropower*. NREL, Golden. <https://atb.nrel.gov/electricity/2024/hydropower>
 - National Renewable Energy Laboratory. *turbine-models: power curves and specifications of wind turbines*. <https://github.com/NREL/turbine-models>
 - Obernberger, I., Thek, G. (2010). *The Pellet Handbook: The Production and Thermal Utilization of Biomass Pellets*. Earthscan, London.
+- Paish, O. (2002). Small hydro power: technology and current status. *Renewable and Sustainable Energy Reviews* 6(6):537-556. doi:<https://doi.org/10.1016/S1364-0321(02)00006-0>
 - Peters, J.F., Baumann, M., Zimmermann, B., Braun, J., Weil, M. (2017). The environmental impact of Li-ion batteries and the role of key parameters: a review. *Renewable and Sustainable Energy Reviews* 67:491-506.
 - European Commission, Joint Research Centre. *Photovoltaic Geographical Information System (PVGIS)*. <https://re.jrc.ec.europa.eu/pvg_tools/>
 - Quaschning, V., Hanitsch, R. (1996). Numerical simulation of current-voltage characteristics of photovoltaic systems with shaded solar cells. *Solar Energy* 56(6):513-520.
@@ -82,12 +90,16 @@ Standards and reports are revised: use the current edition when you cite them. W
 - Schmidt, O., Melchior, S., Hawkes, A., Staffell, I. (2019). Projecting the future levelized cost of electricity storage technologies. *Joule* 3(1):81-100. doi:<https://doi.org/10.1016/j.joule.2018.12.008>
 - Short, W., Packey, D.J., Holt, T. (1995). *A Manual for the Economic Evaluation of Energy Efficiency and Renewable Energy Technologies*. National Renewable Energy Laboratory, Golden, NREL/TP-462-5173.
 - Skoplaki, E., Palyvos, J.A. (2009). On the temperature dependence of photovoltaic module electrical performance: a review of efficiency/power correlations. *Solar Energy* 83(5):614-624. doi:<https://doi.org/10.1016/j.solener.2008.10.008>
+- Swamee, P.K., Jain, A.K. (1976). Explicit equations for pipe-flow problems. *Journal of the Hydraulics Division, ASCE* 102(5):657-664.
+- Tennant, D.L. (1976). Instream flow regimens for fish, wildlife, recreation and related environmental resources. *Fisheries* 1(4):6-10.
 - Ulleberg, Ø. (2003). Modeling of advanced alkaline electrolyzers: a system simulation approach. *International Journal of Hydrogen Energy* 28(1):21-33. doi:<https://doi.org/10.1016/S0360-3199(02)00033-2>
 - VDEW (1999). *Repräsentative VDEW-Lastprofile*. VDEW-Materialien M-32/99, Frankfurt.
+- Vogel, R.M., Fennessey, N.M. (1994). Flow-duration curves. I: New interpretation and confidence intervals. *Journal of Water Resources Planning and Management* 120(4):485-504. doi:<https://doi.org/10.1061/(ASCE)0733-9496(1994)120:4(485)>
 - Wang, J., et al. (2011). Cycle-life model for graphite-LiFePO4 cells. *Journal of Power Sources* 196(8):3942-3948.
 - Weiland, P. (2010). Biogas production: current state and perspectives. *Applied Microbiology and Biotechnology* 85(4):849-860.
 - Weiss, W., Spörk-Dür, M. (2024). *Solar Heat Worldwide*. AEE INTEC, for the IEA Solar Heating and Cooling Programme, latest edition: check.
 - Weniger, J., Tjaden, T., Quaschning, V. (2014). Sizing of residential PV battery systems. *Energy Procedia* 46:78-87.
+- White, F.M. (2016). *Fluid Mechanics*, 8th ed. McGraw-Hill, New York.
 - Šúri, M., Huld, T.A., Dunlop, E.D., Ossenbrink, H.A. (2007). Potential of solar electricity generation in the European Union member states and candidate countries. *Solar Energy* 81(10):1295-1305. doi:<https://doi.org/10.1016/j.solener.2006.12.007>
 
 ## Default costs and where they come from
@@ -115,6 +127,14 @@ Orders of magnitude from the literature, not quotes: prices change every year an
 | Electrolyser operation and maintenance | 0.03 fraction of CAPEX per year | IRENA does not give O&M as a share of CAPEX. | none found | No source found: the default is a round placeholder of RESize. |
 | Compressed hydrogen storage | 600 euro per kg stored | About 500 USD/kg (2010) rising to about 800 USD/kg (2013) for a 250 bar tank module (Hexagon Lincoln, a DOE project); currencies are not converted. | Baldwin (2014), slides on cost | Default inside the range of the sources. |
 | Flat-plate solar collector, installed | 380 euro per m2 of aperture | Germany, small systems: domestic hot water for one house 940 euro/m2 (average 5.2 m2), combi systems 680 euro/m2 (13.4 m2); about 800 euro/m2 over all surveyed countries and system types. | Mugnier et al. (2018), Fig. 1 and text | Default inside the range of the sources. The sources give total system prices. The program adds tank and fixed costs to the collector: for 5 m2 and a 300 litre tank, (5 x 380 + 300 x 1.8 + 1500) / 5 is about 790 euro/m2 (RESize's arithmetic). |
+| Run-of-river hydropower, installed | 6,600 euro per kW | USA, 2024 ATB: new stream-reach development 6,574-8,611 USD/kW; the eight reference plants on existing non-powered dams 3,045-20,043 USD/kW. | NREL ATB (2024), hydropower, capital expenditure | Default inside the range of the sources. Dollars are not converted. The cost changes by a factor of two or three with the site (intake, penstock, access, grid connection): ask for quotes. |
+| Hydropower operation and maintenance | 2.5 percent of CAPEX per year | USA, 2024 ATB: the yearly O&M is the lesser of 227,000 x P^0.547 USD (P in MW) and 2.5 % of the CAPEX. | NREL ATB (2024), hydropower, fixed O&M | Default inside the range of the sources. At the upper limit of the formula, for small plants. |
+| Hydropower plant life | 40 years | The ATB gives no number for the technical lifetime. | none found | No source found: the default is a round placeholder of RESize. A round placeholder: civil works last much longer, machines are refurbished. |
+| Geothermal power plant with wells, installed | 6,300 euro per kW of net power | USA, 2024 ATB, hydrothermal plants: flash (200 degC and above) 3,091-5,922 USD/kW, average 4,350; binary (150 to below 200 degC) average 9,483, representative plant 6,349, lowest case 4,882 USD/kW. | NREL ATB (2024), geothermal, capital cost | Default inside the range of the sources. Includes exploration, wells and plant. Dollars are not converted. |
+| Geothermal plant life | 30 years | USA, 2024 ATB: 30 years for the plant and the reservoir. | NREL ATB (2024), geothermal, lifetime | Default inside the range of the sources. |
+| Geothermal operation and maintenance | 0.03 fraction of CAPEX per year | The ATB page gives no O&M value in a form that can be quoted. | none found | No source found: the default is a round placeholder of RESize. A round placeholder. |
+| Geothermal well, drilled and cased | 1,500 euro per metre | MIT study, 2004 US dollars: 2.3 million for 1,500 m, 4.0 million for 3,000 m, 6.7-8.3 million for 5,000 m, 9.2-12.3 million for 6,000 m, that is about 1,300-2,000 per metre. | MIT (2006), chapter 6, table 6.1 | Default inside the range of the sources. 2004 values, not updated for inflation: today's wells cost more. |
+| Surface equipment of a geothermal heat plant | 250 euro per kW of heat | No document with numbers for the heat exchangers, pumps and network connection was found. | none found | No source found: the default is a round placeholder of RESize. A round placeholder: replace it with a quote. |
 | Evacuated-tube and unglazed collectors, storage tank, fixed costs, adsorption chiller | 520 / 120 / 1.8 / 1,500 / 1,100 euro per m2, per litre, euro, per kW | No document with numbers for these items was found. | none found | No source found: the default is a round placeholder of RESize. Round placeholders: replace them with quotes. |
 
 ## Sources by topic
@@ -581,3 +601,107 @@ Orders of magnitude from the literature, not quotes: prices change every year an
 
 - **Formula:** Saltelli et al. (2008)
 - **RESize's own choice:** One input at a time, +/-20 %.
+
+### Flow-duration curve: how much water the river has
+
+- **Formula:** Vogel & Fennessey (1994)
+- **Values and assumptions:** ESHA (2004), hydrology
+- **RESize's own choice:** A log-normal curve fixed by the mean flow and Q95: a RESize simplification.
+
+### Environmental flow and the flow left for the turbine
+
+- **Values and assumptions:** Tennant (1976), 10 % and 30 % of the mean flow; Directive 2000/60/EC
+- **RESize's own choice:** A constant flow all year: a RESize simplification.
+
+### Design flow: how big to make the turbine
+
+- **Formula:** ESHA (2004), ch. 3; Paish (2002)
+- **RESize's own choice:** A cost proportional to the rated power: a RESize simplification.
+
+### Power from the head and the flow
+
+- **Formula:** ESHA (2004), ch. 3 and 6
+- **Values and assumptions:** ESHA (2004), tables 6.7 and 6.8; Paish (2002)
+
+### Penstock: diameter and head loss
+
+- **Formula:** White (2016), pipe flow; Swamee & Jain (1976)
+- **Values and assumptions:** ESHA (2004), ch. 5
+- **RESize's own choice:** One pipe of constant diameter; water hammer is not checked.
+
+### Which turbine, and from which flow it works
+
+- **Formula:** ESHA (2004), section 6.2
+- **Values and assumptions:** ESHA (2004), tables 6.3 and 6.7; Paish (2002)
+- **RESize's own choice:** The flow rules that choose between overlapping types, and the crossflow figures, are RESize's own.
+
+### Energy in a year
+
+- **Formula:** ESHA (2004), ch. 3
+- **Values and assumptions:** NREL ATB (2024), hydropower, capacity factors of run-of-river plants
+- **RESize's own choice:** Operating losses of 5 %: a RESize choice.
+
+### Cost of the plant and of the energy
+
+- **Formula:** Short et al. (1995); IEA & NEA (2020), methodology
+- **Values and assumptions:** NREL ATB (2024), hydropower, costs of new stream-reach development
+
+### Carbon avoided
+
+- **Formula:** Schlömer et al. (2014), life-cycle emissions of electricity supply
+- **Values and assumptions:** Schlömer et al. (2014), hydropower, median value; ISPRA, national grid factor
+
+### Heat from the brine
+
+- **Formula:** DiPippo (2016); Lund & Toth (2021)
+- **Values and assumptions:** Lund & Toth (2021), direct use
+- **RESize's own choice:** Constant flow and temperature for the whole life.
+
+### How much of the heat a doublet covers
+
+- **Formula:** Quaschning (2013); EN 15316
+- **RESize's own choice:** Power-law shape of the duration curve; wells in whole pairs: RESize simplifications.
+
+### Depth and cost of the wells
+
+- **Formula:** MIT (2006), ch. 6
+- **Values and assumptions:** MIT (2006), cost of wells against depth, 2004 dollars
+- **RESize's own choice:** A single cost per metre for every depth: a RESize simplification.
+
+### Pumping electricity
+
+- **Formula:** White (2016), pumps
+- **Values and assumptions:** DiPippo (2016), well flow and pumping
+- **RESize's own choice:** Typical pressure rise and pump efficiency: values of RESize.
+
+### Exergy: the part of the heat that can become work
+
+- **Formula:** DiPippo (2016), exergy of geofluids; MIT (2006), ch. 7
+
+### Binary plant: electricity from a medium-temperature brine
+
+- **Formula:** MIT (2006), ch. 7, fig. 7.2 and table 7.2; DiPippo (2016)
+- **Values and assumptions:** MIT (2006), ten operating binary plants, brine 103-166 degC
+- **RESize's own choice:** The reinjection temperature is a typical value of RESize.
+
+### Flash plant: electricity from a hot brine
+
+- **Formula:** MIT (2006), section 7.2.2, table 7.5; DiPippo (2016)
+- **Values and assumptions:** MIT (2006), utilization efficiency 31 % at 200 degC, parasitic load 5 %
+- **RESize's own choice:** One utilization efficiency for every temperature.
+
+### Net power and number of wells
+
+- **Formula:** DiPippo (2016); MIT (2006), ch. 7
+- **RESize's own choice:** Identical wells, no decline of the reservoir; operating hours of RESize.
+
+### Cost of the plant and of the energy
+
+- **Formula:** Short et al. (1995); IEA & NEA (2020), methodology
+- **Values and assumptions:** NREL ATB (2024), geothermal, cost of hydrothermal plants; MIT (2006), ch. 6
+- **RESize's own choice:** Surface cost of the heat, drilling cost and O&M are placeholders of RESize.
+
+### Carbon avoided
+
+- **Formula:** Schlömer et al. (2014), life-cycle emissions of electricity supply
+- **Values and assumptions:** Schlömer et al. (2014), geothermal, median value; ISPRA, national grid factor
