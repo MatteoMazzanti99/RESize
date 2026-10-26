@@ -80,7 +80,7 @@ class WakeResult:
 
     @property
     def wake_loss(self) -> float:
-        return 1.0 - self.array_efficiency
+        return max(0.0, 1.0 - self.array_efficiency)
 
 
 def wake_efficiency(

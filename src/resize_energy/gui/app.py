@@ -315,11 +315,21 @@ def _screenshots(window, app, folder: str) -> None:
         _settle(app, 0.4)
     _settle(app, 1.0)
     window.grab().save(str(out / "wind_layout_results.png"))
-    bar = window.pages[-1].browser.verticalScrollBar()
-    for fraction, name in ((0.30, "wind_layout_map"), (0.40, "wind_layout_rose")):
-        bar.setValue(int(bar.maximum() * fraction))   # down to the pictures of the layout
+    browser = window.pages[-1].browser
+    window.resize(1240, 1500)                      # tall enough to see a whole picture
+    _settle(app, 0.5)
+    for phrase, name in (("placed inside the site", "wind_layout_map"),
+                         ("Petals point to where", "wind_layout_rose")):
+        found = browser.document().find(phrase)
+        if found.isNull():
+            continue
+        browser.setTextCursor(found)
+        browser.ensureCursorVisible()
+        bar = browser.verticalScrollBar()
+        bar.setValue(max(0, bar.value() + 160))    # show the picture above its caption
         _settle(app, 0.4)
         window.grab().save(str(out / f"{name}.png"))
+    window.resize(1240, 820)
     window._restart()
 
 
