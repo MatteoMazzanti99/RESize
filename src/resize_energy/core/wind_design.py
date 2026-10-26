@@ -13,6 +13,7 @@ from resize_energy.core.plant_economics import (
     evaluate_economics,
     with_sensitivity,
 )
+from resize_energy.core.satellite import Satellite
 from resize_energy.core.wind_layout import SiteArea, optimise_layout
 from resize_energy.core.wind_rose import WindRose
 
@@ -64,6 +65,7 @@ class WindInputs:
     site_length_m: float = 2500.0
     site_rotation_deg: float = 0.0      # compass bearing of the length of the rectangle
     min_spacing_d: float = 3.0          # closest two turbines may stand, in rotor diameters
+    satellite: Satellite | None = None  # aerial picture under the layout map (site centre = origin)
     turbine: TurbineSpec = field(default_factory=TurbineSpec)
     economics: EconomicInputs | None = None   # costs and prices; None = no economic step
 

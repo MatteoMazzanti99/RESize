@@ -6,6 +6,7 @@ picture, so the results page and the PDF show the same image.
 
 from __future__ import annotations
 
+import base64
 import math
 from collections.abc import Sequence
 from xml.sax.saxutils import escape
@@ -21,8 +22,17 @@ def _text(x: float, y: float, s: str, size: float = 11, color: str = MUTED, anch
             f'text-anchor="{anchor}" font-weight="{weight}" {FONT}>{escape(s)}</text>')
 
 
+def _halo(x: float, y: float, s: str, size: float, anchor: str = "start") -> str:
+    """White text with a dark outline, readable on a satellite picture (two layers: the
+    outline first, then the fill, because QtSvg ignores paint-order)."""
+    back = _text(x, y, s, size, "#000000", anchor, "700").replace(
+        "<text ", '<text stroke="#000000" stroke-width="2.6" stroke-linejoin="round" ', 1)
+    return back + _text(x, y, s, size, "#FFFFFF", anchor, "700")
+
+
 def _svg(width: int, height: int, body: str) -> str:
-    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
+            f'width="{width}" height="{height}" '
             f'viewBox="0 0 {width} {height}"><rect width="{width}" height="{height}" fill="white"/>'
             f'{body}</svg>')
 
@@ -43,41 +53,84 @@ def _scale_bar_m(span_m: float) -> float:
     return next(m * mag for m in (1, 2, 5, 10) if m * mag >= raw)
 
 
-def layout_svg(title: str, positions: Sequence[tuple[float, float]], rotor_d: float,
-               efficiencies: Sequence[float], outline: Sequence[tuple[float, float]] | None,
-               wind_from_deg: float, decay: float, width: int = 460, height: int = 390) -> str:
-    """Top view of the farm: site outline, rotors to scale, wake cones of the prevailing wind,
-    each turbine coloured by the share of a free turbine's energy it keeps. North is up."""
+def _frame(positions: Sequence[tuple[float, float]], rotor_d: float,
+           outline: Sequence[tuple[float, float]] | None, wind_from_deg: float,
+           width: int, height: int):
+    """Scale and offsets that fit the farm in the picture, and the window it then shows."""
     pts = list(positions)
     area = list(outline) if outline else []
-    r0 = rotor_d / 2.0
     wake_len = 10.0 * rotor_d
-    # extent of what must be shown (wake cones included, they may leave the site)
-    box = [*area, *pts]
-    if not box:
-        return _svg(width, height, _text(width / 2, height / 2, "No layout", anchor="middle"))
     th = math.radians(wind_from_deg)
     dx, dy = -math.sin(th), -math.cos(th)
     tail = [(x + dx * wake_len * 0.6, y + dy * wake_len * 0.6) for x, y in pts]
-    xs = [p[0] for p in [*box, *tail]]
-    ys = [p[1] for p in [*box, *tail]]
+    xs = [p[0] for p in [*area, *pts, *tail]]
+    ys = [p[1] for p in [*area, *pts, *tail]]
     pad = 2.0 * rotor_d
     x_lo, x_hi, y_lo, y_hi = min(xs) - pad, max(xs) + pad, min(ys) - pad, max(ys) + pad
     top, bottom, left, right = 34.0, height - 52.0, 14.0, width - 14.0
     k = min((right - left) / (x_hi - x_lo), (bottom - top) / (y_hi - y_lo))
     ox = left + ((right - left) - (x_hi - x_lo) * k) / 2.0 - x_lo * k
     oy = bottom - ((bottom - top) - (y_hi - y_lo) * k) / 2.0 + y_lo * k
+    window = ((left - ox) / k, (right - ox) / k, (oy - bottom) / k, (oy - top) / k)
+    return k, ox, oy, (top, bottom, left, right), window
+
+
+def layout_window(positions: Sequence[tuple[float, float]], rotor_d: float,
+                  outline: Sequence[tuple[float, float]] | None, wind_from_deg: float,
+                  width: int = 460, height: int = 390) -> tuple[float, float, float, float]:
+    """The part of the ground (east_lo, east_hi, north_lo, north_hi, metres from the site
+    centre) that the map shows: the area a satellite picture has to cover."""
+    if not positions and not outline:
+        return (-100.0, 100.0, -100.0, 100.0)
+    return _frame(positions, rotor_d, outline, wind_from_deg, width, height)[4]
+
+
+def layout_svg(title: str, positions: Sequence[tuple[float, float]], rotor_d: float,
+               efficiencies: Sequence[float], outline: Sequence[tuple[float, float]] | None,
+               wind_from_deg: float, decay: float, width: int = 460, height: int = 390,
+               satellite=None) -> str:
+    """Top view of the farm: site outline, rotors to scale, wake cones of the prevailing wind,
+    each turbine coloured by the share of a free turbine's energy it keeps. North is up.
+    ``satellite`` (a core.satellite.Satellite) puts the aerial picture under everything."""
+    pts = list(positions)
+    area = list(outline) if outline else []
+    r0 = rotor_d / 2.0
+    wake_len = 10.0 * rotor_d
+    if not pts and not area:
+        return _svg(width, height, _text(width / 2, height / 2, "No layout", anchor="middle"))
+    th = math.radians(wind_from_deg)
+    dx, dy = -math.sin(th), -math.cos(th)
+    k, ox, oy, (top, bottom, left, right), _window = _frame(
+        pts, rotor_d, area, wind_from_deg, width, height)
 
     def px(e: float, n: float) -> tuple[float, float]:
         return ox + e * k, oy - n * k
 
+    aerial = satellite is not None and satellite.ok
+    line = "#FFFFFF" if aerial else MUTED
     body = [_text(12, 20, title, 14, INK, weight="700")]
+    body.append(f'<defs><clipPath id="mapclip"><rect x="{left}" y="{top}" '
+                f'width="{right - left}" height="{bottom - top}"/></clipPath></defs>')
+    if aerial:
+        body.append('<g clip-path="url(#mapclip)">')
+        for tile in satellite.tiles:
+            x, y = px(tile.west_m, tile.north_m)
+            b64 = base64.b64encode(tile.data).decode("ascii")
+            mime = "image/png" if tile.data[:4] == b"\x89PNG" else "image/jpeg"
+            size = tile.size_m * k + 0.6                      # a hair of overlap: no seams
+            body.append(f'<image x="{x:.2f}" y="{y:.2f}" width="{size:.2f}" height="{size:.2f}" '
+                        f'xlink:href="data:{mime};base64,{b64}"/>')
+        body.append('</g>'
+                    f'<rect x="{left}" y="{top}" width="{right - left}" height="{bottom - top}" '
+                    f'fill="none" stroke="{GRID}"/>')
     if area:
         poly = " ".join(f"{px(e, n)[0]:.1f},{px(e, n)[1]:.1f}" for e, n in area)
-        body.append(f'<polygon points="{poly}" fill="#F3F8F5" stroke="{MUTED}" stroke-width="1.2" '
+        fill = "none" if aerial else "#F3F8F5"
+        body.append(f'<polygon points="{poly}" fill="{fill}" stroke="{line}" stroke-width="1.6" '
                     f'stroke-dasharray="6 4"/>')
     # wake cones of the prevailing wind, behind the rotors
     cross = (math.cos(th), -math.sin(th))
+    body.append('<g clip-path="url(#mapclip)">')
     for e, n in pts:
         half_far = r0 + decay * wake_len
         a = px(e + cross[0] * r0, n + cross[1] * r0)
@@ -85,17 +138,26 @@ def layout_svg(title: str, positions: Sequence[tuple[float, float]], rotor_d: fl
         c = px(e + dx * wake_len - cross[0] * half_far, n + dy * wake_len - cross[1] * half_far)
         d = px(e + dx * wake_len + cross[0] * half_far, n + dy * wake_len + cross[1] * half_far)
         body.append(f'<polygon points="{a[0]:.1f},{a[1]:.1f} {d[0]:.1f},{d[1]:.1f} '
-                    f'{c[0]:.1f},{c[1]:.1f} {b[0]:.1f},{b[1]:.1f}" fill="{BLUE}" opacity="0.10"/>')
+                    f'{c[0]:.1f},{c[1]:.1f} {b[0]:.1f},{b[1]:.1f}" fill="{BLUE}" opacity="{0.35 if aerial else 0.10}"/>')
+    body.append('</g>')
     show_numbers = len(pts) <= 14
     for i, ((e, n), eff) in enumerate(zip(pts, efficiencies, strict=True)):
         x, y = px(e, n)
         col = efficiency_color(eff)
         rr = max(4.0, r0 * k)
-        body.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{rr:.1f}" fill="{col}" fill-opacity="0.25" '
+        body.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{rr:.1f}" fill="{col}" fill-opacity="{0.55 if aerial else 0.25}" '
                     f'stroke="{col}" stroke-width="1.8"/>'
                     f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2.2" fill="{col}"/>')
         if show_numbers:
-            body.append(_text(x, y + rr + 11, f"{i + 1}  {eff:.0%}", 9.5, INK, "middle"))
+            label = f"{i + 1}  {eff:.0%}"
+            if aerial:      # white halo so the figures can be read on any picture
+                body.append(_halo(x, y + rr + 11, label, 9.5, "middle"))
+            else:
+                body.append(_text(x, y + rr + 11, label, 9.5, INK, "middle"))
+    if aerial:
+        body.append(_halo(right - 3, bottom - 4, satellite.attribution, 7.5, "end"))
+        body.append(f'<circle cx="{width - 30}" cy="{top + 22}" r="21" fill="#FFFFFF" '
+                    'fill-opacity="0.8"/>')
     # north arrow, scale bar, wind arrow, colour key
     body.append(f'<path d="M{width - 30},{top + 26} V{top + 4} M{width - 30},{top + 2} l-4,8 h8 z" '
                 f'stroke="{INK}" stroke-width="1.6" fill="{INK}"/>'

@@ -102,8 +102,43 @@ def _wind_layout_check(window, app) -> int:
     if window.wind_site.rose() is None:
         print("self-test: the wind rose was not restored from the project", flush=True)
         return 1
+    if _satellite_render_failed():
+        return 1
     window._restart()
     return 0
+
+
+def _satellite_render_failed() -> bool:
+    """A map with an aerial picture must show it through QtSvg (tiles are embedded JPEGs)."""
+    from PySide6.QtCore import QBuffer, QByteArray, QIODevice
+    from PySide6.QtGui import QColor, QImage, QPainter
+    from PySide6.QtSvg import QSvgRenderer
+
+    from resize_energy.core.satellite import Satellite, Tile
+    from resize_energy.report.layout_art import layout_svg
+
+    tile = QImage(256, 256, QImage.Format.Format_RGB32)
+    tile.fill(QColor(30, 140, 40))
+    raw = QByteArray()
+    buf = QBuffer(raw)
+    buf.open(QIODevice.OpenModeFlag.WriteOnly)
+    tile.save(buf, "JPEG")
+    sat = Satellite((Tile(-2000.0, 2000.0, 4000.0, bytes(raw)),))
+    svg = layout_svg("t", [(0.0, 0.0), (400.0, 100.0)], 100.0, [0.9, 0.95],
+                     [(-500, -300), (500, -300), (500, 300), (-500, 300)], 270.0, 0.075,
+                     satellite=sat)
+    img = QImage(460, 390, QImage.Format.Format_RGB32)
+    img.fill(QColor("white"))
+    painter = QPainter(img)
+    renderer = QSvgRenderer(svg.encode())
+    renderer.render(painter)
+    painter.end()
+    px = img.pixelColor(60, 60)
+    if not (px.green() > px.red() + 40 and px.green() > px.blue() + 40):
+        print(f"self-test: the satellite tile was not drawn by QtSvg (pixel {px.name()})",
+              flush=True)
+        return True
+    return False
 
 
 def _versions_check(window, app) -> int:

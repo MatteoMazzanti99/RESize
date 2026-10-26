@@ -21,7 +21,10 @@ the number of turbines for your demand, the layout with wake losses, and the eco
    you set (and an optional wake model), or **the program places the turbines** inside the
    rectangle of land you give (width, length, direction) at a minimum distance of your choice.
    In the second case it searches the layout that loses the least energy to the wakes of your
-   wind rose.
+   wind rose. The layout map is drawn on a **satellite picture** of the place (the latitude and
+   longitude you typed are the centre of the map); it needs internet and can be switched off. The
+   picture is Esri World Imagery, shown with its credit; for a public or commercial use check its
+   terms.
 4. **Costs and savings.** Installed cost per kW, maintenance, prices, discount rate, emissions.
 5. **Results and checks.**
 

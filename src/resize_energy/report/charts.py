@@ -187,10 +187,15 @@ def _wake_charts(inp: WindInputs, d: WindDesign) -> dict[str, ChartSpec]:
                     f"regular {inp.crosswind_spacing_d:g} D x {inp.downwind_spacing_d:g} D "
                     "grid of the same turbines.")
     outline = d.site.corners() if d.site else None
+    sat = inp.satellite
+    if sat is not None:
+        caption += (" The picture under the map is a satellite image of the site; " +
+                    "the centre of the map is the latitude and longitude you gave."
+                    if sat.ok else f" {sat.note}")
     map_spec = ChartSpec(
         "svg", layout_title, caption=caption, width=460, height=390,
         svg=layout_svg(layout_title, w.positions, t.rotor_diameter_m, w.turbine_efficiency,
-                       outline, prevailing, inp.wake_decay))
+                       outline, prevailing, inp.wake_decay, satellite=sat))
     rose_title = "Wind rose of the site" + (" (measured)" if rose else " (assumed shape)")
     rose_caption = ("Petals point to where the wind comes from. " + (
         f"Hourly data of {', '.join(str(y) for y in rose.years)} ({rose.source}, 50 m)."

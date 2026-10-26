@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from resize_energy.core.nasa_power import NasaPowerError, fetch_wind_climate
+from resize_energy.core.satellite import fetch_satellite
 from resize_energy.core.turbine_library import SOURCE, load_library
 from resize_energy.core.wind_design import TurbineSpec, WindInputs, size_wind_plant
 from resize_energy.core.wind_rose import WindRose, fetch_wind_rose
@@ -27,6 +28,7 @@ from resize_energy.gui.widgets import StepPage
 from resize_energy.gui.wizard import BaseResultsPage, NumberField, _hint, first_error
 from resize_energy.report.charts import ChartSpec, wind_charts
 from resize_energy.report.html_report import build_wind_report
+from resize_energy.report.layout_art import layout_window
 from resize_energy.tutor.checker import Finding
 from resize_energy.tutor.checker_wind import check_wind_design
 from resize_energy.tutor.context_wind import build_wind_context
@@ -297,6 +299,8 @@ class WindTurbinePage(StepPage):
         self.site_rotation = NumberField(0, 0, 359, 0, "deg: where the length points (0 = north)",
                                          "wind.layout")
         self.min_spacing = NumberField(3.0, 1.0, 10, 1, "D (closest two turbines)", "wind.layout")
+        self.satellite = QCheckBox("Show a satellite picture under the layout map (needs internet)")
+        self.satellite.setChecked(True)
         self.rose_note = QLabel("")
         self.rose_note.setWordWrap(True)
         self.rose_note.setObjectName("hint")
@@ -315,6 +319,7 @@ class WindTurbinePage(StepPage):
         lf.addRow("Turbines per row", self.per_row)
         lf.addRow(self.stagger)
         lf.addRow("Wake decay constant k", self.decay)
+        lf.addRow(self.satellite)
         lf.addRow(self.rose_note)
         lf.addRow("Prevailing wind", self.prevailing)
         lf.addRow("Rose concentration", self.conc)
@@ -469,11 +474,21 @@ class WindResultsPage(BaseResultsPage):
             turbine=self.turbine.spec(), economics=self.costs.inputs(),
         )
         design = size_wind_plant(inputs)   # a site that is too small raises ValueError: shown
+        if self.turbine.satellite.isChecked() and design.wake is not None:
+            inputs = replace(inputs, satellite=self._satellite(inputs, design))
         findings = check_wind_design(inputs, design)
         note = f"Site: lat {self.site.lat.value():.4f}, lon {self.site.lon.value():.4f}."
         light = build_wind_report(inputs, design, findings, site_note=note, theme="light")
         dark = build_wind_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, dark
+
+    def _satellite(self, inputs: WindInputs, design):
+        """Aerial tiles for the part of the ground the layout map shows (never raises)."""
+        w = design.wake
+        prevailing = inputs.rose.prevailing_deg() if inputs.rose else inputs.prevailing_direction_deg
+        outline = design.site.corners() if design.site else None
+        window = layout_window(w.positions, inputs.turbine.rotor_diameter_m, outline, prevailing)
+        return fetch_satellite(self.site.lat.value(), self.site.lon.value(), window)
 
     def _flow(self):
         from resize_energy.report.flow_pictures import wind_picture
