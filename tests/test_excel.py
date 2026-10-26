@@ -142,3 +142,29 @@ def test_hydrogen_excel_matches_the_app(tmp_path, cheapest):
                          degradation_per_1000h=0.002, storage_mode="hourly")
     _all_ok(_recalculated(
         build_hydrogen_workbook(inp, prof, size_hydrogen_plant(inp, prof)), tmp_path))
+
+
+@pytest.mark.skipif(SOFFICE is None, reason="LibreOffice is not installed")
+@pytest.mark.parametrize("head,flow,q95", [(40.0, 2.0, 0.4), (120.0, 0.8, 0.1)])
+def test_hydro_excel_matches_the_app(tmp_path, head, flow, q95):
+    from resize_energy.core.hydro_design import HydroInputs, size_hydro_plant
+    from resize_energy.report.excel_hydro_geo import build_hydro_workbook
+
+    inp = HydroInputs(gross_head_m=head, mean_flow_m3s=flow, q95_m3s=q95,
+                      annual_demand_kwh=500_000.0)
+    _all_ok(_recalculated(build_hydro_workbook(inp, size_hydro_plant(inp)), tmp_path))
+
+
+@pytest.mark.skipif(SOFFICE is None, reason="LibreOffice is not installed")
+@pytest.mark.parametrize("kw", [
+    dict(pathway="heat"),
+    dict(pathway="heat", coverage=1.0),
+    dict(pathway="power", reservoir_temp_c=140.0),
+    dict(pathway="power", reservoir_temp_c=220.0),
+])
+def test_geothermal_excel_matches_the_app(tmp_path, kw):
+    from resize_energy.core.geothermal_design import GeothermalInputs, size_geothermal_plant
+    from resize_energy.report.excel_hydro_geo import build_geothermal_workbook
+
+    inp = GeothermalInputs(**kw)
+    _all_ok(_recalculated(build_geothermal_workbook(inp, size_geothermal_plant(inp)), tmp_path))

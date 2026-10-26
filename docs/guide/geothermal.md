@@ -32,4 +32,4 @@ with charts of the load and the energy (heat) or of the power and the temperatur
   range it is an extrapolation.
 - The drilling cost (1500 euro/m) comes from a 2004 dollar value; the surface cost per kW of
   heat and the O&M share are RESize's typical values without a source.
-- Geothermal is not in the technology comparison and has no Excel export yet.
+- Geothermal is not in the technology comparison.

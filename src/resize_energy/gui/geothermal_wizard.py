@@ -311,6 +311,7 @@ class GeothermalResultsPage(BaseResultsPage):
 
     topic_order = GEOTHERMAL_TOPIC_ORDER
     pdf_name = "RESize_geothermal_report.pdf"
+    has_excel = True
 
     def __init__(self, resource: GeothermalResourcePage, plant: GeothermalPlantPage,
                  costs: GeothermalCostPage) -> None:
@@ -360,6 +361,11 @@ class GeothermalResultsPage(BaseResultsPage):
         from resize_energy.report.flow_pictures import geothermal_picture
 
         return geothermal_picture(self._inputs, self._design)
+
+    def _workbook(self):
+        from resize_energy.report.excel_hydro_geo import build_geothermal_workbook
+
+        return build_geothermal_workbook(self._inputs, self._design)
 
     def _worked(self, key: str) -> str | None:
         return geothermal_worked_example(key, self._inputs, self._design)

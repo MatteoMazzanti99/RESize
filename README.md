@@ -162,7 +162,7 @@ the Solar Keymark certificate of your collector and the datasheet of the chiller
 environmental flow, design flow, penstock, turbine type, yearly energy and cost. **Geothermal**
 sizes either a doublet for a heat network or a binary/flash power plant: wells, depth, pumping,
 net power, cost. Both are first-sizing tools with "Why?" explanations and sources; they are not
-in the technology comparison yet and have no Excel export.
+in the technology comparison yet.
 
 ## Technology comparison
 

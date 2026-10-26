@@ -201,6 +201,7 @@ class HydroCostPage(StepPage):
 class HydroResultsPage(BaseResultsPage):
     topic_order = HYDRO_TOPIC_ORDER
     pdf_name = "RESize_hydropower_report.pdf"
+    has_excel = True
 
     def __init__(self, site: HydroSitePage, plant: HydroPlantPage, costs: HydroCostPage) -> None:
         self.site, self.plant, self.costs = site, plant, costs
@@ -235,6 +236,11 @@ class HydroResultsPage(BaseResultsPage):
         from resize_energy.report.flow_pictures import hydro_picture
 
         return hydro_picture(self._inputs, self._design)
+
+    def _workbook(self):
+        from resize_energy.report.excel_hydro_geo import build_hydro_workbook
+
+        return build_hydro_workbook(self._inputs, self._design)
 
     def _worked(self, key: str) -> str | None:
         return hydro_worked_example(key, self._inputs, self._design)

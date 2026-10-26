@@ -542,9 +542,11 @@ def battery_charts(inp: BatteryInputs, d: BatteryDesign) -> dict[str, ChartSpec]
     out["bat_npv"] = ChartSpec(
         "lines", "Money gained or lost by the battery over its life", (),
         (Series("net present value [euro]", tuple(p.npv for p in d.sweep), AMBER, x=xs),),
-        x_label="Battery capacity [kWh]", y_label="Net present value [euro]",
+        x_label="Battery capacity [kWh]", y_label="NPV at end of life, in today's euro",
         hlines=((0.0, "break-even"),), vlines=((d.capacity_kwh, "your battery"),), height=290,
-        caption="Above zero the battery repays itself; below, it costs more than it saves.")
+        caption="Net present value: every saving and cost over the battery's whole life, "
+                "discounted to today. Above zero the battery repays itself; below, it costs "
+                "more than it saves.")
     labels = ("Without battery", "With battery")
     out["bat_grid"] = ChartSpec(
         "stack", "Where the electricity you consume comes from", labels,

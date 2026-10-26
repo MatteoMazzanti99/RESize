@@ -14,7 +14,7 @@ from PySide6.QtWidgets import QWidget
 from resize_energy.report.step_art import ARTS, H, W, step_svg
 
 LAP_MS = 8000
-FRAME_MS = 70
+FRAME_MS = 33
 
 
 class StepArt(QWidget):
