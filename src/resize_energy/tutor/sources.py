@@ -45,7 +45,8 @@ _RAW: dict[str, tuple[str, str, str]] = {
     "wind.number_of_turbines": ("", "", "Identical turbines in a regular layout: a simplification of RESize."),
     "wind.spacing": ("burton2011|ch. 8; manwell2009", "", "Regular rectangular layout."),
     "wind.wake": ("jensen1983; katic1986", "burton2011|typical wake decay constant", "Generic thrust curve and one wind-speed distribution for all directions: RESize simplifications."),
-    "wind.rose": ("burton2011|ch. 8", "gwa|wind roses", "A one-peak rose built from two numbers."),
+    "wind.rose": ("burton2011|ch. 8", "nasa_power|WS50M and WD50M, hourly; gwa|wind roses", "Twelve sectors of 30 degrees; one speed distribution shape (Weibull k) for every sector, scaled by the mean speed of the sector."),
+    "wind.layout": ("mosetti1994; kirkpatrick1983; jensen1983", "", "Surrogate of the wake loss (fixed thrust coefficient, power as the cube of the speed) used for the search, then the full model for the result; the area is a rectangle without exclusion zones, roads or terrain: RESize simplifications."),
     "wind.economics": ("short1995", "fraunhofer2024|cost ranges", ""),
     "wind.sensitivity": ("saltelli2008|ch. 2", "", "One input at a time, +/-20 %: a RESize choice."),
     # --- economics common to the comparison -----------------------------------------------------

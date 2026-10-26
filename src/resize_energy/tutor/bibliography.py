@@ -99,6 +99,13 @@ REFS: dict[str, Ref] = {
                      "Journal of Applied Meteorology", "17(3):350-353"),
     "jensen1983": _r("Jensen (1983)", "Jensen, N.O.", "1983", "A note on wind generator interaction",
                      "Risø National Laboratory, Roskilde", "Risø-M-2411", kind="report"),
+    "mosetti1994": _r("Mosetti et al. (1994)", "Mosetti, G., Poloni, C., Diviacco, B.", "1994",
+                      "Optimization of wind turbine positioning in large windfarms by means of "
+                      "a genetic algorithm", "Journal of Wind Engineering and Industrial "
+                      "Aerodynamics", "51(1):105-116", doi="10.1016/0167-6105(94)90080-9"),
+    "kirkpatrick1983": _r("Kirkpatrick et al. (1983)", "Kirkpatrick, S., Gelatt, C.D., Vecchi, M.P.",
+                          "1983", "Optimization by simulated annealing", "Science",
+                          "220(4598):671-680", doi="10.1126/science.220.4598.671"),
     "katic1986": _r("Katić et al. (1986)", "Katić, I., Højstrup, J., Jensen, N.O.", "1986",
                     "A simple model for cluster efficiency",
                     "Proceedings of the European Wind Energy Association Conference and "

@@ -59,7 +59,7 @@ manufacturer-certified data: for a real project use the manufacturer's curve and
 wind resource. Editing a value switches back to the generic curve.
 
 
-Wind can also use a wake model (step 3, Layout): Jensen wakes over a wind rose for a grid of
+Wind can download the **wind rose** of the site (NASA POWER, hourly, 3 years) and, in step 3, either use a wake model on a regular grid or **let the program place the turbines** inside a site you describe, choosing the layout that loses the least energy to wakes; the results show the map. Wake model: Jensen wakes over a wind rose for a grid of
 staggered rows, giving the real wake loss, the efficiency of every turbine and of every
 wind direction, and a turbine count that accounts for it.
 

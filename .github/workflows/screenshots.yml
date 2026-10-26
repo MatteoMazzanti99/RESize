@@ -26,7 +26,7 @@ jobs:
       - name: Copy the ones the README uses
         run: |
           git rm -q --ignore-unmatch docs/images/step*.png
-          for name in home home_half home_open pv_start pv_results pv_why wind_results wind_why hydrogen_why battery_why hydrogen_results battery_results solar_results hydro_results geothermal_results hydro_why geothermal_why biomass_results compare_results; do
+          for name in home home_half home_open pv_start pv_results pv_why wind_results wind_why hydrogen_why battery_why hydrogen_results battery_results solar_results hydro_results wind_layout_results geothermal_results hydro_why geothermal_why biomass_results compare_results; do
             cp "$RUNNER_TEMP/shots/$name.png" "docs/images/$name.png"
           done
       - name: Commit

@@ -13,6 +13,8 @@ from resize_energy.core.plant_economics import (
     evaluate_economics,
     with_sensitivity,
 )
+from resize_energy.core.wind_layout import SiteArea, optimise_layout
+from resize_energy.core.wind_rose import WindRose
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,13 @@ class WindInputs:
     wake_decay: float = 0.075           # 0.075 onshore, 0.04-0.05 offshore
     prevailing_direction_deg: float = 270.0
     rose_concentration: float = 1.0
+    rose: WindRose | None = None        # measured rose: replaces prevailing direction + concentration
+    # --- layout: a regular grid, or turbines placed by the program inside a site area ---
+    layout_mode: str = "grid"           # "grid" or "optimized"
+    site_width_m: float = 2500.0
+    site_length_m: float = 2500.0
+    site_rotation_deg: float = 0.0      # compass bearing of the length of the rectangle
+    min_spacing_d: float = 3.0          # closest two turbines may stand, in rotor diameters
     turbine: TurbineSpec = field(default_factory=TurbineSpec)
     economics: EconomicInputs | None = None   # costs and prices; None = no economic step
 
@@ -86,6 +95,17 @@ class WindDesign:
     turbines_per_row: int = 0
     rows: int = 0
     economics: Economics | None = None
+    layout_mode: str = "grid"
+    site: SiteArea | None = None
+    grid_wake_loss: float | None = None   # the same turbines on a regular grid (optimised mode)
+    min_distance_d: float = 0.0           # closest pair of the layout, in rotor diameters
+
+
+def _min_distance_d(wake: ww.WakeResult | None, diameter_m: float) -> float:
+    if wake is None or len(wake.positions) < 2:
+        return 0.0
+    pts = wake.positions
+    return min(math.dist(a, b) for i, a in enumerate(pts) for b in pts[i + 1:]) / diameter_m
 
 
 def size_wind_plant(inp: WindInputs) -> WindDesign:
@@ -114,28 +134,55 @@ def size_wind_plant(inp: WindInputs) -> WindDesign:
     gross = wind.annual_energy_kwh(curve, inp.weibull_k, scale)
     net_free = gross * inp.availability * (1.0 - inp.other_losses)
     n = wind.required_turbines(inp.annual_demand_kwh, net_free, inp.coverage)
+    if inp.layout_mode not in ("grid", "optimized"):
+        raise ValueError("the layout must be 'grid' or 'optimized'")
+    optimized = inp.layout_mode == "optimized"
     wake: ww.WakeResult | None = None
     per_row = 0
-    if inp.wake_model:
-        weights = ww.rose_weights(inp.prevailing_direction_deg, inp.rose_concentration)
+    site: SiteArea | None = None
+    grid_loss: float | None = None
+    if inp.wake_model or optimized:
+        if inp.rose is not None:
+            weights, factors = inp.rose.frequency, inp.rose.speed_factor
+            energy_weights = inp.rose.energy_share()
+        else:
+            weights = ww.rose_weights(inp.prevailing_direction_deg, inp.rose_concentration)
+            factors, energy_weights = None, weights
+        if optimized:
+            if inp.min_spacing_d < 1.0:
+                raise ValueError("the minimum spacing must be at least 1 rotor diameter")
+            site = SiteArea(inp.site_width_m, inp.site_length_m, inp.site_rotation_deg)
 
-        def evaluate(count: int) -> tuple[ww.WakeResult, int]:
+        def grid(count: int) -> tuple[list[tuple[float, float]], int]:
             row = inp.turbines_per_row or max(1, round(math.sqrt(count)))
-            layout = ww.grid_layout(count, row, inp.crosswind_spacing_d, inp.downwind_spacing_d,
-                                    t.rotor_diameter_m, inp.stagger_rows,
-                                    inp.prevailing_direction_deg)
+            return ww.grid_layout(count, row, inp.crosswind_spacing_d, inp.downwind_spacing_d,
+                                  t.rotor_diameter_m, inp.stagger_rows,
+                                  inp.prevailing_direction_deg), row
+
+        def run(layout: list[tuple[float, float]]) -> ww.WakeResult:
             return ww.wake_efficiency(layout, curve, t.rotor_diameter_m, v_hub, inp.weibull_k,
                                       t.cut_in_ms, t.rated_speed_ms, t.cut_out_ms,
-                                      inp.wake_decay, weights), row
+                                      inp.wake_decay, weights, factors)
+
+        def evaluate(count: int, steps: int) -> tuple[ww.WakeResult, int]:
+            if site is None:
+                layout, row = grid(count)
+                return run(layout), row
+            layout = optimise_layout(count, site, t.rotor_diameter_m, inp.min_spacing_d,
+                                     energy_weights, inp.wake_decay, steps=steps)
+            return run(layout), 0
 
         # more turbines mean more wake: raise the number until the demand is covered
         for _ in range(25):
-            wake, per_row = evaluate(n)
+            wake, per_row = evaluate(n, 1500 if optimized else 0)
             needed = wind.required_turbines(inp.annual_demand_kwh,
                                             net_free * wake.array_efficiency, inp.coverage)
             if needed <= n:
                 break
             n = needed
+        if optimized:
+            wake, per_row = evaluate(n, 8000)          # the final, longer search
+            grid_loss = run(grid(n)[0]).wake_loss
     net = net_free * (wake.array_efficiency if wake else 1.0)
     energy = n * net
     design = WindDesign(
@@ -155,12 +202,14 @@ def size_wind_plant(inp: WindInputs) -> WindDesign:
         installed_power_kw=n * t.rated_power_kw,
         annual_energy_kwh=energy,
         achieved_coverage=energy / inp.annual_demand_kwh if inp.annual_demand_kwh > 0 else math.inf,
-        array_area_km2=wind.array_area_km2(n, t.rotor_diameter_m, inp.crosswind_spacing_d,
-                                           inp.downwind_spacing_d),
+        array_area_km2=(site.area_km2 if site else wind.array_area_km2(
+            n, t.rotor_diameter_m, inp.crosswind_spacing_d, inp.downwind_spacing_d)),
         tip_clearance_m=t.hub_height_m - t.rotor_diameter_m / 2.0,
         rated_to_mean_ratio=t.rated_speed_ms / v_hub,
         wake_loss=wake.wake_loss if wake else 0.0, wake=wake, turbines_per_row=per_row,
         rows=math.ceil(n / per_row) if per_row else 0,
+        layout_mode=inp.layout_mode, site=site, grid_wake_loss=grid_loss,
+        min_distance_d=_min_distance_d(wake, t.rotor_diameter_m),
     )
     if inp.economics is not None and energy > 0:
         econ = evaluate_economics(design.installed_power_kw, energy, inp.annual_demand_kwh,

@@ -87,21 +87,37 @@ def wake_efficiency(
     positions: list[tuple[float, float]], power_kw: Callable[[float], float],
     diameter_m: float, hub_mean_ms: float, k_weibull: float, cut_in: float, rated: float,
     cut_out: float, decay: float, weights: tuple[float, ...],
+    speed_factors: tuple[float, ...] | None = None,
 ) -> WakeResult:
-    """Array efficiency of a layout for a wind rose and a Weibull wind-speed distribution."""
+    """Array efficiency of a layout for a wind rose and a Weibull wind-speed distribution.
+
+    ``speed_factors`` (one per sector) scale the mean speed of each direction; without them
+    every direction has the same speed distribution."""
     if not 0.01 <= decay <= 0.15:
         raise ValueError("wake decay constant must be between 0.01 and 0.15")
+    if speed_factors is not None and len(speed_factors) != len(weights):
+        raise ValueError("one speed factor per sector is needed")
     n = len(positions)
-    scale = wind.weibull_scale_from_mean(hub_mean_ms, k_weibull)
     speeds = [float(v) for v in range(int(math.ceil(cut_in)), int(cut_out))]
-    probs = [wind.weibull_cdf(v + 0.5, k_weibull, scale) - wind.weibull_cdf(v - 0.5, k_weibull, scale)
-             for v in speeds]
+
+    def distribution(mean: float) -> list[float]:
+        scale = wind.weibull_scale_from_mean(mean, k_weibull)
+        return [wind.weibull_cdf(v + 0.5, k_weibull, scale)
+                - wind.weibull_cdf(v - 0.5, k_weibull, scale) for v in speeds]
+
+    probs_all = distribution(hub_mean_ms)
     r0 = diameter_m / 2.0
     sectors = len(weights)
     e_wake = [0.0] * n
     e_free = 0.0
     sector_eff: list[float] = []
     for s, wgt in enumerate(weights):
+        if speed_factors is None:
+            probs = probs_all
+        elif speed_factors[s] > 0:
+            probs = distribution(hub_mean_ms * speed_factors[s])
+        else:
+            probs = [0.0] * len(speeds)
         theta = math.radians(s * 360.0 / sectors)          # wind comes FROM theta
         dx, dy = -math.sin(theta), -math.cos(theta)         # direction of travel
         us = [x * dx + y * dy for x, y in positions]

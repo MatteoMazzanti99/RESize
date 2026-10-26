@@ -11,6 +11,7 @@ from typing import Any
 from PySide6.QtWidgets import QCheckBox, QComboBox
 
 from resize_energy.core import profiles as prof
+from resize_energy.core.wind_rose import WindRose
 from resize_energy.gui.wizard import NumberField
 
 
@@ -26,6 +27,9 @@ def capture(page: Any) -> dict[str, Any]:
             state[name] = {"idx": obj.currentIndex(), "text": obj.currentText()}
         elif isinstance(obj, QCheckBox):
             state[name] = {"on": obj.isChecked()}
+    rose = getattr(page, "_rose", None)
+    if isinstance(rose, WindRose):
+        state["_rose"] = {"rose": rose.to_dict()}
     implied = getattr(page, "_implied_pr", None)
     if isinstance(implied, float):
         state["_implied_pr"] = {"num": repr(implied)}
@@ -69,6 +73,8 @@ def restore(page: Any, state: dict[str, Any], weather: prof.HourlyWeather | None
                 obj.source = saved.get("src")
             elif name == "_implied_pr" and "num" in saved:
                 page._implied_pr = float(saved["num"])
+            elif name == "_rose" and "rose" in saved and hasattr(page, "restore_rose"):
+                page.restore_rose(WindRose.from_dict(saved["rose"]))
         except (TypeError, ValueError, KeyError):
             problems.append(name)
     if weather is not None and hasattr(page, "_weather"):

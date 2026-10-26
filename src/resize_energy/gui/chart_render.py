@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import math
 
-from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtCore import QByteArray, QPointF, QRectF, Qt
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -17,6 +17,7 @@ from PySide6.QtGui import (
     QPen,
     QPolygonF,
 )
+from PySide6.QtSvg import QSvgRenderer
 
 from resize_energy.report.charts import ChartSpec, nice_ticks
 
@@ -266,6 +267,9 @@ def render_chart(spec: ChartSpec, scale: float = 2.0) -> QImage:
         _bars(canvas, spec, stacked=True)
     elif spec.kind == "lines":
         _lines(canvas, spec)
+    elif spec.kind == "svg":
+        QSvgRenderer(QByteArray(spec.svg.encode("utf-8"))).render(
+            canvas.p, QRectF(0, 0, spec.width, spec.height))
     else:
         raise ValueError(f"unknown chart kind {spec.kind!r}")
     return canvas.done()

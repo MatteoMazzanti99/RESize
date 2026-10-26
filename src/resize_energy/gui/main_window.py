@@ -118,7 +118,7 @@ class MainWindow(QMainWindow):
         self.results = ResultsPage(self.site, self.load, self.comp, self.pv_costs)
         self.wind_site = WindSitePage()
         self.wind_load = WindLoadPage()
-        self.wind_turbine = WindTurbinePage()
+        self.wind_turbine = WindTurbinePage(self.wind_site)
         self.wind_costs = PlantCostPage("wind", 4)
         self.wind_results = WindResultsPage(self.wind_site, self.wind_load, self.wind_turbine,
                                             self.wind_costs)

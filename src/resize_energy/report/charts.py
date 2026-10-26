@@ -27,6 +27,7 @@ from resize_energy.core.solar_thermal import COLLECTORS as SOLAR_COLLECTORS
 from resize_energy.core.solar_thermal import collector_efficiency as solar_eff
 from resize_energy.core.solar_thermal_design import SolarThermalDesign, SolarThermalInputs
 from resize_energy.core.wind_design import WindDesign, WindInputs
+from resize_energy.report.layout_art import layout_svg, rose_svg
 
 GREEN, BLUE, AMBER, PURPLE = "#0A7452", "#1F5FBF", "#C77700", "#7B3FB8"
 GREY, RED, TEAL, LIGHT = "#7C8AA0", "#B3261E", "#0E8C9B", "#9CC9B8"
@@ -47,7 +48,7 @@ class Series:
 
 @dataclass(frozen=True)
 class ChartSpec:
-    kind: str                                   # "bars" "hbars" "stack" "lines"
+    kind: str                                   # "bars" "hbars" "stack" "lines" "svg"
     title: str
     categories: tuple[str, ...] = ()
     series: tuple[Series, ...] = ()
@@ -59,6 +60,7 @@ class ChartSpec:
     decimals: int = 0
     width: int = 460
     height: int = 270
+    svg: str = ""                               # kind "svg": the finished picture, drawn as it is
 
 
 def nice_ticks(lo: float, hi: float, target: int = 5) -> list[float]:
@@ -160,12 +162,46 @@ def _turbine_power(inp: WindInputs, rho: float):
                                            t.cut_out_ms, rho)
 
 
-def _wake_charts(d: WindDesign) -> dict[str, ChartSpec]:
+def _wake_charts(inp: WindInputs, d: WindDesign) -> dict[str, ChartSpec]:
     w = d.wake
     if w is None:
         return {}
     dirs = tuple(f"{i * 30}" for i in range(len(w.sector_efficiency)))
+    t = inp.turbine
+    optimized = d.layout_mode == "optimized"
+    rose = inp.rose
+    prevailing = rose.prevailing_deg() if rose else inp.prevailing_direction_deg
+    energy = rose.energy_share() if rose else w.sector_weights
+    n = len(w.positions)
+    layout_title = ("Where the program placed the turbines" if optimized
+                    else "Where the turbines stand")
+    caption = (f"{n} turbines placed inside the site (dashed line), at least "
+               f"{inp.min_spacing_d:g} rotor diameters apart. The pale cones are the wakes when "
+               f"the wind blows from {prevailing:.0f} deg; colour = share of the energy of a "
+               "free turbine that each one keeps." if optimized else
+               f"{n} turbines on a regular grid. The pale cones are the wakes when the wind "
+               f"blows from {prevailing:.0f} deg; colour = share of the energy of a free "
+               "turbine that each one keeps.")
+    if optimized and d.grid_wake_loss is not None:
+        caption += (f" Wake loss {d.wake_loss:.1%}, against {d.grid_wake_loss:.1%} for a "
+                    f"regular {inp.crosswind_spacing_d:g} D x {inp.downwind_spacing_d:g} D "
+                    "grid of the same turbines.")
+    outline = d.site.corners() if d.site else None
+    map_spec = ChartSpec(
+        "svg", layout_title, caption=caption, width=520, height=420,
+        svg=layout_svg(layout_title, w.positions, t.rotor_diameter_m, w.turbine_efficiency,
+                       outline, prevailing, inp.wake_decay))
+    rose_title = "Wind rose of the site" + (" (measured)" if rose else " (assumed shape)")
+    rose_caption = ("Petals point to where the wind comes from. " + (
+        f"Hourly data of {', '.join(str(y) for y in rose.years)} ({rose.source}, 50 m)."
+        if rose else "The shape comes from the prevailing direction and concentration you typed."))
+    rose_spec = ChartSpec(
+        "svg", rose_title, caption=rose_caption, width=460, height=330,
+        svg=rose_svg(rose_title, w.sector_weights, energy,
+                     tuple(1.0 - x for x in w.sector_efficiency)))
     return {
+        "wind_layout_map": map_spec,
+        "wind_rose_polar": rose_spec,
         "wind_wake_rose": ChartSpec(
             "bars", "Where the wind comes from, and how much the wakes cost from there", dirs,
             (Series("share of the time [%]", tuple(x * 100 for x in w.sector_weights), BLUE),
@@ -176,19 +212,23 @@ def _wake_charts(d: WindDesign) -> dict[str, ChartSpec]:
             caption=f"Overall wake loss {d.wake_loss:.1%}. The loss is highest when the wind "
                     "runs along a line of turbines."),
         "wind_wake_turbines": ChartSpec(
-            "bars", f"Energy of each turbine against a lone turbine ({d.rows} rows)",
+            "bars", "Energy of each turbine against a lone turbine"
+            + ("" if optimized else f" ({d.rows} rows)"),
             tuple(str(i + 1) for i in range(len(w.turbine_efficiency))),
             (Series("share [%]", tuple(x * 100 for x in w.turbine_efficiency), GREEN),),
-            x_label="Turbine (row by row, first row first)", y_label="Percent of a free turbine",
-            decimals=0,
+            x_label="Turbine (numbered as on the map)" if optimized
+            else "Turbine (row by row, first row first)",
+            y_label="Percent of a free turbine", decimals=0,
             caption="The first row sees free wind; the others lose a little in every direction "
-                    "from which they are behind a turbine."),
+                    "from which they are behind a turbine." if not optimized else
+                    "Turbines in the open keep nearly all their energy; those behind another "
+                    "one, in the directions that matter, lose a little."),
     }
 
 
 def wind_charts(inp: WindInputs, d: WindDesign) -> dict[str, ChartSpec]:
     out = _wind_base_charts(inp, d)
-    return out | _wake_charts(d) | economics_charts("wind", d.economics)
+    return out | _wake_charts(inp, d) | economics_charts("wind", d.economics)
 
 
 def _wind_base_charts(inp: WindInputs, d: WindDesign) -> dict[str, ChartSpec]:

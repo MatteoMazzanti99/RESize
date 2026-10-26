@@ -113,7 +113,8 @@ def check_wind_design(inp: WindInputs, d: WindDesign) -> list[Finding]:
                            "power curve was corrected for it.", "wind.air_density"))
 
     # 9. Spacing
-    if inp.crosswind_spacing_d < 3.0 or inp.downwind_spacing_d < 5.0:
+    if d.layout_mode == "grid" and (inp.crosswind_spacing_d < 3.0
+                                    or inp.downwind_spacing_d < 5.0):
         out.append(Finding("warning", "spacing",
                            f"Spacing {inp.crosswind_spacing_d:.0f} D x "
                            f"{inp.downwind_spacing_d:.0f} D is tighter than the usual "
@@ -133,11 +134,35 @@ def check_wind_design(inp: WindInputs, d: WindDesign) -> list[Finding]:
                                f"versus {inp.coverage:.0%} requested (turbines come in whole "
                                "units).", "wind.number_of_turbines"))
     if d.wake is not None:
-        if d.wake_loss > 0.12:
+        if d.wake_loss > 0.12 and d.layout_mode == "optimized":
+            out.append(Finding(
+                "warning", "wake_high",
+                f"The wake loss is {d.wake_loss:.1%} even with the turbines placed by the "
+                "program: the site is crowded. Use a bigger area, fewer or bigger turbines.",
+                "wind.layout"))
+        elif d.wake_loss > 0.12:
             out.append(Finding(
                 "warning", "wake_high",
                 f"The wake loss is {d.wake_loss:.1%}: widen the spacing along the prevailing "
                 "wind or reduce the number of rows.", "wind.wake"))
+        if d.layout_mode == "optimized":
+            if inp.min_spacing_d < 2.5:
+                out.append(Finding(
+                    "warning", "min_spacing",
+                    f"A minimum distance of {inp.min_spacing_d:g} D is tighter than the usual "
+                    "3 D: turbines that close suffer more turbulence and loads.", "wind.layout"))
+            if d.site is not None and d.n_turbines * (inp.min_spacing_d
+                                                        * inp.turbine.rotor_diameter_m) ** 2 \
+                    > 0.5 * d.site.width_m * d.site.length_m:
+                out.append(Finding(
+                    "info", "site_crowded",
+                    "The turbines fill a large part of the site at the minimum distance: the "
+                    "program has little freedom to avoid wakes. A bigger area would help.",
+                    "wind.layout"))
+            out.append(Finding(
+                "info", "layout_ground",
+                "The positions ignore terrain, roads, houses, protected areas and cables: check "
+                "them on the ground before using them.", "wind.layout"))
         worst = min(d.wake.sector_efficiency)
         if worst < 0.75:
             out.append(Finding(

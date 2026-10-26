@@ -57,6 +57,7 @@ Standards and reports are revised: use the current edition when you cite them. W
 - Jordan, D.C., Kurtz, S.R. (2013). Photovoltaic degradation rates: an analytical review. *Progress in Photovoltaics* 21(1):12-29. doi:<https://doi.org/10.1002/pip.1182>
 - Justus, C.G., Hargraves, W.R., Mikhail, A., Graber, D. (1978). Methods for estimating wind speed frequency distributions. *Journal of Applied Meteorology* 17(3):350-353.
 - Katić, I., Højstrup, J., Jensen, N.O. (1986). *A simple model for cluster efficiency*. Proceedings of the European Wind Energy Association Conference and Exhibition (EWEC'86), Rome, pp. 407-410.
+- Kirkpatrick, S., Gelatt, C.D., Vecchi, M.P. (1983). Optimization by simulated annealing. *Science* 220(4598):671-680. doi:<https://doi.org/10.1126/science.220.4598.671>
 - Klein, S.A., Beckman, W.A. (1979). A general design method for closed-loop solar energy systems. *Solar Energy* 22(3):269-282.
 - Kost, C., Müller, P., Sepúlveda Schweiger, J., Fluri, V., Thomsen, J. (2024). *Levelized Cost of Electricity: Renewable Energy Technologies*. Fraunhofer Institute for Solar Energy Systems ISE, Freiburg, July 2024. <https://www.ise.fraunhofer.de/en/publications/studies/cost-of-electricity.html>
 - KTBL (2013). *Faustzahlen Biogas*. KTBL, Darmstadt, 3rd ed..
@@ -69,6 +70,7 @@ Standards and reports are revised: use the current edition when you cite them. W
 - McKendry, P. (2002). Energy production from biomass (part 1): overview of biomass. *Bioresource Technology* 83(1):37-46.
 - Tester, J.W., et al. (2006). *The Future of Geothermal Energy: Impact of Enhanced Geothermal Systems (EGS) on the United States in the 21st Century*. Massachusetts Institute of Technology, chapters 6 (drilling) and 7 (energy conversion). <https://www1.eere.energy.gov/geothermal/pdfs/egs_chapter_7.pdf>
 - Mondol, J.D., Yohanis, Y.G., Norton, B. (2006). Optimal sizing of array and inverter for grid-connected photovoltaic systems. *Solar Energy* 80(12):1517-1539.
+- Mosetti, G., Poloni, C., Diviacco, B. (1994). Optimization of wind turbine positioning in large windfarms by means of a genetic algorithm. *Journal of Wind Engineering and Industrial Aerodynamics* 51(1):105-116. doi:<https://doi.org/10.1016/0167-6105(94)90080-9>
 - Mugnier, D., Saile, S., Philippen, D. (2018). *Review of installation costs. Info Sheet D1, IEA SHC Task 54 Price Reduction of Solar Thermal Systems*. IEA Solar Heating and Cooling Programme, 15 September 2018. <https://mobile.iea-shc.org/Data/Sites/1/publications/D01-Info-Sheet--Review-of-Installation-Costs.pdf>
 - NASA Langley Research Center. *Prediction Of Worldwide Energy Resources (POWER) Project*. <https://power.larc.nasa.gov/>
 - Linstrom, P.J., Mallard, W.G. (eds.). *NIST Chemistry WebBook, NIST Standard Reference Database Number 69*. NIST. doi:<https://doi.org/10.18434/T4D303>
@@ -277,8 +279,13 @@ Orders of magnitude from the literature, not quotes: prices change every year an
 ### Wind rose and layout across the prevailing wind
 
 - **Formula:** Burton et al. (2011), ch. 8
-- **Values and assumptions:** Davis et al. (2023), wind roses
-- **RESize's own choice:** A one-peak rose built from two numbers.
+- **Values and assumptions:** NASA POWER, WS50M and WD50M, hourly; Davis et al. (2023), wind roses
+- **RESize's own choice:** Twelve sectors of 30 degrees; one speed distribution shape (Weibull k) for every sector, scaled by the mean speed of the sector.
+
+### Turbines placed by the program inside your site
+
+- **Formula:** Mosetti et al. (1994); Kirkpatrick et al. (1983); Jensen (1983)
+- **RESize's own choice:** Surrogate of the wake loss (fixed thrust coefficient, power as the cube of the speed) used for the search, then the full model for the result; the area is a rectangle without exclusion zones, roads or terrain: RESize simplifications.
 
 ### Costs, savings and payback
 

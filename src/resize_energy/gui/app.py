@@ -59,11 +59,51 @@ def _walk_through(window, app) -> int:
         print("self-test: the comparison charts were not drawn", flush=True)
         return 1
     window._restart()
-    for check in (_versions_check, _solar_cooling_check, _country_check, _step_art_check):
+    for check in (_versions_check, _solar_cooling_check, _country_check, _step_art_check,
+                  _wind_layout_check):
         code = check(window, app)
         if code:
             return code
     return _project_roundtrip(window, app)
+
+
+def _demo_rose():
+    from resize_energy.core.wind_rose import rose_from_series
+
+    speeds = [5.0 + (i % 7) for i in range(8760)]
+    dirs = [(250.0 + 55.0 * ((i * 37) % 100) / 100.0 - 20.0) % 360.0 for i in range(8760)]
+    return rose_from_series(speeds, dirs, (2019,))
+
+
+def _wind_layout_check(window, app) -> int:
+    """Wind with a wind rose and turbines placed by the program in a site: map and rose drawn,
+    and the rose survives saving and opening a project."""
+    from resize_energy.gui import project_io
+
+    window._start("wind")
+    window.wind_site._rose = _demo_rose()
+    window.wind_site._rose_changed()
+    window.wind_turbine.layout_mode.setCurrentIndex(1)
+    for _ in range(len(window.pages) - 2):
+        window._next()
+        app.processEvents()
+    results = window.pages[-1]
+    if "placed by the program" not in results.html or window.index != len(window.pages) - 1:
+        print("self-test: the wind layout flow did not reach its results", flush=True)
+        return 1
+    for name in ("chart:wind_layout_map", "chart:wind_rose_polar"):
+        image = results.chart_images.get(name)
+        if image is None or image.isNull():
+            print(f"self-test: the wind chart {name} was not drawn", flush=True)
+            return 1
+    state = project_io.capture(window.wind_site)
+    window.wind_site._rose = None
+    project_io.restore(window.wind_site, state)
+    if window.wind_site.rose() is None:
+        print("self-test: the wind rose was not restored from the project", flush=True)
+        return 1
+    window._restart()
+    return 0
 
 
 def _versions_check(window, app) -> int:
@@ -265,6 +305,17 @@ def _screenshots(window, app, folder: str) -> None:
             _settle(app, 0.5)
             window.grab().save(str(out / f"{tech}_why.png"))
         window._restart()
+    # wind with a wind rose and the turbines placed by the program
+    window._start("wind")
+    window.wind_site._rose = _demo_rose()
+    window.wind_site._rose_changed()
+    window.wind_turbine.layout_mode.setCurrentIndex(1)
+    for _ in range(len(window.pages) - 2):
+        window._next()
+        _settle(app, 0.4)
+    _settle(app, 1.0)
+    window.grab().save(str(out / "wind_layout_results.png"))
+    window._restart()
 
 
 def main(argv: list[str] | None = None) -> int:

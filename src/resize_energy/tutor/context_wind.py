@@ -38,6 +38,12 @@ def build_wind_context(inp: WindInputs, d: WindDesign, findings: list[Finding]) 
         f"{d.capacity_factor_net:.1%} ({d.full_load_hours_net:,.0f} full-load hours)",
         f"- Turbines: {d.n_turbines} ({d.installed_power_kw:,.0f} kW installed), "
         f"{d.annual_energy_kwh:,.0f} kWh/year = {d.achieved_coverage:.0%} of the demand",
+        *([f"- Layout placed by the program in a {d.site.width_m:,.0f} m x {d.site.length_m:,.0f} m "
+           f"site, closest pair {d.min_distance_d:.1f} D; wake loss {d.wake_loss:.1%}"
+           + (f" (regular grid: {d.grid_wake_loss:.1%})" if d.grid_wake_loss is not None else "")]
+          if d.site is not None else []),
+        *([f"- Wind rose from {inp.rose.source} ({inp.rose.hours:,} hours), energy mainly from "
+           f"{inp.rose.prevailing_deg():.0f} deg"] if inp.rose is not None else []),
         f"- Land for the array: {d.array_area_km2:.2f} km2; tip clearance "
         f"{d.tip_clearance_m:.0f} m",
         "",

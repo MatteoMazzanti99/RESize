@@ -299,6 +299,32 @@ not a substitute for detailed engineering design (see DISCLAIMER).</i></p>
 </body></html>"""
 
 
+def _wake_model_text(inp: WindInputs) -> str:
+    if not (inp.wake_model or inp.layout_mode == "optimized"):
+        return "off: the single 'other losses' number"
+    if inp.rose is not None:
+        wind_text = (f"measured wind rose ({inp.rose.source}, "
+                     f"{', '.join(str(y) for y in inp.rose.years)}), energy mainly from "
+                     f"{inp.rose.prevailing_deg():.0f} deg")
+    else:
+        wind_text = (f"wind from {inp.prevailing_direction_deg:.0f} deg (concentration "
+                     f"{inp.rose_concentration:g})")
+    return f"Jensen, k = {inp.wake_decay}, {wind_text}"
+
+
+def _layout_rows(inp: WindInputs, design: WindDesign) -> list[str]:
+    if design.site is not None:
+        rows = [_row("Layout", "turbines placed by the program"),
+                _row("Site (width x length, length towards)",
+                     f"{design.site.width_m:,.0f} m x {design.site.length_m:,.0f} m, "
+                     f"{design.site.rotation_deg:.0f} deg"),
+                _row("Minimum distance between turbines", f"{inp.min_spacing_d:g} D")]
+        return rows
+    return [_row("Layout", f"regular grid, {'staggered' if inp.stagger_rows else 'aligned'} rows"),
+            _row("Spacing (across x along the wind)",
+                 f"{inp.crosswind_spacing_d:.0f} D x {inp.downwind_spacing_d:.0f} D")]
+
+
 def build_wind_report(
     inp: WindInputs,
     design: WindDesign,
@@ -328,12 +354,8 @@ def build_wind_report(
              f"tabulated, {len(t.power_curve)} points ({t.curve_source})" if t.power_curve
              else "generic (cubic between cut-in and rated)"),
         _row("Availability / other losses", f"{inp.availability:.0%} / {inp.other_losses:.0%}"),
-        _row("Wake model", f"Jensen, k = {inp.wake_decay}, wind from "
-             f"{inp.prevailing_direction_deg:.0f} deg (concentration {inp.rose_concentration:g}), "
-             f"{'staggered' if inp.stagger_rows else 'aligned'} rows" if inp.wake_model
-             else "off: the single 'other losses' number"),
-        _row("Spacing (across x along the wind)",
-             f"{inp.crosswind_spacing_d:.0f} D x {inp.downwind_spacing_d:.0f} D"),
+        _row("Wake model", _wake_model_text(inp)),
+        *_layout_rows(inp, design),
     ]) + _economics_rows(inp.economics, design.economics)[0]
     results_rows = "".join([
         _row("Mean speed at hub height", f"{design.mean_speed_hub_ms:.2f} m/s"),
@@ -352,6 +374,10 @@ def build_wind_report(
         _row("Expected annual energy", f"{design.annual_energy_kwh:,.0f} kWh"),
         _row("Demand covered", f"{design.achieved_coverage:.0%}"),
         _row("Land for the array", f"{design.array_area_km2:.2f} km2"),
+        *([_row("Wake loss", f"{design.wake_loss:.1%}"
+                + (f" (a regular grid of the same turbines: {design.grid_wake_loss:.1%})"
+                   if design.grid_wake_loss is not None else ""))]
+          if design.wake is not None else []),
     ]) + _economics_rows(inp.economics, design.economics)[1]
     why = "".join(
         explanation_html(key, wind_worked_example(key, inp, design), math=True)

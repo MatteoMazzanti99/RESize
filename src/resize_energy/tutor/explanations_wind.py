@@ -198,21 +198,58 @@ WIND_EXPLANATIONS: dict[str, dict[str, str]] = {
     },
     "wind.rose": {
         "title": "Wind rose and layout across the prevailing wind",
-        "formula": "weight(sector) ~ exp(c cos(sector - prevailing direction))",
+        "formula": "share(sector) = hours from the sector / total hours;    "
+                   "energy(sector) ~ share * (mean speed of the sector)^3",
         "why": (
-            "The wind does not blow equally from all directions. If it comes mostly from one "
-            "side, the best layout puts the rows across that direction and leaves a large "
-            "distance along it; the turbines in a row then do not shade each other much. When "
-            "the wind turns by 90 degrees, however, a row becomes a line of turbines one "
-            "behind the other and the loss in that sector is large. Staggering the rows "
-            "reduces it. A concentration of 0 means a uniform rose, 1-2 is a typical site "
-            "with a prevailing direction."
+            "The wind does not blow equally from all directions, and the wakes only matter "
+            "when a turbine stands behind another one for the wind that is blowing. The wind "
+            "rose says how often the wind comes from each of twelve 30-degree sectors and how "
+            "strong it is there. RESize builds it from the hourly wind speed and direction of "
+            "NASA POWER (three years, 50 m); you can also describe it by hand with a "
+            "prevailing direction and a concentration (0 = all directions equal, 1-2 = a "
+            "typical site). A strong wind counts more: the energy of the wind goes with the "
+            "cube of its speed, so a direction that blows less often but harder can matter "
+            "more than a frequent weak one. If the wind comes mostly from one side, the rows "
+            "go across that direction with a large distance along it; when the wind turns by "
+            "90 degrees a row becomes a line of turbines one behind the other and the loss in "
+            "that sector is large."
         ),
         "assumptions": (
-            "A one-peak rose built from two numbers: use the rose of your site if you have it. "
-            "Regular grid layout, rows of equal length except the last."
+            "Three years of reanalysis data (about 50 km grid) at 50 m: it shows the main "
+            "directions but not the effect of hills, valleys or the coast, and three years "
+            "can differ from the long-term rose. A measurement mast or the Global Wind Atlas "
+            "is better for a real project. Every sector uses the same Weibull shape k, scaled "
+            "to the mean speed of the sector."
         ),
-        "reference": "Burton et al., Wind Energy Handbook, ch. 8; Global Wind Atlas wind roses.",
+        "reference": "NASA POWER hourly data (MERRA-2); Burton et al., Wind Energy Handbook, ch. 8; Global Wind Atlas wind roses.",
+    },
+    "wind.layout": {
+        "title": "Turbines placed by the program inside your site",
+        "formula": "minimise  loss = sum over sectors of w_s * (1 - mean over turbines of "
+                   "(1 - sqrt(sum of deficits^2))^3);    distance between turbines >= m * D",
+        "why": (
+            "Instead of a regular grid you can give the program the area you have (width, "
+            "length and direction of the rectangle) and the closest two turbines may stand "
+            "(typically 3 rotor diameters, D). The program then decides where each turbine "
+            "goes. It starts from an even pattern and moves one turbine at a time to a new "
+            "spot: a move is kept when the wake loss falls, and sometimes also when it rises "
+            "a little, early in the search, so the layout does not get stuck in a bad "
+            "arrangement (simulated annealing). The loss it minimises counts every wind "
+            "direction by the energy that it carries, so the turbines spread out along the "
+            "directions that matter and may stand close together across them. Because the "
+            "area is limited, turbines usually end up near its edges and spread out. The "
+            "result is then evaluated with the full wake model, and the map shows where each "
+            "turbine stands and how much of its energy it keeps."
+        ),
+        "assumptions": (
+            "A rectangular site without roads, houses, protected areas or terrain: you must "
+            "check the positions on the ground. The search uses a simple estimate of the wake "
+            "loss (fixed thrust coefficient), so the best layout of the full model could be "
+            "slightly different; the search is repeatable but it does not prove that no better "
+            "layout exists. The number of turbines comes from your demand, not from the area. "
+            "Noise, shadow, cables and access are not considered."
+        ),
+        "reference": "Mosetti, Poloni and Diviacco (1994); Kirkpatrick, Gelatt and Vecchi (1983).",
     },
 }
 
@@ -230,6 +267,7 @@ WIND_TOPIC_ORDER: tuple[str, ...] = (
     "wind.spacing",
     "wind.wake",
     "wind.rose",
+    "wind.layout",
     "wind.economics",
     "wind.sensitivity",
 )
