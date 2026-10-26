@@ -198,7 +198,8 @@ class MainWindow(QMainWindow):
                 "leaf": [self.bio_plant], "target": [self.h2_goal],
                 "electrolyser": [self.h2_plant], "battery": [self.bat_battery],
                 "tap": [self.sol_load], "collector": [self.sol_coll],
-                "river": [self.hyd_site, self.hyd_plant], "well": [self.geo_resource, self.geo_plant]}.items():
+                "river": [self.hyd_site], "runner": [self.hyd_plant],
+                "well": [self.geo_resource], "heat_plant": [self.geo_plant]}.items():
             for each in page:
                 each.art_key = key
         self.tech = "pv"

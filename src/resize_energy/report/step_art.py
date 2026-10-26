@@ -343,7 +343,58 @@ def well(phase: float) -> str:
     return _wrap(ground + wells + rock + up + down + thermo)
 
 
-ARTS = {"river": river, "well": well, "sun_path": sun_path, "load_profile": load_profile, "modules": modules, "coins": coins, "sun_wind": sun_wind,
+def runner(phase: float) -> str:
+    """Water comes down a penstock, spins the turbine and the generator makes the power."""
+    t = _t()
+    path = "M26,10 V60 H84"
+    pipe = (f'<path d="{path}" fill="none" stroke="{t["blue"]}" stroke-width="12" stroke-linejoin="round" opacity="0.85"/>'
+            f'<path d="{path}" fill="none" stroke="{t["panel"]}" stroke-width="4" stroke-linejoin="round"/>')
+    blobs = []
+    for k in range(4):
+        u = (phase * 2 + k / 4) % 1.0 * 108          # 50 down, then 58 across
+        x, y = (26, 10 + u) if u <= 50 else (26 + (u - 50), 60)
+        blobs.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3" fill="{t["blue"]}"/>')
+    blades = "".join(
+        f'<line x1="110" y1="60" x2="{110 + 21 * math.cos(2 * math.pi * phase + k * math.pi / 3):.1f}" '
+        f'y2="{60 + 21 * math.sin(2 * math.pi * phase + k * math.pi / 3):.1f}" stroke="{t["green"]}" '
+        f'stroke-width="4" stroke-linecap="round"/>' for k in range(6))
+    bolt = f'<path d="M180,48 l-9,13 h8 l-4,11 l12,-15 h-8 z" fill="{t["sun"]}"/>'
+    return _wrap(
+        pipe + "".join(blobs)
+        + f'<circle cx="110" cy="60" r="26" fill="none" stroke="{t["green"]}" stroke-width="4"/>{blades}'
+        + f'<circle cx="110" cy="60" r="5" fill="{t["green"]}"/>'
+        + f'<line x1="136" y1="60" x2="154" y2="60" stroke="{t["grey"]}" stroke-width="5"/>'
+        + f'<rect x="154" y="38" width="46" height="44" rx="8" fill="{t["panel"]}" stroke="{t["green"]}" stroke-width="3.5"/>'
+        + bolt
+        + f'<line x1="8" y1="100" x2="212" y2="100" stroke="{t["grey"]}" stroke-width="3" stroke-linecap="round"/>')
+
+
+def heat_plant(phase: float) -> str:
+    """Hot water from the wells gives its heat to a network and goes back cooler."""
+    t = _t()
+    hot = f'<path d="M12,34 H70" fill="none" stroke="{t["red"]}" stroke-width="8" stroke-linecap="round" opacity="0.5"/>'
+    cold = f'<path d="M70,78 H12" fill="none" stroke="{t["blue"]}" stroke-width="8" stroke-linecap="round" opacity="0.5"/>'
+    out = f'<path d="M122,34 H150" fill="none" stroke="{t["red"]}" stroke-width="8" stroke-linecap="round" opacity="0.5"/>'
+    back = f'<path d="M150,78 H122" fill="none" stroke="{t["blue"]}" stroke-width="8" stroke-linecap="round" opacity="0.5"/>'
+    dots = []
+    for k in range(3):
+        u = (phase + k / 3) % 1.0
+        dots.append(f'<circle cx="{12 + 58 * u:.1f}" cy="34" r="3.5" fill="{t["red"]}"/>')
+        dots.append(f'<circle cx="{70 - 58 * u:.1f}" cy="78" r="3.5" fill="{t["blue"]}"/>')
+        dots.append(f'<circle cx="{122 + 28 * u:.1f}" cy="34" r="3.5" fill="{t["red"]}"/>')
+        dots.append(f'<circle cx="{150 - 28 * u:.1f}" cy="78" r="3.5" fill="{t["blue"]}"/>')
+    glow = 0.25 + 0.2 * math.sin(2 * math.pi * phase)
+    exch = (f'<rect x="70" y="20" width="52" height="72" rx="8" fill="{t["panel"]}" stroke="{t["red"]}" stroke-width="3.5"/>'
+            f'<path d="M78,40 q6,-8 12,0 t12,0 t12,0" fill="none" stroke="{t["red"]}" stroke-width="3" stroke-linecap="round"/>'
+            f'<path d="M78,70 q6,-8 12,0 t12,0 t12,0" fill="none" stroke="{t["blue"]}" stroke-width="3" stroke-linecap="round"/>')
+    house = (f'<circle cx="182" cy="62" r="26" fill="{t["orange"]}" opacity="{glow:.2f}"/>'
+             f'<path d="M160,70 L182,48 L204,70 Z" fill="{t["orange"]}"/>'
+             f'<rect x="166" y="70" width="32" height="22" fill="{t["panel"]}" stroke="{t["orange"]}" stroke-width="3"/>'
+             f'<path d="M150,34 H182 V48 M150,78 H166" fill="none" stroke="{t["grey"]}" stroke-width="2" stroke-dasharray="3 3"/>')
+    return _wrap(hot + cold + out + back + exch + house + "".join(dots))
+
+
+ARTS = {"runner": runner, "heat_plant": heat_plant, "river": river, "well": well, "sun_path": sun_path, "load_profile": load_profile, "modules": modules, "coins": coins, "sun_wind": sun_wind,
         "wind": wind, "weibull": weibull, "turbine_curve": turbine_curve, "battery": battery,
         "electrolyser": electrolyser, "flame": flame, "collector": collector, "tap": tap,
         "target": target, "leaf": leaf}
