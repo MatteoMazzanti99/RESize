@@ -234,8 +234,23 @@ def tap(phase: float) -> str:
     """A hot-water tap with a falling drop, and the sun that heats the water."""
     t = _t()
     u = phase % 1.0
-    drop = (f'<path d="M138,0 q-6,9 0,13 q6,-4 0,-13z" fill="{t["blue"]}" opacity="{1 - u ** 3:.2f}" '
-            f'transform="translate(0,{66 + 24 * u * u:.1f})"/>')
+    # two drops per lap: the drop swells on the rim of the spout, then it lets go and falls
+    # under gravity (distance grows with the square of the time), faster than it grew
+    c = (u * 2.0) % 1.0
+    shape = "M0,0 C-1.5,4 -6,7 -6,11 a6,6 0 0 0 12,0 C6,7 1.5,4 0,0z"
+    rim, fall_at, travel = 73.0, 0.93, 20.0
+    if c < fall_at:
+        g = c / fall_at
+        size = 0.15 + 0.85 * (1 - (1 - g) ** 2)           # grows quickly at first, then slowly
+        drop = (f'<path d="{shape}" fill="{t["blue"]}" '
+                f'transform="translate(138,{rim}) scale({size:.3f})"/>')
+    else:
+        tau = (c - fall_at) / (1 - fall_at)               # 0 when it lets go, 1 when it is gone
+        y = rim + travel * tau * tau                       # free fall: y = 1/2 g t^2
+        stretch = 1 + 0.35 * tau
+        fade = 1 - max(0.0, (tau - 0.6) / 0.4)
+        drop = (f'<path d="{shape}" fill="{t["blue"]}" opacity="{fade:.2f}" '
+                f'transform="translate(138,{y:.1f}) scale(1,{stretch:.2f})"/>')
     sun = (f'<circle cx="176" cy="26" r="9" fill="{t["sun"]}"/>' + "".join(
         f'<line x1="{176 + 13 * math.cos(k * math.pi / 4):.1f}" y1="{26 + 13 * math.sin(k * math.pi / 4):.1f}" '
         f'x2="{176 + 18 * math.cos(k * math.pi / 4):.1f}" y2="{26 + 18 * math.sin(k * math.pi / 4):.1f}" '
