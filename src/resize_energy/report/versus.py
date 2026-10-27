@@ -81,7 +81,11 @@ def versus_rounds(r: ComparisonResult) -> list[Round]:
 
 def wins_at(rounds: list[Round], done: int) -> dict[str, int]:
     """Rounds won after the first ``done`` rounds have finished (for the scoreboard count-up)."""
-    return rounds_won(rounds[:max(0, done)]) if rounds else {}
+    wins = {e.name: 0 for e in rounds[0].entries} if rounds else {}
+    for rd in rounds[:max(0, done)]:
+        if rd.winner is not None:
+            wins[rd.winner] += 1
+    return wins
 
 
 def rounds_won(rounds: list[Round]) -> dict[str, int]:
