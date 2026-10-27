@@ -566,7 +566,8 @@ class WindResultsPage(BaseResultsPage):
         super().__init__()
         self.setTitle("5. Results and design checks")
 
-    def _compute(self) -> tuple[object, object, list[Finding], str, str]:
+    def _wind_inputs(self):
+        """The wind inputs read from the pages (also used by the live preview)."""
         inputs = WindInputs(
             annual_demand_kwh=self.load.demand.value(),
             mean_speed_ref_ms=self.site.speed.value(),
@@ -596,6 +597,10 @@ class WindResultsPage(BaseResultsPage):
             rose_concentration=self.turbine.conc.value(),
             turbine=self.turbine.spec(), economics=self.costs.inputs(),
         )
+        return inputs
+
+    def _compute(self) -> tuple[object, object, list[Finding], str, str]:
+        inputs = self._wind_inputs()
         design = size_wind_plant(inputs)   # a site that is too small raises ValueError: shown
         if self.turbine.satellite.isChecked() and design.wake is not None:
             inputs = replace(inputs, satellite=self._satellite(inputs, design))
@@ -619,6 +624,15 @@ class WindResultsPage(BaseResultsPage):
         if fresh.ok:
             self._satellite_saved = fresh
         return fresh
+
+    def preview_job(self):
+        """Read the pages now (on the main thread); the returned function sizes the design."""
+        inputs = self._wind_inputs()
+        def job():
+            design = size_wind_plant(inputs)
+            return design, check_wind_design(inputs, design)
+
+        return job
 
     def _flow(self):
         from resize_energy.report.flow_pictures import wind_picture

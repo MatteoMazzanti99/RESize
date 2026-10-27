@@ -361,6 +361,15 @@ class BiomassResultsPage(BaseResultsPage):
         screen = build_biomass_report(inputs, design, findings, theme="screen")
         return inputs, design, findings, light, screen
 
+    def preview_job(self):
+        """Read the pages now (on the main thread); the returned function sizes the design."""
+        inputs = self._inputs_from_pages()
+        def job():
+            design = size_biomass_plant(inputs)
+            return design, check_biomass_design(inputs, design)
+
+        return job
+
     def _flow(self):
         from resize_energy.report.flow_pictures import biomass_picture
 

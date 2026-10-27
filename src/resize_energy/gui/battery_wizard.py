@@ -245,7 +245,8 @@ class BatteryResultsPage(BaseResultsPage):
         super().__init__()
         self.setTitle("5. Results and design checks")
 
-    def _compute(self) -> tuple[object, object, list[Finding], str, str]:
+    def _bat_inputs(self):
+        """The battery inputs read from the pages (also used by the live preview)."""
         g, b, c = self.goal, self.battery, self.costs
         inputs = BatteryInputs(
             annual_demand_kwh=g.demand.value(), load_kind=g.load_kind(),
@@ -261,6 +262,10 @@ class BatteryResultsPage(BaseResultsPage):
             retail_price=c.retail.value(), export_price=c.export.value(),
             discount_rate=c.rate.value() / 100.0, grid_ef=c.ef.value(),
         )
+        return inputs
+
+    def _compute(self) -> tuple[object, object, list[Finding], str, str]:
+        inputs = self._bat_inputs()
         profiles = self.site.battery_profiles()
         self._profiles = profiles
         design = size_battery(inputs, profiles)
@@ -271,6 +276,16 @@ class BatteryResultsPage(BaseResultsPage):
         light = build_battery_report(inputs, design, findings, site_note=note, theme="light")
         screen = build_battery_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, screen
+
+    def preview_job(self):
+        inputs = self._bat_inputs()
+        profiles = self.site.battery_profiles()
+
+        def job():
+            design = size_battery(inputs, profiles)
+            return design, check_battery_design(inputs, design)
+
+        return job
 
     def _flow(self):
         from resize_energy.report.flow_pictures import battery_picture

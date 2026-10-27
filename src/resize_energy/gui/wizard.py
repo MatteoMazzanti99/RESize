@@ -506,6 +506,20 @@ class BaseResultsPage(StepPage):
         layout.addLayout(buttons)
 
     # --- hooks for each technology ----------------------------------------------------
+    def _pv_inputs(self):
+        """The PV inputs read from the pages (also used by the live preview)."""
+        module, inverter, t_min, t_max = self.comp.specs()
+        inputs = PVInputs(
+            annual_demand_kwh=self.load.demand.value(),
+            annual_irradiation_kwh_m2=self.site.irr.value(),
+            coverage=self.load.coverage.value() / 100.0,
+            performance_ratio=self.load.pr.value(),
+            t_min_c=t_min, t_cell_max_c=t_max, module=module, inverter=inverter,
+            latitude_deg=self.site.lat.value(), shading_loss=self.load.shading(),
+            economics=self.costs.inputs(),
+        )
+        return inputs
+
     def _compute(self) -> tuple[object, object, list[Finding], str, str]:
         """Return (inputs, design, findings, light report html, dark report html).
 
@@ -701,16 +715,7 @@ class ResultsPage(BaseResultsPage):
         self.setTitle("5. Results and design checks")
 
     def _compute(self) -> tuple[object, object, list[Finding], str, str]:
-        module, inverter, t_min, t_max = self.comp.specs()
-        inputs = PVInputs(
-            annual_demand_kwh=self.load.demand.value(),
-            annual_irradiation_kwh_m2=self.site.irr.value(),
-            coverage=self.load.coverage.value() / 100.0,
-            performance_ratio=self.load.pr.value(),
-            t_min_c=t_min, t_cell_max_c=t_max, module=module, inverter=inverter,
-            latitude_deg=self.site.lat.value(), shading_loss=self.load.shading(),
-            economics=self.costs.inputs(),
-        )
+        inputs = self._pv_inputs()
         design = size_pv_system(inputs)
         findings = check_pv_design(inputs, design)
         note = (
@@ -720,6 +725,15 @@ class ResultsPage(BaseResultsPage):
         light = build_pv_report(inputs, design, findings, site_note=note, theme="light")
         dark = build_pv_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, dark
+
+    def preview_job(self):
+        """Read the pages now (on the main thread); the returned function sizes the design."""
+        inputs = self._pv_inputs()
+        def job():
+            design = size_pv_system(inputs)
+            return design, check_pv_design(inputs, design)
+
+        return job
 
     def _flow(self):
         from resize_energy.report.flow_pictures import pv_picture

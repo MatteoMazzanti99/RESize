@@ -476,7 +476,8 @@ class HydrogenResultsPage(BaseResultsPage):
         super().__init__()
         self.setTitle("5. Results and design checks")
 
-    def _compute(self) -> tuple[object, object, list[Finding], str, str]:
+    def _h2_inputs(self):
+        """The hydrogen inputs read from the pages (also used by the live preview)."""
         g, p, c = self.goal, self.plant, self.costs
         inputs = HydrogenInputs(
             mode=g.mode(), use_pv=g.pv.isChecked(), use_wind=g.wind.isChecked(),
@@ -503,6 +504,10 @@ class HydrogenResultsPage(BaseResultsPage):
             grid_ef=c.grid_ef.value(), pv_ef=c.pv_ef.value(), wind_ef=c.wind_ef.value(),
             grey_h2_kg_co2_per_kg=c.grey.value(),
         )
+        return inputs
+
+    def _compute(self) -> tuple[object, object, list[Finding], str, str]:
+        inputs = self._h2_inputs()
         profiles = self.site.profiles()
         if inputs.use_grid and inputs.cheapest_hours_first:
             profiles = replace(profiles, prices=h2.synthetic_price_profile(inputs.grid_price_per_kwh))
@@ -514,6 +519,18 @@ class HydrogenResultsPage(BaseResultsPage):
         light = build_hydrogen_report(inputs, design, findings, site_note=note, theme="light")
         screen = build_hydrogen_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, screen
+
+    def preview_job(self):
+        inputs = self._h2_inputs()
+        profiles = self.site.profiles()
+        if inputs.use_grid and inputs.cheapest_hours_first:
+            profiles = replace(profiles, prices=h2.synthetic_price_profile(inputs.grid_price_per_kwh))
+
+        def job():
+            design = size_hydrogen_plant(inputs, profiles)
+            return design, check_hydrogen_design(inputs, design)
+
+        return job
 
     def _flow(self):
         from resize_energy.report.flow_pictures import hydrogen_picture

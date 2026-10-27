@@ -5,9 +5,10 @@ It hosts one flow of steps per technology (photovoltaic, wind, biomass, hydrogen
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
-from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QActionGroup, QKeySequence
 from PySide6.QtWidgets import (
     QComboBox,
@@ -27,7 +28,6 @@ from PySide6.QtWidgets import (
 
 from resize_energy.core import project_file as pf
 from resize_energy.core.comparison import possible_carriers
-from resize_energy.core.pv_design import PVInputs, size_pv_system
 from resize_energy.gui import country, project_io
 from resize_energy.gui import theme as theme_mod
 from resize_energy.gui.battery_wizard import (
@@ -86,7 +86,7 @@ from resize_energy.gui.hydrogen_wizard import (
 from resize_energy.gui.icons import tech_color
 from resize_energy.gui.live_preview import LivePreview
 from resize_energy.gui.plant_cost_page import PlantCostPage
-from resize_energy.gui.preview_data import Preview, pv_preview
+from resize_energy.gui.preview_data import design_preview
 from resize_energy.gui.solar_wizard import (
     SOLAR_STEP_NAMES,
     SolarCollectorPage,
@@ -111,7 +111,6 @@ from resize_energy.gui.wizard import (
     ResultsPage,
     SitePage,
 )
-from resize_energy.tutor.checker import check_pv_design
 
 TECH_LABELS = {"pv": "PHOTOVOLTAIC", "wind": "WIND", "biomass": "BIOMASS",
                "hydrogen": "GREEN HYDROGEN", "battery": "BATTERY STORAGE",
@@ -121,6 +120,8 @@ TECH_LABELS = {"pv": "PHOTOVOLTAIC", "wind": "WIND", "biomass": "BIOMASS",
 
 
 class MainWindow(QMainWindow):
+    preview_ready = Signal(int, object, str)   # (generation, Preview or None, error)
+
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("RESize - renewable energy sizing tutor")
@@ -226,6 +227,11 @@ class MainWindow(QMainWindow):
                 "heat_plant": [self.geo_plant, self.bhe_load]}.items():
             for each in page:
                 each.art_key = key
+        self.preview_pages = {
+            "pv": self.results, "wind": self.wind_results, "biomass": self.bio_results,
+            "hydrogen": self.h2_results, "battery": self.bat_results,
+            "solar": self.sol_results, "hydro": self.hyd_results,
+            "geothermal": self.geo_results, "bhe": self.bhe_results}
         self.tech = "pv"
         self.pages: list[StepPage] = [self.home, *self.flows["pv"][1]]
         self.index = 0
@@ -294,8 +300,12 @@ class MainWindow(QMainWindow):
         self._preview_timer.setSingleShot(True)
         self._preview_timer.setInterval(250)
         self._preview_timer.timeout.connect(self._refresh_preview)
-        for page in self.flows["pv"][1][:-1]:       # PV first; other technologies follow
-            self._watch_inputs(page)
+        self._preview_gen = 0
+        self.preview_ready.connect(self._show_preview)
+        for tech, (_names, pages) in self.flows.items():
+            if tech in self.preview_pages:
+                for page in pages[:-1]:
+                    self._watch_inputs(page)
         body = QHBoxLayout()
         body.setSpacing(18)
         body.addWidget(self.stack, 1)
@@ -321,30 +331,37 @@ class MainWindow(QMainWindow):
         for combo in page.findChildren(QComboBox):
             combo.currentIndexChanged.connect(lambda *_: self._preview_timer.start())
 
-    def _pv_preview(self) -> Preview:
-        module, inverter, t_min, t_max = self.comp.specs()
-        inputs = PVInputs(
-            annual_demand_kwh=self.load.demand.value(),
-            annual_irradiation_kwh_m2=self.site.irr.value(),
-            coverage=self.load.coverage.value() / 100.0,
-            performance_ratio=self.load.pr.value(), t_min_c=t_min, t_cell_max_c=t_max,
-            module=module, inverter=inverter, latitude_deg=self.site.lat.value(),
-            shading_loss=self.load.shading(), economics=self.pv_costs.inputs(),
-        )
-        design = size_pv_system(inputs)
-        return pv_preview(inputs, design, check_pv_design(inputs, design))
-
     def _refresh_preview(self) -> None:
+        results = self.preview_pages.get(self.tech)
         last = self.index == len(self.pages) - 1
-        maker = {"pv": self._pv_preview}.get(self.tech)
-        show = maker is not None and self.index > 0 and not last
+        show = results is not None and self.index > 0 and not last
         self.preview_panel.setVisible(show)
         if not show:
             return
+        self._preview_gen += 1
+        gen = self._preview_gen
         try:
-            self.preview_panel.show_preview(maker(), tech_color(self.tech))
+            job = results.preview_job()      # reads the fields here, on the main thread
         except ValueError as exc:
             self.preview_panel.show_waiting(f"Waiting for valid numbers: {exc}")
+            return
+
+        def work() -> None:                  # the sizing runs aside: typing never stalls
+            try:
+                design, findings = job()
+                self.preview_ready.emit(gen, design_preview(design, findings), "")
+            except Exception as exc:  # noqa: BLE001 - a preview must never break the app
+                self.preview_ready.emit(gen, None, str(exc))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _show_preview(self, gen: int, preview: object, error: str) -> None:
+        if gen != self._preview_gen or not self.preview_panel.isVisible():
+            return                           # an older answer: the user has typed since
+        if preview is None:
+            self.preview_panel.show_waiting(f"Waiting for valid numbers: {error}")
+        else:
+            self.preview_panel.show_preview(preview, tech_color(self.tech))
 
     # --- navigation ---------------------------------------------------------------
     def _start(self, tech: str = "pv") -> None:

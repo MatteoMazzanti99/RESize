@@ -396,7 +396,8 @@ class SolarResultsPage(BaseResultsPage):
         super().__init__()
         self.setTitle("5. Results and design checks")
 
-    def _compute(self) -> tuple[object, object, list[Finding], str, str]:
+    def _sol_inputs(self):
+        """The solar-thermal inputs read from the pages (also used by the live preview)."""
         ld, st, cp, ct = self.load, self.site, self.coll, self.costs
         inputs = SolarThermalInputs(
             dhw_litres_per_day=ld.litres.value(), t_use_c=ld.t_use.value(),
@@ -419,12 +420,26 @@ class SolarResultsPage(BaseResultsPage):
             discount_rate=ct.rate.value() / 100.0, heat_ef_kg_per_kwh=ct.heat_ef.value(),
             grid_ef_kg_per_kwh=ct.grid_ef.value(),
         )
+        return inputs
+
+    def _compute(self) -> tuple[object, object, list[Finding], str, str]:
+        inputs = self._sol_inputs()
+        st = self.site
         design = size_solar_thermal(inputs)
         findings = check_solar_design(inputs, design)
         note = f"Site: lat {st.lat.value():.4f}, lon {st.lon.value():.4f}."
         light = build_solar_report(inputs, design, findings, site_note=note, theme="light")
         dark = build_solar_report(inputs, design, findings, site_note=note, theme="screen")
         return inputs, design, findings, light, dark
+
+    def preview_job(self):
+        """Read the pages now (on the main thread); the returned function sizes the design."""
+        inputs = self._sol_inputs()
+        def job():
+            design = size_solar_thermal(inputs)
+            return design, check_solar_design(inputs, design)
+
+        return job
 
     def _flow(self):
         from resize_energy.report.flow_pictures import solar_picture

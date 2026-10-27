@@ -404,6 +404,15 @@ class GeothermalResultsPage(BaseResultsPage):
         screen = build_geothermal_report(inputs, design, findings, theme="screen")
         return inputs, design, findings, light, screen
 
+    def preview_job(self):
+        """Read the pages now (on the main thread); the returned function sizes the design."""
+        inputs = self._inputs_from_pages()
+        def job():
+            design = size_geothermal_plant(inputs)
+            return design, check_geothermal_design(inputs, design)
+
+        return job
+
     def _flow(self):
         from resize_energy.report.flow_pictures import geothermal_picture
 
