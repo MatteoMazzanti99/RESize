@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QImage, QPageSize, QPdfWriter, QTextDocument
+from PySide6.QtGui import QImage, QPageSize, QPdfWriter, QTextCursor, QTextDocument
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -679,7 +679,19 @@ class BaseResultsPage(StepPage):
             self._explained = versions_ui.explain(self)
         finally:
             QApplication.restoreOverrideCursor()
+        if not self._explained[0]:
+            QMessageBox.information(
+                self, "RESize", "There is nothing to explain yet: change an input in an earlier "
+                "step, come back here, and the differences from version A are explained one by "
+                "one.")
+            return
         self._compose()
+        tabs = getattr(self, "tabs", None)       # the comparison keeps its report in a tab
+        if tabs is not None:
+            tabs.setCurrentWidget(self.browser)
+        self.browser.moveCursor(QTextCursor.MoveOperation.Start)
+        if not self.browser.find("Why did it change?"):   # jump to the explanation
+            self.browser.moveCursor(QTextCursor.MoveOperation.Start)
 
     def _workbook(self):
         """The Excel workbook of the current design (technologies with ``has_excel``)."""
