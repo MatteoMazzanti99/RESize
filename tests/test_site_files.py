@@ -165,3 +165,11 @@ def test_distance_helpers():
     pts = np.array([[0.0, 0.0], [1500.0, 0.0], [1000.0, 0.0]])
     assert list(_in_ring(pts, SQUARE))[:2] == [True, False]
     assert _dist_to_ring(np.array([[0.0, 0.0]]), SQUARE)[0] == pytest.approx(1000.0)
+
+
+def test_typed_coordinates_are_compared_with_the_file():
+    shape = sf.site_from_file(geojson(BOX), "a.geojson")
+    near = sf.compare_with_typed(shape, 45.005, 7.01)
+    assert "inside the boundary" in near and "agree" in near
+    far = sf.compare_with_typed(shape, 45.07, 7.69)
+    assert "outside the boundary" in far and "km" in far and "again" in far

@@ -211,3 +211,22 @@ def exclusions_from_file(data: bytes, name: str, lat0: float, lon0: float) -> tu
     for outer, _holes in read_polygons(data, name):
         rings.append(project(outer, lat0, lon0))
     return tuple(rings)
+
+
+def compare_with_typed(shape: SiteShape, lat: float, lon: float) -> str:
+    """Say whether the coordinates typed before are on the site of the file, in plain words."""
+    import numpy as np
+
+    from resize_energy.core.wind_layout import _in_ring  # the same point-in-polygon test
+
+    (x, y), = project(((lon, lat),), shape.lat, shape.lon)
+    distance = math.hypot(x, y)
+    inside = bool(_in_ring(np.array([[x, y]]), shape.boundary)[0])
+    where = (f"{distance / 1000:.1f} km from the centre of the boundary" if distance >= 1000
+             else f"{distance:,.0f} m from the centre of the boundary")
+    if inside:
+        return (f"The coordinates you had typed ({lat:.5f}, {lon:.5f}) fall inside the boundary "
+                f"({where}): they agree with the file.")
+    return (f"The coordinates you had typed ({lat:.5f}, {lon:.5f}) are outside the boundary, "
+            f"{where}: the wind data you downloaded for them may belong to another place. "
+            "Download the wind data again for the new coordinates.")

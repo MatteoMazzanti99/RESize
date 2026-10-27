@@ -25,6 +25,7 @@ from resize_energy.core.satellite import fetch_satellite
 from resize_energy.core.site_files import (
     SiteFileError,
     SiteShape,
+    compare_with_typed,
     exclusions_from_file,
     site_from_file,
 )
@@ -433,10 +434,17 @@ class WindTurbinePage(StepPage):
             self.shape_status.setText(f"Could not use the file: {exc}")
             return
         self._shape = shape
+        verdict = ""
         if self.site is not None:        # the centre of the site is the origin of the map
+            try:
+                verdict = compare_with_typed(shape, self.site.lat.value(), self.site.lon.value())
+            except ValueError:
+                verdict = ""
             self.site.lat.set_value(round(shape.lat, 5), "site file")
             self.site.lon.set_value(round(shape.lon, 5), "site file")
         self._shape_changed()
+        if verdict:
+            self.shape_status.setText(self.shape_status.text() + "\n" + verdict)
 
     def _load_exclusions(self) -> None:
         if self._shape is None:
