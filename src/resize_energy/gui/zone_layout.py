@@ -53,3 +53,19 @@ def flash_alpha(progress: float) -> int:
     """Opacity (0..255) of the flash at the moment of the hit."""
     d = abs(progress - 0.55)
     return int(max(0.0, 1.0 - d / 0.14) * 200)
+
+
+def autoscroll_step(y: float, top: float, bottom: float, margin: float = 90.0,
+                    max_step: float = 26.0) -> int:
+    """Pixels to scroll while a drag is held at height ``y`` in a view spanning top..bottom.
+
+    Negative scrolls up, positive scrolls down; zero in the middle of the view. The step grows
+    from 0 at the inner edge of the margin to ``max_step`` at (and beyond) the view edge.
+    """
+    if bottom - top < 2 * margin:
+        margin = max(1.0, (bottom - top) / 2.0)
+    if y < top + margin:
+        return -round(max_step * min(1.0, (top + margin - y) / margin))
+    if y > bottom - margin:
+        return round(max_step * min(1.0, (y - (bottom - margin)) / margin))
+    return 0

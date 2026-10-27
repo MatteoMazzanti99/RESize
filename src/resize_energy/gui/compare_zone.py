@@ -12,8 +12,9 @@ import time
 from collections.abc import Callable
 
 from PySide6.QtCore import QMimeData, QPoint, QPointF, QRectF, Qt, QTimer
-from PySide6.QtGui import QColor, QDrag, QFont, QPainter, QPixmap
+from PySide6.QtGui import QColor, QCursor, QDrag, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import (
+    QAbstractScrollArea,
     QApplication,
     QFrame,
     QHBoxLayout,
@@ -28,6 +29,7 @@ from resize_energy.gui.theme import COLORS
 from resize_energy.gui.zone_layout import (
     CLASH_SECONDS,
     ICON_SIZE,
+    autoscroll_step,
     bob,
     clash_x,
     flash_alpha,
@@ -78,7 +80,37 @@ class TechCard(QFrame):
         pixmap = icon_pixmap(self.key)
         drag.setPixmap(pixmap)
         drag.setHotSpot(QPoint(pixmap.width() // 2, pixmap.height() // 2))
-        drag.exec(Qt.DropAction.CopyAction)
+        timer = self._start_autoscroll()
+        try:
+            drag.exec(Qt.DropAction.CopyAction)
+        finally:
+            if timer is not None:
+                timer.stop()
+
+    def _scroll_area(self) -> QAbstractScrollArea | None:
+        widget = self.parentWidget()
+        while widget is not None and not isinstance(widget, QAbstractScrollArea):
+            widget = widget.parentWidget()
+        return widget
+
+    def _start_autoscroll(self) -> QTimer | None:
+        """While the card is dragged near the top or bottom edge, the page scrolls with it."""
+        area = self._scroll_area()
+        if area is None:
+            return None
+        bar = area.verticalScrollBar()
+
+        def tick() -> None:
+            view = area.viewport()
+            top = view.mapToGlobal(QPoint(0, 0)).y()
+            step = autoscroll_step(QCursor.pos().y(), top, top + view.height())
+            if step:
+                bar.setValue(bar.value() + step)
+
+        timer = QTimer(self)
+        timer.timeout.connect(tick)
+        timer.start(16)
+        return timer
 
     def mouseReleaseEvent(self, event) -> None:
         if self._press is not None and event.button() == Qt.MouseButton.LeftButton:
