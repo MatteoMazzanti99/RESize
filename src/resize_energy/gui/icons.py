@@ -8,6 +8,12 @@ from PySide6.QtWidgets import QWidget
 
 from resize_energy.gui.icon_shapes import GRID, ICONS, STROKE
 from resize_energy.gui.theme import COLORS
+from resize_energy.report.charts import TECH_COLORS
+
+
+def tech_color(kind: str) -> QColor:
+    """The colour that identifies a technology everywhere (icons, bars, charts)."""
+    return QColor(TECH_COLORS.get(kind, COLORS["accent"]))
 
 
 class IconTile(QWidget):
@@ -29,10 +35,12 @@ def paint_icon_tile(painter: QPainter, kind: str, s: float) -> None:
     """Draw the tile and the icon of ``kind`` in a square of side ``s`` at the origin."""
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
     painter.setPen(QPen(Qt.PenStyle.NoPen))
-    painter.setBrush(QBrush(QColor(COLORS["accent_tint"])))
+    accent = tech_color(kind)
+    tint = QColor(accent)
+    tint.setAlpha(40)
+    painter.setBrush(QBrush(tint))
     painter.drawRoundedRect(QRectF(0, 0, s, s), s * 0.25, s * 0.25)
 
-    accent = QColor(COLORS["accent"])
     pen = QPen(accent, STROKE * (s * 0.62) / GRID)
     pen.setCapStyle(Qt.PenCapStyle.RoundCap)
     pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)

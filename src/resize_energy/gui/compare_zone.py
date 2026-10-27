@@ -16,7 +16,7 @@ from PySide6.QtGui import QColor, QCursor, QDrag, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
     QApplication,
-    QComboBox,
+    QButtonGroup,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -41,8 +41,7 @@ from resize_energy.gui.zone_layout import (
 )
 
 MIME_PREFIX = "resize/tech:"
-CARRIER_LABELS = {"electricity": "Compare electricity", "heat": "Compare heat",
-                  "both": "Compare electricity and heat"}
+SEGMENT_LABELS = {"electricity": "Electricity", "heat": "Heat", "both": "Both"}
 CARRIER_WORDS = {"electricity": "electricity", "heat": "heat", "both": "electricity and heat"}
 TICK_MS = 33
 
@@ -266,9 +265,25 @@ class CompareZone(QFrame):
         self.button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.button.clicked.connect(lambda *_: self._compare())
         # what to compare: only the kinds of energy that the dropped technologies allow
-        self.mode = QComboBox()
+        self.mode = QWidget()
+        self.mode.setObjectName("segmented")
         self.mode.setToolTip("Compare the electricity, the heat, or both (the plants that make "
                              "each are compared on the same demand)")
+        seg = QHBoxLayout(self.mode)
+        seg.setContentsMargins(3, 3, 3, 3)
+        seg.setSpacing(2)
+        self._group = QButtonGroup(self.mode)
+        self._group.setExclusive(True)
+        self._segments: dict[str, QPushButton] = {}
+        for key, label in SEGMENT_LABELS.items():
+            segment = QPushButton(label)
+            segment.setProperty("variant", "segment")
+            segment.setCheckable(True)
+            segment.setCursor(Qt.CursorShape.PointingHandCursor)
+            self._group.addButton(segment)
+            self._segments[key] = segment
+            seg.addWidget(segment)
+        self._segments["both"].setChecked(True)
         self.mode.setVisible(False)
         self.hint = QLabel("")
         self.hint.setObjectName("hint")
@@ -313,24 +328,21 @@ class CompareZone(QFrame):
         self._refresh()
 
     def carrier(self) -> str:
-        """The kind of comparison chosen in the drop-down ("electricity", "heat" or "both")."""
-        data = self.mode.currentData()
-        return data if isinstance(data, str) else "electricity"
+        """The kind of comparison chosen on the switch ("electricity", "heat" or "both")."""
+        for key, segment in self._segments.items():
+            if segment.isChecked():
+                return key
+        return "electricity"
 
     def _refresh(self) -> None:
         n = len(self.arena.keys)
         busy = self.arena.busy()
         options = possible_carriers(tuple(self.keys()))
         previous = self.carrier()
-        self.mode.blockSignals(True)
-        self.mode.clear()
-        for option in options:
-            self.mode.addItem(CARRIER_LABELS[option], option)
-        if previous in options:
-            self.mode.setCurrentIndex(options.index(previous))
-        elif "both" in options:
-            self.mode.setCurrentIndex(options.index("both"))
-        self.mode.blockSignals(False)
+        for key, segment in self._segments.items():
+            segment.setEnabled(key in options)
+        if previous not in options and options:
+            self._segments["both" if "both" in options else options[0]].setChecked(True)
         self.mode.setVisible(len(options) > 1)
         if n >= 2 and not options:
             self.hint.setText(

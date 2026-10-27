@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 
 from PySide6.QtCore import QRectF, Qt, QTimer
-from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainter
+from PySide6.QtGui import QBrush, QColor, QFont, QFontMetricsF, QLinearGradient, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
 from resize_energy.gui.icons import paint_icon_tile
@@ -19,7 +19,8 @@ ICON = 20
 ROW = 26
 HEAD = 30
 GAP = 16
-TOP = 62
+TOP = 118
+BOARD_H = 56
 
 
 def ease_out(x: float) -> float:
@@ -78,14 +79,9 @@ class VersusPanel(QWidget):
         best = max(wins.values()) if wins else 0
         painter.setFont(title)
         painter.setPen(QColor(COLORS["text"]))
-        painter.drawText(QRectF(14, 8, w - 28, 22), Qt.AlignmentFlag.AlignVCenter,
-                         "Round by round")
-        painter.setFont(base)
-        painter.setPen(QColor(COLORS["muted"]))
-        score = "   ".join(f"{name} {n}" for name, n in wins.items())
-        painter.drawText(QRectF(14, 30, w - 28, 20), Qt.AlignmentFlag.AlignVCenter,
-                         f"Rounds won:  {score}" if best else "No round has a clear winner")
-
+        painter.drawText(QRectF(14, 6, w - 28, 22), Qt.AlignmentFlag.AlignVCenter,
+                         "Round by round" if best else "Round by round: no clear winner")
+        self._paint_scoreboard(painter, wins, best, w, base, bold)
         y = float(TOP)
         for r_index, rd in enumerate(self.rounds):
             progress = ease_out((elapsed - r_index * ROUND_DELAY) / FILL_SECONDS)
@@ -118,7 +114,10 @@ class VersusPanel(QWidget):
                     fill.setAlpha(150)
                 width = max(0.0, track.width() * e.score * progress)
                 if width > 0.5:
-                    painter.setBrush(fill)
+                    shade = QLinearGradient(track.left(), 0, track.left() + width, 0)
+                    shade.setColorAt(0.0, fill.darker(112))
+                    shade.setColorAt(1.0, fill)
+                    painter.setBrush(QBrush(shade))
                     painter.drawRoundedRect(QRectF(track.left(), track.top(), width,
                                                    track.height()), 5, 5)
                 painter.setFont(bold if is_win else base)
@@ -129,3 +128,50 @@ class VersusPanel(QWidget):
                 y += ROW
             y += GAP
         painter.end()
+
+    def _paint_scoreboard(self, painter: QPainter, wins: dict[str, int], best: int, w: float,
+                          base: QFont, bold: QFont) -> None:
+        """One tile per technology with its rounds won; the leader glows."""
+        entries = self.rounds[0].entries
+        n = len(entries)
+        gap = 10.0
+        tile_w = (w - 28 - gap * (n - 1)) / n
+        leaders = [name for name, count in wins.items() if best and count == best]
+        for i, e in enumerate(entries):
+            x = 14 + i * (tile_w + gap)
+            rect = QRectF(x, 34, tile_w, BOARD_H)
+            colour = QColor(TECH_COLORS.get(e.key, COLORS["accent"]))
+            lead = e.name in leaders and len(leaders) == 1
+            if lead:
+                for grow, alpha in ((6, 26), (3, 46)):
+                    glow = QColor(colour)
+                    glow.setAlpha(alpha)
+                    painter.setPen(Qt.PenStyle.NoPen)
+                    painter.setBrush(glow)
+                    painter.drawRoundedRect(rect.adjusted(-grow, -grow, grow, grow), 16, 16)
+            edge = QColor(colour)
+            edge.setAlpha(255 if lead else 110)
+            painter.setPen(QPen(edge, 2.0 if lead else 1.2))
+            painter.setBrush(QColor(COLORS["surface"]))
+            painter.drawRoundedRect(rect, 14, 14)
+            painter.save()
+            painter.translate(x + 12, rect.top() + (BOARD_H - 30) / 2)
+            paint_icon_tile(painter, e.key, 30.0)
+            painter.restore()
+            if tile_w >= 210:       # with many technologies only the icon and the score fit
+                painter.setPen(QColor(COLORS["text"]))
+                painter.setFont(bold)
+                painter.drawText(QRectF(x + 50, rect.top() + 6, tile_w - 100, 22),
+                                 Qt.AlignmentFlag.AlignVCenter, e.name)
+                painter.setFont(base)
+                painter.setPen(QColor(COLORS["muted"]))
+                painter.drawText(QRectF(x + 50, rect.top() + 28, tile_w - 100, 20),
+                                 Qt.AlignmentFlag.AlignVCenter,
+                                 "leads" if lead else "rounds won")
+            big = QFont(bold)
+            big.setPointSizeF(base.pointSizeF() + 8)
+            painter.setFont(big)
+            painter.setPen(colour)
+            painter.drawText(QRectF(x + tile_w - 52, rect.top(), 40, BOARD_H),
+                             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight,
+                             str(wins.get(e.name, 0)))

@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QPushButton, QVBoxLayout
 
 from resize_energy.gui.formula_image import FormulaBrowser
-from resize_energy.gui.theme import SCREEN_DOC_CSS
+from resize_energy.gui.theme import screen_doc_css
 from resize_energy.tutor.why_html import explanation_html
 
 
@@ -20,7 +20,7 @@ class WhyDialog(QDialog):
         self.setWindowTitle("Why?")
         self.resize(580, 480)
         browser = FormulaBrowser()
-        browser.document().setDefaultStyleSheet(SCREEN_DOC_CSS)
+        browser.document().setDefaultStyleSheet(screen_doc_css())
         browser.setHtml(explanation_html(key, worked, math=True, full_refs=True))
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)

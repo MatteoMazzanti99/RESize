@@ -32,7 +32,7 @@ from resize_energy.report.layout_art import layout_svg, rose_svg
 GREEN, BLUE, AMBER, PURPLE = "#0A7452", "#1F5FBF", "#C77700", "#7B3FB8"
 GREY, RED, TEAL, LIGHT = "#7C8AA0", "#B3261E", "#0E8C9B", "#9CC9B8"
 TECH_COLORS = {"pv": GREEN, "wind": BLUE, "biomass": AMBER, "hydrogen": PURPLE, "hydro": TEAL,
-               "geothermal": RED, "solar": "#E36414", "bhe": "#3B4CC0"}
+               "geothermal": RED, "solar": "#E36414", "bhe": "#3B4CC0", "battery": GREY}
 MONTHS = ("J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D")
 
 

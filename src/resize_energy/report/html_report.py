@@ -65,19 +65,36 @@ _THEMES = {
             "table { border-collapse: collapse; } td { padding: 2px 10px 2px 0; }\n"
             "code { background: #eee; }"
         ),
-    },
-    "screen": {
-        "colors": {"error": "#B3261E", "warning": "#8F5600", "info": "#1F5FBF", "ok": "#0A7452"},
-        "css": (
-            "body { color: #0F1B2D; font-size: 10pt; }\n"
-            "h1 { font-size: 17pt; color: #0F1B2D; }\n"
-            "h2 { font-size: 13pt; margin-top: 16px; color: #0A7452; }\n"
-            "h3 { font-size: 10.5pt; margin-bottom: 2px; color: #0A7452; }\n"
-            "table { border-collapse: collapse; } td { padding: 2px 10px 2px 0; }\n"
-            "code { background-color: #EAF0F6; color: #085F43; }"
-        ),
-    },
+    }
 }
+
+
+def _screen_look(colors: dict[str, str], dark: bool) -> dict:
+    """The look of the report shown in the window, in the palette in use."""
+    status = ({"error": "#FF8A80", "warning": "#F5B941", "info": "#6CB4FF", "ok": "#34D399"}
+              if dark else {"error": "#B3261E", "warning": "#8F5600", "info": "#1F5FBF",
+                            "ok": "#0A7452"})
+    return {
+        "colors": status,
+        "css": (
+            f"body {{ color: {colors['text']}; font-size: 10pt; }}\n"
+            f"h1 {{ font-size: 17pt; color: {colors['text']}; }}\n"
+            f"h2 {{ font-size: 13pt; margin-top: 16px; color: {colors['accent']}; }}\n"
+            f"h3 {{ font-size: 10.5pt; margin-bottom: 2px; color: {colors['accent']}; }}\n"
+            "table { border-collapse: collapse; } td { padding: 2px 10px 2px 0; }\n"
+            f"code {{ background-color: {colors['surface2']}; color: {colors['accent_hover']}; }}"
+        ),
+    }
+
+
+_THEMES["screen"] = _screen_look(
+    {"text": "#0F1B2D", "accent": "#0A7452", "surface2": "#EAF0F6", "accent_hover": "#085F43"},
+    dark=False)
+
+
+def set_screen_palette(colors: dict[str, str], dark: bool = False) -> None:
+    """Colour the window version of the reports with the palette in use (PDFs stay light)."""
+    _THEMES["screen"] = _screen_look(dict(colors), dark)
 
 
 def _row(label: str, value: str) -> str:
@@ -127,7 +144,7 @@ def _kpi_html(items: list[tuple[str, str]]) -> str:
 def _charts_html(charts: dict[str, ChartSpec]) -> str:
     return "".join(
         f'<p align="center"><img src="chart:{name}" width="{c.width}" height="{c.height}">'
-        + (f'<br><span style="color:#556377">{escape(c.caption)}</span>' if c.caption else "")
+        + (f'<br><span style="color:#7C8798">{escape(c.caption)}</span>' if c.caption else "")
         + "</p>" for name, c in charts.items())
 
 
@@ -136,7 +153,7 @@ def _versus_html(r: ComparisonResult) -> str:
     out = []
     for i, rd in enumerate(versus_rounds(r), start=1):
         out.append(f'<tr><td colspan="3"><b>Round {i}: {escape(rd.title)}</b> '
-                   f'<span style="color:#556377">({escape(rd.hint)})</span></td></tr>')
+                   f'<span style="color:#7C8798">({escape(rd.hint)})</span></td></tr>')
         for e in rd.entries:
             pct = max(1, round(100 * e.score))
             star = " &#9733;" if rd.winner == e.name else ""

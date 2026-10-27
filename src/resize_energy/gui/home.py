@@ -5,11 +5,11 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QVBoxLayout
+from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayout
 
 from resize_energy.gui.compare_zone import CompareZone, TechCard
 from resize_energy.gui.hero import HeroArt
-from resize_energy.gui.icons import IconTile
+from resize_energy.gui.icons import IconTile, tech_color
 from resize_energy.gui.widgets import StepPage, make_card, make_label, make_pill
 
 BENEFITS: list[tuple[str, str, str]] = [
@@ -36,6 +36,14 @@ TECHNOLOGIES: list[tuple[str, str, str, bool]] = [
     ("geothermal", "Geothermal", "Hot water from the ground for a heat network or a power plant: wells, pumping, net power.", True),
     ("bhe", "Ground-source heat pump", "Vertical boreholes for heating and cooling: ASHRAE length method, number and depth of boreholes, field layout.", True),
 ]
+# what each technology delivers: the tags of its card ("elec", "heat" or a plain tag)
+CARRIER_TAGS: dict[str, tuple[tuple[str, str], ...]] = {
+    "pv": (("Electricity", "elec"),), "wind": (("Electricity", "elec"),),
+    "biomass": (("Electricity", "elec"), ("Heat", "heat")),
+    "hydrogen": (("Hydrogen", "tag"),), "battery": (("Storage", "tag"),),
+    "solar": (("Heat", "heat"),), "hydro": (("Electricity", "elec"),),
+    "geothermal": (("Electricity", "elec"), ("Heat", "heat")), "bhe": (("Heat", "heat"),),
+}
 # technologies that make electricity, heat or hydrogen and can be dragged into the Compare zone
 COMPARABLE: tuple[str, ...] = ("pv", "wind", "biomass", "hydrogen", "hydro", "geothermal",
                                 "solar", "bhe")
@@ -110,7 +118,16 @@ class HomePage(StepPage):
             top = QHBoxLayout()
             top.addWidget(IconTile(key))
             top.addStretch(1)
-            top.addWidget(make_pill("Available" if available else "Planned", available))
+            if available:
+                for tag, kind in CARRIER_TAGS.get(key, ()):
+                    top.addWidget(make_pill(tag, True, kind))
+            else:
+                top.addWidget(make_pill("Planned", False))
+            stripe = QFrame()      # the colour that identifies the technology everywhere
+            stripe.setFixedHeight(3)
+            stripe.setStyleSheet(f"background-color: {tech_color(key).name()}; border: none; "
+                                 "border-radius: 1px;")
+            layout.insertWidget(0, stripe)
             layout.addLayout(top)
             layout.addWidget(make_label(title, "cardTitle"))
             layout.addWidget(make_label(text, "cardText"))

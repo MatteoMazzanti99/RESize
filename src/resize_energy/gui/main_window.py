@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtGui import QAction, QActionGroup, QKeySequence
 from PySide6.QtWidgets import (
     QFileDialog,
     QFrame,
@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 from resize_energy.core import project_file as pf
 from resize_energy.core.comparison import possible_carriers
 from resize_energy.gui import country, project_io
+from resize_energy.gui import theme as theme_mod
 from resize_energy.gui.battery_wizard import (
     BATTERY_STEP_NAMES,
     BatteryCostPage,
@@ -394,6 +395,24 @@ class MainWindow(QMainWindow):
             menu.addAction(action)
         menu.addSeparator()
         menu.addAction(home_action)
+        view = self.menuBar().addMenu("&View")
+        group = QActionGroup(self)
+        group.setExclusive(True)
+        for name, label in theme_mod.THEME_LABELS.items():
+            action = QAction(f"{label} theme", self, checkable=True)
+            action.setChecked(name == theme_mod.current_theme)
+            action.triggered.connect(lambda _=False, n=name: self._choose_theme(n))
+            group.addAction(action)
+            view.addAction(action)
+
+    def _choose_theme(self, name: str) -> None:
+        if name == theme_mod.current_theme:
+            return
+        theme_mod.save_theme(name)
+        QMessageBox.information(
+            self, "Theme saved",
+            f"The {theme_mod.THEME_LABELS[name].lower()} theme is used from the next start of "
+            "RESize: close and open the program to see it everywhere.")
 
     def _update_title(self) -> None:
         name = f" - {self.project_path.name}" if self.project_path else ""

@@ -1,11 +1,11 @@
-"""Dark 'energy dashboard' theme: colours, style sheet and contrast helpers.
+"""Colour themes (light and graphite dark), style sheet and contrast helpers.
 
 Everything except :func:`apply_theme` is plain Python (no Qt), so it is unit-tested.
 """
 
 from __future__ import annotations
 
-COLORS: dict[str, str] = {
+LIGHT: dict[str, str] = {
     "bg": "#F4F7FA",          # window background (cool light grey)
     "sidebar": "#FFFFFF",     # left navigation
     "surface": "#FFFFFF",     # panels, text areas
@@ -20,17 +20,52 @@ COLORS: dict[str, str] = {
     "warning": "#8F5600",
     "error": "#B3261E",
     "info": "#1F5FBF",
+    "heat": "#B45309",        # heat tags (orange)
+    "heat_bg": "#FDF0E1",
 }
+
+DARK: dict[str, str] = {
+    "bg": "#141516", "sidebar": "#1A1B1D", "surface": "#1E2023", "surface2": "#2A2C30",
+    "border": "#44474E", "text": "#ECEDEF", "muted": "#A0A3AB", "accent": "#34D399",
+    "accent_hover": "#6EE7B7", "accent_text": "#04140E", "accent_tint": "#17332A",
+    "warning": "#F5B941", "error": "#FF8A80", "info": "#6CB4FF",
+    "heat": "#FDBA74", "heat_bg": "#3A2616",
+}
+THEMES: dict[str, dict[str, str]] = {"light": LIGHT, "dark": DARK}
+THEME_LABELS = {"light": "Light", "dark": "Dark (graphite)"}
+
+# The palette in use. The keys never change, so modules can keep the reference; the values
+# are those of the theme chosen at start-up (see :func:`use_theme`).
+COLORS: dict[str, str] = dict(LIGHT)
+current_theme = "light"
+
+
+def use_theme(name: str) -> str:
+    """Make ``name`` the palette in use (unknown names fall back to light). Returns the name."""
+    global current_theme
+    name = name if name in THEMES else "light"
+    COLORS.clear()
+    COLORS.update(THEMES[name])
+    current_theme = name
+    from resize_energy.report.html_report import set_screen_palette
+
+    set_screen_palette(COLORS, dark=name == "dark")
+    return name
+
+
+def screen_doc_css() -> str:
+    """Style for the HTML shown inside text browsers, in the palette in use."""
+    return (
+        f"body {{ color: {COLORS['text']}; }} "
+        f"h3 {{ color: {COLORS['accent']}; }} "
+        f"code {{ background-color: {COLORS['surface2']}; color: {COLORS['accent_hover']}; }} "
+        f"a {{ color: {COLORS['info']}; }}"
+    )
+
 
 FONT_FAMILY = '"Poppins", "Segoe UI", "Inter", "SF Pro Text", "Helvetica Neue", Arial, sans-serif'
 
-# Style for HTML shown inside QTextBrowser widgets (the PDF keeps its own light style).
-SCREEN_DOC_CSS = (
-    f"body {{ color: {COLORS['text']}; }} "
-    f"h3 {{ color: {COLORS['accent']}; }} "
-    f"code {{ background-color: {COLORS['surface2']}; color: {COLORS['accent_hover']}; }} "
-    f"a {{ color: {COLORS['info']}; }}"
-)
+SCREEN_DOC_CSS = screen_doc_css()   # of the light palette; use screen_doc_css() after use_theme
 
 
 def _linear(channel: int) -> float:
@@ -98,6 +133,18 @@ QPushButton[variant="primary"] { background-color: {accent}; color: {accent_text
 QPushButton[variant="primary"]:hover { background-color: {accent_hover}; border-color: {accent_hover}; }
 QPushButton[variant="primary"]:disabled { background-color: {surface2}; color: {muted}; border-color: {surface2}; }
 QPushButton[variant="ghost"] { background-color: transparent; border: 1px solid {border}; }
+QWidget#segmented { background-color: {surface2}; border: 1px solid {border}; border-radius: 18px; }
+QPushButton[variant="segment"] { background-color: transparent; border: none; border-radius: 15px; padding: 6px 16px; color: {muted}; font-weight: 600; }
+QPushButton[variant="segment"]:hover:!checked:enabled { color: {text}; background-color: transparent; border: none; }
+QPushButton[variant="segment"]:checked { background-color: {accent}; color: {accent_text}; }
+QPushButton[variant="segment"]:disabled { color: {border}; background-color: transparent; border: none; }
+QLabel#pillElec { background-color: {surface2}; color: {info}; border-radius: 10px; padding: 2px 10px; font-size: 8.5pt; font-weight: 700; }
+QLabel#pillHeat { background-color: {heat_bg}; color: {heat}; border-radius: 10px; padding: 2px 10px; font-size: 8.5pt; font-weight: 700; }
+QLabel#pillTag { background-color: {surface2}; color: {muted}; border-radius: 10px; padding: 2px 10px; font-size: 8.5pt; font-weight: 700; }
+QFrame#kpiTile { background-color: {surface}; border: 1px solid {border}; border-radius: 14px; }
+QLabel#kpiLabel { color: {muted}; font-size: 8.5pt; }
+QLabel#kpiValue { color: {text}; font-size: 19pt; font-weight: 700; }
+QLabel#kpiUnit { color: {accent}; font-size: 8.5pt; font-weight: 600; }
 QPushButton#whyButton { border-radius: 12px; padding: 0px; min-width: 24px; max-width: 24px; min-height: 24px; max-height: 24px; color: {accent}; font-weight: 700; }
 
 QLineEdit, QComboBox { background-color: {surface}; color: {text}; border: 1px solid {border}; border-radius: 10px; padding: 5px 8px; selection-background-color: {accent}; selection-color: {accent_text}; }
@@ -171,8 +218,12 @@ def load_fonts() -> int:
     return loaded
 
 
-def apply_theme(app) -> None:
-    """Use the Fusion style, the light palette (for native dialogs), Poppins and the style sheet."""
+def apply_theme(app, name: str | None = None) -> None:
+    """Use the Fusion style, the palette (for native dialogs), Poppins and the style sheet.
+
+    ``name`` ("light" or "dark") is also remembered by the caller; left out, the saved choice
+    is used."""
+    use_theme(name or saved_theme())
     from PySide6.QtGui import QColor, QPalette
 
     load_fonts()
@@ -198,3 +249,24 @@ def apply_theme(app) -> None:
         palette.setColor(role, QColor(color))
     app.setPalette(palette)
     app.setStyleSheet(build_stylesheet(_check_icon_file()))
+
+
+def saved_theme() -> str:
+    """The theme chosen last time ("light" when none or when settings cannot be read)."""
+    try:
+        from PySide6.QtCore import QSettings
+
+        value = QSettings("RESize", "RESize").value("theme", "light")
+        return value if value in THEMES else "light"
+    except Exception:  # noqa: BLE001 - a settings problem must never stop the app
+        return "light"
+
+
+def save_theme(name: str) -> None:
+    """Remember the theme for the next start."""
+    try:
+        from PySide6.QtCore import QSettings
+
+        QSettings("RESize", "RESize").setValue("theme", name if name in THEMES else "light")
+    except Exception:  # noqa: BLE001
+        pass

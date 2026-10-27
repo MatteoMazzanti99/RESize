@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPen
 from PySide6.QtWidgets import (
     QFrame,
     QGraphicsDropShadowEffect,
@@ -45,9 +45,11 @@ def make_card(kind: str = "card", frame: QFrame | None = None) -> tuple[QFrame, 
     return frame, layout
 
 
-def make_pill(text: str, on: bool) -> QLabel:
+def make_pill(text: str, on: bool, kind: str = "") -> QLabel:
+    """A small tag. ``kind`` "elec", "heat" or "tag" gives it the colour of what it names."""
     label = QLabel(text)
-    label.setObjectName("pillOn" if on else "pillOff")
+    named = {"elec": "pillElec", "heat": "pillHeat", "tag": "pillTag"}.get(kind)
+    label.setObjectName(named or ("pillOn" if on else "pillOff"))
     label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
     return label
@@ -60,8 +62,6 @@ class Sidebar(QWidget):
         super().__init__()
         self.setObjectName("sidebar")
         self.setFixedWidth(250)
-        self._labels: list[QLabel] = []
-        self._steps = steps
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 26, 18, 20)
@@ -73,9 +73,8 @@ class Sidebar(QWidget):
         layout.addSpacing(30)
         layout.addWidget(make_label("SIZING PATH", "sidebarNote", wrap=False))
         layout.addSpacing(6)
-        self._steps_layout = QVBoxLayout()
-        self._steps_layout.setSpacing(4)
-        layout.addLayout(self._steps_layout)
+        self._list = StepList()
+        layout.addWidget(self._list)
         layout.addStretch(1)
         layout.addWidget(make_label(
             "Preliminary and educational sizing. Not a substitute for detailed engineering "
@@ -86,34 +85,80 @@ class Sidebar(QWidget):
 
     def set_steps(self, steps: list[str]) -> None:
         """Replace the listed steps (each technology has its own path)."""
-        for label in self._labels:
-            self._steps_layout.removeWidget(label)
-            label.deleteLater()
-        self._labels = []
-        self._steps = steps
-        for _ in steps:
-            label = QLabel()
-            label.setTextFormat(Qt.TextFormat.RichText)
-            label.setContentsMargins(0, 7, 0, 7)
-            self._labels.append(label)
-            self._steps_layout.addWidget(label)
-        self.set_current(-1)
+        self._list.set_steps(steps)
 
     def set_current(self, index: int) -> None:
         """Highlight step ``index`` (0-based); earlier steps are shown as done, -1 = none."""
-        for i, (label, name) in enumerate(zip(self._labels, self._steps, strict=True)):
-            if i < index:
-                mark, color, weight = "&#10003;", COLORS["accent"], 400
-            elif i == index:
-                mark, color, weight = "&#9679;", COLORS["accent"], 700
+        self._list.set_current(index)
+
+
+class StepList(QWidget):
+    """The steps as a vertical stepper: ticked circles for the done ones, a ring for the
+    current one, a line joining them."""
+
+    ROW = 40
+    R = 11
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._steps: list[str] = []
+        self._current = -1
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+
+    def set_steps(self, steps: list[str]) -> None:
+        self._steps = list(steps)
+        self._current = -1
+        self.setFixedHeight(max(1, self.ROW * len(self._steps)))
+        self.update()
+
+    def set_current(self, index: int) -> None:
+        self._current = index
+        self.update()
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        accent, border = QColor(COLORS["accent"]), QColor(COLORS["border"])
+        cx = float(self.R + 3)
+        for i, name in enumerate(self._steps):
+            cy = i * self.ROW + self.ROW / 2.0
+            if i > 0:       # the line from the previous circle
+                painter.setPen(QPen(accent if i <= self._current else border, 2.0))
+                painter.drawLine(QPointF(cx, cy - self.ROW + self.R + 3),
+                                 QPointF(cx, cy - self.R - 3))
+            if i == self._current:
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(QColor(COLORS["accent_tint"]))
+                painter.drawRoundedRect(QRectF(0, cy - self.ROW / 2.0 + 3, self.width(),
+                                               self.ROW - 6), 12, 12)
+            circle = QRectF(cx - self.R, cy - self.R, 2 * self.R, 2 * self.R)
+            if i < self._current:           # done: filled, with a tick
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(accent)
+                painter.drawEllipse(circle)
+                tick = QPen(QColor(COLORS["accent_text"]), 2.2)
+                tick.setCapStyle(Qt.PenCapStyle.RoundCap)
+                tick.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+                painter.setPen(tick)
+                painter.drawPolyline([QPointF(cx - 4.5, cy + 0.5), QPointF(cx - 1.2, cy + 3.6),
+                                      QPointF(cx + 4.6, cy - 3.4)])
             else:
-                mark, color, weight = "&#9675;", COLORS["muted"], 400
-            text_color = COLORS["text"] if i == index else color if i < index else COLORS["muted"]
-            label.setText(
-                f'<span style="color:{color}">{mark}</span>&nbsp;&nbsp;'
-                f'<span style="color:{text_color}; font-weight:{weight}">'
-                f"{i + 1}. {name}</span>"
-            )
+                painter.setBrush(Qt.BrushStyle.NoBrush)
+                painter.setPen(QPen(accent if i == self._current else border, 2.0))
+                painter.drawEllipse(circle)
+                painter.setPen(accent if i == self._current else QColor(COLORS["muted"]))
+                painter.drawText(circle, Qt.AlignmentFlag.AlignCenter, str(i + 1))
+            font = QFont(painter.font())
+            font.setBold(i == self._current)
+            painter.setFont(font)
+            colour = COLORS["text"] if i <= self._current else COLORS["muted"]
+            painter.setPen(QColor(colour))
+            room = self.width() - (2 * self.R + 22)
+            shown = QFontMetricsF(font).elidedText(name, Qt.TextElideMode.ElideRight, room)
+            painter.drawText(QRectF(2 * self.R + 16, cy - 12, room + 4, 24),
+                             Qt.AlignmentFlag.AlignVCenter, shown)
+        painter.end()
 
 
 class StepPage(QWidget):

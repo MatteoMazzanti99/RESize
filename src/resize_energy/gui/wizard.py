@@ -33,9 +33,10 @@ from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.gui.chart_render import render_chart
 from resize_energy.gui.flow_banner import FlowBanner, picture_image
 from resize_energy.gui.formula_image import FormulaBrowser, formula_image
+from resize_energy.gui.kpi_strip import KpiStrip
 from resize_energy.gui.numparse import format_number, parse_in_range
 from resize_energy.gui.provenance import insert_before_formulas, provenance_section
-from resize_energy.gui.theme import COLORS, SCREEN_DOC_CSS
+from resize_energy.gui.theme import COLORS, screen_doc_css
 from resize_energy.gui.tutor_panel import TutorDialog
 from resize_energy.gui.why import WhyButton
 from resize_energy.gui.widgets import StepPage, make_label
@@ -438,8 +439,8 @@ class BaseResultsPage(StepPage):
             self.topics.addItem(EXPLANATIONS[key]["title"])
         self.topics.currentRowChanged.connect(self._show_topic)
         self.detail = FormulaBrowser()
-        self.detail.document().setDefaultStyleSheet(SCREEN_DOC_CSS)
-        self.browser.document().setDefaultStyleSheet(SCREEN_DOC_CSS)
+        self.detail.document().setDefaultStyleSheet(screen_doc_css())
+        self.browser.document().setDefaultStyleSheet(screen_doc_css())
         self.detail.setHtml("<p><i>Why?</i> Select a step above to see its formula, the "
                             "reasoning, and your own numbers substituted in.</p>")
         why_panel = QWidget()
@@ -500,6 +501,8 @@ class BaseResultsPage(StepPage):
         actions.addWidget(ask)
         actions.addWidget(export)
         layout = QVBoxLayout(self)
+        self.kpis = KpiStrip()         # the key numbers, counting up
+        layout.addWidget(self.kpis)
         layout.addWidget(self.banner)
         layout.addWidget(splitter, 1)  # the report takes all the spare height
         layout.addLayout(buttons)
@@ -584,8 +587,10 @@ class BaseResultsPage(StepPage):
             self._inputs = self._design = None
             self._findings = []
             self.browser.setHtml(f"<p><b>Cannot compute the design:</b> {exc}</p>")
+            self.kpis.clear()
             return
         self._inputs, self._design, self._findings = inputs, design, findings
+        self.kpis.show_design(design)
         self._base = (light, dark)
         self._explained = ("", "")
         self._draw_charts()
