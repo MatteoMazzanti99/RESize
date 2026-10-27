@@ -456,6 +456,8 @@ class BaseResultsPage(StepPage):
         self.why_split.setStretchFactor(1, 3)
         self.why_split.setSizes([190, 460])
         self.topics.setMinimumHeight(135)
+        self.detail.setMinimumHeight(260)   # the explanation never collapses to a sliver
+        why_panel.setMinimumHeight(560)
         for view in (self.topics, self.detail, self.browser):  # never scroll sideways
             view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         why_layout.addWidget(self.why_split, 1)
