@@ -13,7 +13,9 @@ from PySide6.QtCore import QEasingCurve, QPointF, QRectF, Qt, QTimer, QVariantAn
 from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPen, QPolygonF
 from PySide6.QtWidgets import QWidget
 
-from resize_energy.gui.theme import COLORS
+from resize_energy.gui.theme import (
+    LIGHT as COLORS,  # the picture keeps its natural colours in any theme
+)
 
 SUN = "#F5B941"
 BLADE_STEP_DEG = 120.0  # three blades: one third of a turn looks identical, so the loop is seamless
