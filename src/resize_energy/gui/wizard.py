@@ -445,14 +445,15 @@ class BaseResultsPage(StepPage):
                             "reasoning, and your own numbers substituted in.</p>")
         why_panel = QWidget()
         why_layout = QVBoxLayout(why_panel)
-        why_layout.setContentsMargins(14, 0, 0, 0)  # air between report and Why? panel
+        why_layout.setContentsMargins(18, 0, 0, 0)  # air between report and Why? panel
+        why_layout.setSpacing(10)
         why_layout.addWidget(make_label("Why? Understand each step", "sectionTitle", wrap=False))
         self.why_split = QSplitter(Qt.Orientation.Vertical)  # drag the handle to give the list more room
         self.why_split.addWidget(self.topics)
         self.why_split.addWidget(self.detail)
         self.why_split.setStretchFactor(0, 1)
         self.why_split.setStretchFactor(1, 3)
-        self.why_split.setSizes([170, 420])
+        self.why_split.setSizes([190, 460])
         self.topics.setMinimumHeight(135)
         for view in (self.topics, self.detail, self.browser):  # never scroll sideways
             view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -483,7 +484,7 @@ class BaseResultsPage(StepPage):
         self.explain_button.clicked.connect(self._explain_version)
         self.explain_button.setEnabled(False)
         buttons = QVBoxLayout()
-        buttons.setSpacing(10)  # two rows: one row of five buttons is wider than the window
+        buttons.setSpacing(12)  # two rows: one row of five buttons is wider than the window
         versions = QHBoxLayout()
         versions.addWidget(keep)
         versions.addWidget(self.explain_button)
@@ -500,6 +501,7 @@ class BaseResultsPage(StepPage):
         actions.addWidget(ask)
         actions.addWidget(export)
         layout = QVBoxLayout(self)
+        layout.setSpacing(14)
         self.kpis = KpiStrip()         # the key numbers, counting up
         layout.addWidget(self.kpis)
         layout.addWidget(self.banner)
@@ -522,6 +524,8 @@ class BaseResultsPage(StepPage):
         self.splitter.setVisible(on)
         self.versions_row.setVisible(on)
         self.rest_spacer.setVisible(not on)
+        # open: the report and the Why? panel get all the height, so the picture steps aside
+        self.banner.setVisible(not on and self.banner.picture is not None)
         self.full_button.setText("Hide the full results  ▴" if on else "Full results and Why?  ▾")
 
     # --- hooks for each technology ----------------------------------------------------
@@ -608,12 +612,13 @@ class BaseResultsPage(StepPage):
             return
         self._inputs, self._design, self._findings = inputs, design, findings
         self.kpis.show_design(design)
-        self.full_button.setChecked(not self.kpis.isVisible())  # no key numbers: show the report
-        self._toggle_full(self.full_button.isChecked())
         self._base = (light, dark)
         self._explained = ("", "")
         self._draw_charts()
         self._compose()
+        # no key numbers (comparison): open the report at once; the toggle also hides the picture
+        self.full_button.setChecked(not self.kpis.isVisible())
+        self._toggle_full(self.full_button.isChecked())
         row = self.topics.currentRow()
         if row >= 0:
             self._show_topic(row)  # refresh the open topic with the new numbers
