@@ -485,7 +485,6 @@ class BaseResultsPage(StepPage):
         buttons = QVBoxLayout()
         buttons.setSpacing(10)  # two rows: one row of five buttons is wider than the window
         versions = QHBoxLayout()
-        buttons.addLayout(versions)
         versions.addWidget(keep)
         versions.addWidget(self.explain_button)
         self.excel_button = QPushButton("Export to Excel (live formulas)...")
@@ -504,8 +503,26 @@ class BaseResultsPage(StepPage):
         self.kpis = KpiStrip()         # the key numbers, counting up
         layout.addWidget(self.kpis)
         layout.addWidget(self.banner)
+        # Bare at first: key numbers and picture. The report and the Why? panel open on request.
+        self.full_button = QPushButton("Full results and Why?  ▾")
+        self.full_button.setProperty("variant", "primary")
+        self.full_button.setCheckable(True)
+        self.full_button.toggled.connect(self._toggle_full)
+        layout.addWidget(self.full_button, 0, Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(splitter, 1)  # the report takes all the spare height
+        self.rest_spacer = QWidget()
+        layout.addWidget(self.rest_spacer, 1)  # keeps the collapsed page tidy
+        self.versions_row = QWidget()
+        self.versions_row.setLayout(versions)
+        buttons.insertWidget(0, self.versions_row)
         layout.addLayout(buttons)
+        splitter.setVisible(False)
+
+    def _toggle_full(self, on: bool) -> None:
+        self.splitter.setVisible(on)
+        self.versions_row.setVisible(on)
+        self.rest_spacer.setVisible(not on)
+        self.full_button.setText("Hide the full results  ▴" if on else "Full results and Why?  ▾")
 
     # --- hooks for each technology ----------------------------------------------------
     def _compute(self) -> tuple[object, object, list[Finding], str, str]:
@@ -591,6 +608,8 @@ class BaseResultsPage(StepPage):
             return
         self._inputs, self._design, self._findings = inputs, design, findings
         self.kpis.show_design(design)
+        self.full_button.setChecked(not self.kpis.isVisible())  # no key numbers: show the report
+        self._toggle_full(self.full_button.isChecked())
         self._base = (light, dark)
         self._explained = ("", "")
         self._draw_charts()
