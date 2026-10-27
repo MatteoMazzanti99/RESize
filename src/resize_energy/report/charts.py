@@ -32,7 +32,7 @@ from resize_energy.report.layout_art import layout_svg, rose_svg
 GREEN, BLUE, AMBER, PURPLE = "#0A7452", "#1F5FBF", "#C77700", "#7B3FB8"
 GREY, RED, TEAL, LIGHT = "#7C8AA0", "#B3261E", "#0E8C9B", "#9CC9B8"
 TECH_COLORS = {"pv": GREEN, "wind": BLUE, "biomass": AMBER, "hydrogen": PURPLE, "hydro": TEAL,
-               "geothermal": RED}
+               "geothermal": RED, "solar": "#E36414", "bhe": "#3B4CC0"}
 MONTHS = ("J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D")
 
 
@@ -462,6 +462,9 @@ def comparison_charts(inp: ComparisonInputs, r: ComparisonResult) -> dict[str, C
     refs: list[tuple[float, str]] = []
     if any(t.product == "electricity" for t in techs):
         refs.append((c.retail_price_eur_per_kwh, "electricity price"))
+    heat = next((t for t in techs if t.product == "heat"), None)
+    if heat is not None:
+        refs.append((heat.reference_price_eur_per_kwh, "gas heat"))
     if r.hydrogen is not None:
         refs.append((r.hydrogen.reference_price_eur_per_kwh, "gas hydrogen"))
     life = int(math.ceil(max(t.lifetime_years for t in techs)))

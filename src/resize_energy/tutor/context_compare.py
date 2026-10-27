@@ -16,6 +16,8 @@ def build_compare_context(inp: ComparisonInputs, r: ComparisonResult,
                           findings: list[Finding]) -> str:
     c = inp.costs
     names = ", ".join(t.name for t in r.techs)
+    if inp.carrier == "heat" and inp.heat is not None:
+        return _heat_context(inp, r, findings)
     lines = [
         f"PROJECT: comparison of {names} for the same energy target (RESize)",
         "",
@@ -60,5 +62,40 @@ def build_compare_context(inp: ComparisonInputs, r: ComparisonResult,
         "",
         "CHECKS",
     ]
+    lines += [f"- [{_SEVERITY[f.severity]}] {f.message}" for f in findings]
+    return "\n".join(lines)
+
+
+def _heat_context(inp: ComparisonInputs, r: ComparisonResult, findings: list[Finding]) -> str:
+    h, c = inp.heat, inp.costs
+    hc = h.costs
+    lines = [
+        "PROJECT: comparison of heat technologies for the same heat demand (RESize): "
+        + ", ".join(t.name for t in r.techs),
+        "",
+        "INPUTS",
+        f"- Heat demand {h.annual_heat_kwh:,.0f} kWh/year, peak {h.peak_kw:,.0f} kW, "
+        f"coverage {h.coverage:.0%}",
+        f"- Reference: gas boiler heat {hc.gas_heat_eur_per_kwh:.3f} euro/kWh, "
+        f"{hc.gas_kg_co2_per_kwh_fuel:.3f} kg CO2/kWh of gas, efficiency "
+        f"{hc.gas_boiler_efficiency:.0%}",
+        f"- Biomass boiler {hc.boiler_capex_eur_per_kw:,.0f} euro/kW, wood "
+        f"{hc.wood_eur_per_t:,.0f} euro/t; heat pump {hc.heat_pump_capex_eur_per_kw:,.0f} euro/kW",
+        f"- Geothermal {h.geothermal.reservoir_temp_c:.0f} degC, "
+        f"{h.geothermal.flow_per_well_kg_s:.0f} kg/s per well; ground {h.bhe.ground_conductivity:.1f}"
+        f" W/(m K), seasonal COP {h.bhe.cop_seasonal:.1f}",
+        f"- Discount rate {c.discount_rate:.1%}; electricity {c.retail_price_eur_per_kwh:.3f} "
+        f"euro/kWh; grid {c.grid_kg_co2_per_kwh:.3f} kg CO2/kWh",
+        "",
+        "RESULTS",
+    ]
+    for t in r.techs:
+        lines.append(
+            f"- {t.name}: {t.installed_kw:,.0f} kW, {t.energy_kwh:,.0f} kWh/y heat "
+            f"({t.coverage:.0%} of demand), CAPEX {t.capex_eur:,.0f}, LCOH "
+            f"{t.lcoe_eur_per_kwh:.4f} euro/kWh, payback {_years(t.payback_years)}, NPV "
+            f"{t.npv_eur:,.0f}, CO2 avoided {t.co2_avoided_t_per_year:,.0f} t/y")
+    lines += [f"- Lowest cost of heat: {r.lowest_lcoe}; fastest payback: {r.fastest_payback}; "
+              f"highest NPV: {r.highest_npv}; most CO2 avoided: {r.most_co2}", "", "CHECKS"]
     lines += [f"- [{_SEVERITY[f.severity]}] {f.message}" for f in findings]
     return "\n".join(lines)

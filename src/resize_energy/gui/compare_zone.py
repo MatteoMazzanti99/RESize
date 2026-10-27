@@ -16,6 +16,7 @@ from PySide6.QtGui import QColor, QCursor, QDrag, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
     QApplication,
+    QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -24,6 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from resize_energy.core.comparison import possible_carriers
 from resize_energy.gui.icons import paint_icon_tile
 from resize_energy.gui.theme import COLORS
 from resize_energy.gui.zone_layout import (
@@ -39,6 +41,9 @@ from resize_energy.gui.zone_layout import (
 )
 
 MIME_PREFIX = "resize/tech:"
+CARRIER_LABELS = {"electricity": "Compare electricity", "heat": "Compare heat",
+                  "both": "Compare electricity and heat"}
+CARRIER_WORDS = {"electricity": "electricity", "heat": "heat", "both": "electricity and heat"}
 TICK_MS = 33
 
 
@@ -243,7 +248,8 @@ class _Arena(QWidget):
 class CompareZone(QFrame):
     """Empty area called Compare: drop technologies in it, then press Compare."""
 
-    def __init__(self, allowed: tuple[str, ...], on_compare: Callable[[list[str]], None]) -> None:
+    def __init__(self, allowed: tuple[str, ...],
+                 on_compare: Callable[[list[str], str], None]) -> None:
         super().__init__()
         self.setObjectName("dropZone")
         self.setAcceptDrops(True)
@@ -259,6 +265,15 @@ class CompareZone(QFrame):
         self.button.setEnabled(False)
         self.button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.button.clicked.connect(lambda *_: self._compare())
+        # what to compare: only the kinds of energy that the dropped technologies allow
+        self.mode = QComboBox()
+        self.mode.setToolTip("Compare the electricity, the heat, or both (the plants that make "
+                             "each are compared on the same demand)")
+        self.mode.setVisible(False)
+        self.hint = QLabel("")
+        self.hint.setObjectName("hint")
+        self.hint.setWordWrap(True)
+        self.hint.setVisible(False)
         self.clear_button = QPushButton("Clear")
         self.clear_button.setProperty("variant", "ghost")
         self.clear_button.setEnabled(False)
@@ -267,12 +282,14 @@ class CompareZone(QFrame):
         header = QHBoxLayout()
         header.addWidget(self.title)
         header.addStretch(1)
+        header.addWidget(self.mode)
         header.addWidget(self.clear_button)
         header.addWidget(self.button)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 12, 16, 12)
         layout.setSpacing(6)
         layout.addLayout(header)
+        layout.addWidget(self.hint)
         layout.addWidget(self.arena, 1)
         self.setMinimumHeight(190)
 
@@ -295,20 +312,49 @@ class CompareZone(QFrame):
         self.arena.clear()
         self._refresh()
 
+    def carrier(self) -> str:
+        """The kind of comparison chosen in the drop-down ("electricity", "heat" or "both")."""
+        data = self.mode.currentData()
+        return data if isinstance(data, str) else "electricity"
+
     def _refresh(self) -> None:
         n = len(self.arena.keys)
         busy = self.arena.busy()
-        self.button.setEnabled(n >= 2 and not busy)
+        options = possible_carriers(tuple(self.keys()))
+        previous = self.carrier()
+        self.mode.blockSignals(True)
+        self.mode.clear()
+        for option in options:
+            self.mode.addItem(CARRIER_LABELS[option], option)
+        if previous in options:
+            self.mode.setCurrentIndex(options.index(previous))
+        elif "both" in options:
+            self.mode.setCurrentIndex(options.index("both"))
+        self.mode.blockSignals(False)
+        self.mode.setVisible(len(options) > 1)
+        if n >= 2 and not options:
+            self.hint.setText(
+                "These cannot be compared: pick at least two that make electricity, or at least "
+                "two that make heat (biomass and geothermal make both).")
+        elif len(options) == 1:
+            self.hint.setText(f"They are compared on {CARRIER_WORDS[options[0]]}.")
+        else:
+            self.hint.setText("")
+        self.hint.setVisible(bool(self.hint.text()))
+        self.button.setEnabled(bool(options) and not busy)
         self.clear_button.setEnabled(n >= 1 and not busy)
 
     def _compare(self) -> None:
         keys = self.keys()
         if len(keys) < 2 or self.arena.busy():
             return
+        carrier = self.carrier()
+        if carrier not in possible_carriers(tuple(keys)):
+            return
 
         def go() -> None:
             self._refresh()
-            self._on_compare(keys)
+            self._on_compare(keys, carrier)
 
         self.arena.clash(go)
         self._refresh()

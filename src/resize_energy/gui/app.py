@@ -57,6 +57,26 @@ def _walk_through(window, app) -> int:
             "Hydropower" not in window.pages[-1].html or "Geothermal" not in window.pages[-1].html):
         print("self-test: the six-technology comparison did not reach its results", flush=True)
         return 1
+    window._restart()
+    # heat only, and both carriers at once (the results page switches between the two)
+    for techs, carrier, marker in (
+            (["biomass", "geothermal", "solar", "bhe"], "heat", "Solar thermal"),
+            (["pv", "wind", "biomass", "geothermal"], "both", "Photovoltaic")):
+        window._start_compare(techs, carrier)
+        for _ in range(len(window.pages) - 2):
+            window._next()
+            app.processEvents()
+        page = window.pages[-1]
+        if window.index != len(window.pages) - 1 or marker not in page.html:
+            print(f"self-test: the {carrier} comparison did not reach its results", flush=True)
+            return 1
+        if carrier == "both":
+            page.carrier_box.setCurrentIndex(1)       # the heat comparison of the same project
+            app.processEvents()
+            if "Cost of heat" not in page.html:
+                print("self-test: the heat side of the both comparison did not show", flush=True)
+                return 1
+        window._restart()
     if len(window.pages[-1].chart_images) < 4:
         print("self-test: the comparison charts were not drawn", flush=True)
         return 1
@@ -148,20 +168,26 @@ def _compare_pairs_check(window, app) -> int:
     """Every pair of comparable technologies reaches the comparison."""
     from itertools import combinations
 
+    from resize_energy.core.comparison import possible_carriers
     from resize_energy.gui.home import COMPARABLE
 
     with _NoDialogs():
         for pair in combinations(COMPARABLE, 2):
-            window._start_compare(list(pair))
-            try:
-                reached = _to_results(window, app)
-            except Exception as exc:  # noqa: BLE001
-                print(f"self-test: the comparison of {pair} raised {exc!r}", flush=True)
-                return 1
-            if not reached or "Which is better" not in window.pages[-1].html:
-                print(f"self-test: the comparison of {pair} did not reach its results", flush=True)
-                return 1
-            window._restart()
+            for carrier in possible_carriers(pair):
+                if carrier == "both":
+                    continue
+                window._start_compare(list(pair), carrier)
+                try:
+                    reached = _to_results(window, app)
+                except Exception as exc:  # noqa: BLE001
+                    print(f"self-test: the {carrier} comparison of {pair} raised {exc!r}",
+                          flush=True)
+                    return 1
+                if not reached or "Which is better" not in window.pages[-1].html:
+                    print(f"self-test: the {carrier} comparison of {pair} did not reach its "
+                          "results", flush=True)
+                    return 1
+                window._restart()
     return 0
 
 

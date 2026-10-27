@@ -14,7 +14,8 @@ def compare_worked_example(key: str, inp: ComparisonInputs, r: ComparisonResult)
     c = inp.costs
     d = inp.annual_demand_kwh
     if key == "econ.same_demand":
-        out = [f"Target energy: {inp.coverage:.0%} of {d:,.0f} kWh = {inp.coverage * d:,.0f} kWh"]
+        what = "heat" if inp.carrier == "heat" else "energy"
+        out = [f"Target {what}: {inp.coverage:.0%} of {d:,.0f} kWh = {inp.coverage * d:,.0f} kWh"]
         for t in r.techs:
             extra = ""
             if t.key == "wind" and r.wind_design is not None:
@@ -26,6 +27,11 @@ def compare_worked_example(key: str, inp: ComparisonInputs, r: ComparisonResult)
                 extra = f" ({r.geothermal_design.wells_pairs} well pair(s))"
             if t.key == "hydrogen":
                 extra = f" (hydrogen, {t.energy_kwh / 33.33:,.0f} kg at 33.33 kWh/kg)"
+            if t.product == "heat":
+                extra = {"geothermal": " (whole well pairs)",
+                         "solar": " (peak thermal power of the collectors)",
+                         "bhe": " (heat pump; the boreholes are sized on its load)",
+                         "biomass": " (boiler, sized on the load duration curve)"}.get(t.key, "")
             out.append(f"{t.name}: {t.installed_kw:,.0f} kW -> {t.energy_kwh:,.0f} kWh "
                        f"({t.coverage:.0%} of the demand){extra}")
         return "\n".join(out)
@@ -55,6 +61,11 @@ def compare_worked_example(key: str, inp: ComparisonInputs, r: ComparisonResult)
             if t.product == "hydrogen":
                 out.append(f"{t.name}: {t.energy_kwh:,.0f} x {t.reference_price_eur_per_kwh:.4f} "
                            f"= {t.savings_eur_per_year:,.0f} euro/year (hydrogen not bought)")
+                continue
+            if t.product == "heat":
+                out.append(f"{t.name}: {min(t.energy_kwh, d):,.0f} kWh x "
+                           f"{t.reference_price_eur_per_kwh:.3f} euro/kWh (gas heat not bought) "
+                           f"= {t.savings_eur_per_year:,.0f} euro/year")
                 continue
             useful = min(t.energy_kwh, d)
             surplus = max(0.0, t.energy_kwh - d)

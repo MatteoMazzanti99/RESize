@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from resize_energy.core import project_file as pf
+from resize_energy.core.comparison import possible_carriers
 from resize_energy.gui import country, project_io
 from resize_energy.gui.battery_wizard import (
     BATTERY_STEP_NAMES,
@@ -306,9 +307,14 @@ class MainWindow(QMainWindow):
         self.sidebar.set_steps(names)
         self._go(1)
 
-    def _start_compare(self, techs: list[str]) -> None:
-        """Open the comparison of the technologies dropped in the Compare zone."""
+    def _start_compare(self, techs: list[str], carrier: str | None = None) -> None:
+        """Open the comparison of the technologies dropped in the Compare zone.
+
+        ``carrier`` is "electricity", "heat" or "both"; left out, the first one the
+        technologies allow."""
         self.cmp_selection.techs = tuple(techs)
+        self.cmp_selection.carrier = carrier or (
+            possible_carriers(self.cmp_selection.techs) or ("electricity",))[0]
         self._start("compare")
 
     def _back(self) -> None:
@@ -404,6 +410,7 @@ class MainWindow(QMainWindow):
         return pf.Project(
             tech=self.tech, pages=[project_io.capture(p) for p in flow],
             compare_techs=self.cmp_selection.techs if self.tech == "compare" else (),
+            compare_carrier=self.cmp_selection.carrier,
             weather=weather)
 
     def save_to(self, path: Path) -> None:
@@ -422,6 +429,7 @@ class MainWindow(QMainWindow):
             raise pf.ProjectError("this is not a RESize project file") from exc
         if project.tech == "compare":
             self.cmp_selection.techs = project.compare_techs or self.cmp_selection.techs
+            self.cmp_selection.carrier = project.compare_carrier
         country.forget_choice()    # the file's own prices win over an earlier pick
         self._start(project.tech)
         flow = self.pages[1:]

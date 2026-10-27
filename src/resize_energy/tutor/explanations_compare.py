@@ -17,7 +17,12 @@ COMPARE_EXPLANATIONS: dict[str, dict[str, str]] = {
             "compared with hydrogen from natural gas, not with the grid. A run-of-river "
             "hydropower plant is not sized on the demand at all: it takes the water the river "
             "offers, so it can cover much less (or more) than the target. A geothermal plant is "
-            "built in whole pairs of wells, so like wind it overshoots when one pair is large."
+            "built in whole pairs of wells, so like wind it overshoots when one pair is large. "
+            "When you compare HEAT instead (biomass boiler, geothermal doublet, solar thermal, "
+            "ground-source heat pump) the same logic holds with a heat demand and a peak load: "
+            "the plants are sized on the load duration curve, the heat pump and the pumps use "
+            "electricity that is counted as a running cost, and the reference is the heat of a "
+            "gas boiler."
         ),
         "assumptions": (
             "Annual energy balance only. Wind and sun are not available at the same hours of "

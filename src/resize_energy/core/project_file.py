@@ -29,6 +29,7 @@ class Project:
     tech: str
     pages: list[dict[str, Any]] = field(default_factory=list)   # one dict per step, in order
     compare_techs: tuple[str, ...] = ()
+    compare_carrier: str = "electricity"      # "electricity", "heat" or "both"
     weather: dict[str, prof.HourlyWeather] = field(default_factory=dict)  # page index -> year
     note: str = ""
 
@@ -57,6 +58,7 @@ def dumps(project: Project) -> str:
     doc = {
         "format": FORMAT, "version": FORMAT_VERSION, "app_version": __version__,
         "tech": project.tech, "compare_techs": list(project.compare_techs),
+        "compare_carrier": project.compare_carrier,
         "note": project.note, "pages": project.pages,
         "weather": {k: _weather_to_json(v) for k, v in project.weather.items()},
     }
@@ -86,10 +88,13 @@ def loads(text: str) -> Project:
     techs = doc.get("compare_techs", [])
     if not isinstance(techs, list) or not all(isinstance(t, str) for t in techs):
         raise ProjectError("the saved list of compared technologies is damaged")
+    carrier = doc.get("compare_carrier", "electricity")
+    if carrier not in ("electricity", "heat", "both"):
+        raise ProjectError("the saved kind of comparison is not valid")
     weather_doc = doc.get("weather", {})
     if not isinstance(weather_doc, dict):
         raise ProjectError("the saved weather data is damaged")
-    return Project(tech=tech, pages=pages, compare_techs=tuple(techs),
+    return Project(tech=tech, pages=pages, compare_techs=tuple(techs), compare_carrier=carrier,
                    weather={str(k): _weather_from_json(v) for k, v in weather_doc.items()},
                    note=str(doc.get("note", "")))
 

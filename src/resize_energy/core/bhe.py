@@ -195,11 +195,22 @@ def line_source_penalty(n: int, columns: int, spacing: float, alpha: float,
     if n == 1 or load_per_m == 0.0:
         return 0.0
     t = years * 365.0 * 86400.0
-    pos = [((k // columns) * spacing, (k % columns) * spacing) for k in range(n)]
+    # boreholes fill a grid row by row: group the pairs by their offset (rows, columns) so that
+    # E1 is evaluated once per offset instead of once per pair
+    lens = [min(columns, n - r * columns) for r in range((n + columns - 1) // columns)]
+    rows = len(lens)
     total = 0.0
-    for a in range(n):
-        for b in range(n):
-            if a != b:
-                d2 = (pos[a][0] - pos[b][0]) ** 2 + (pos[a][1] - pos[b][1]) ** 2
-                total += exp_integral_e1(d2 / (4.0 * alpha * t))
+    for dr in range(rows):
+        for dc in range(-(columns - 1), columns):
+            if dr == 0 and dc == 0:
+                continue
+            pairs = 0
+            for ra in range(rows - dr):
+                na, nb = lens[ra], lens[ra + dr]
+                pairs += max(0, min(na, nb - dc) - max(0, -dc))
+            if pairs == 0:
+                continue
+            d2 = (dr * spacing) ** 2 + (dc * spacing) ** 2
+            weight = 2 if dr > 0 else 1        # the pair (a, b) and the pair (b, a)
+            total += weight * pairs * exp_integral_e1(d2 / (4.0 * alpha * t))
     return load_per_m / (4.0 * math.pi * conductivity) * total / n

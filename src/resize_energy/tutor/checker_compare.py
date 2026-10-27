@@ -11,8 +11,8 @@ def check_comparison(inp: ComparisonInputs, r: ComparisonResult) -> list[Finding
     c = inp.costs
     for t in r.techs:
         if t.lcoe_eur_per_kwh >= t.reference_price_eur_per_kwh:
-            what = "buying electricity" if t.product == "electricity" else (
-                "buying hydrogen made from natural gas")
+            what = {"electricity": "buying electricity", "heat": "burning gas for the same heat",
+                    }.get(t.product, "buying hydrogen made from natural gas")
             out.append(Finding(
                 "warning", "lcoe_above_price",
                 f"{t.name}: the LCOE ({t.lcoe_eur_per_kwh:.3f} euro/kWh) is not below the "
@@ -28,6 +28,10 @@ def check_comparison(inp: ComparisonInputs, r: ComparisonResult) -> list[Finding
                 "warning", "slow_payback",
                 f"{t.name}: payback of {t.payback_years:.0f} years is close to the lifetime "
                 f"({t.lifetime_years:.0f} years).", "econ.payback"))
+    for note in r.notes:
+        out.append(Finding("warning", "tech_left_out", note, "econ.same_demand"))
+    if inp.carrier == "heat":
+        out += _heat_findings(inp, r)
     wind = r.wind
     if wind is not None and wind.coverage > 1.5:
         out.append(Finding(
@@ -70,7 +74,7 @@ def check_comparison(inp: ComparisonInputs, r: ComparisonResult) -> list[Finding
                 "The hydrogen plant is simulated on an invented hourly year with the yearly "
                 "totals of your site: use the hydrogen flow with real hourly data for a better "
                 "estimate.", "econ.same_demand"))
-    if r.biomass is not None:
+    if r.biomass is not None and inp.carrier != "heat":
         out.append(Finding(
             "info", "heat_not_credited",
             "Biogas also produces heat: here only the electricity is valued, so the biomass "
@@ -98,4 +102,36 @@ def check_comparison(inp: ComparisonInputs, r: ComparisonResult) -> list[Finding
         out.insert(0, Finding("ok", "economics_ok",
                               "Every technology has an LCOE below its reference price and a "
                               "positive NPV with these assumptions.", "econ.lcoe"))
+    return out
+
+
+def _heat_findings(inp: ComparisonInputs, r: ComparisonResult) -> list[Finding]:
+    out: list[Finding] = []
+    for t in r.techs:
+        if t.key == "geothermal" and t.coverage > 1.15 * inp.coverage:
+            out.append(Finding(
+                "info", "geothermal_pairs",
+                f"The geothermal plant covers {t.coverage:.0%} of the heat, more than the "
+                f"{inp.coverage:.0%} asked: wells come in pairs and one pair is a large step. "
+                "The extra heat is not sold here, so read the cost of one kWh of heat.",
+                "econ.same_demand"))
+    if r.solar_design is not None:
+        out.append(Finding(
+            "info", "solar_flat_load",
+            "The solar field is sized on a flat, hot-water type load. Space heating peaks in "
+            "winter when the sun is weakest, so for a heating load the real solar share would "
+            "be lower: use the solar thermal flow for a detailed case.", "econ.same_demand"))
+    bhe = r.bhe_design
+    if bhe is not None:
+        out.append(Finding(
+            "info", "heat_pump_electricity",
+            "The heat pump runs on electricity: its cost and emissions use the retail price "
+            "and the grid emission factor, so its result depends on the grid you are in.",
+            "econ.lcoe"))
+        if getattr(bhe, "warnings", ()):
+            out.append(Finding(
+                "warning", "bhe_ground_warnings",
+                "Ground-source heat pump: " + "; ".join(bhe.warnings) + ". A heating-only field "
+                "cools the ground year after year: check it in the ground-source flow.",
+                "econ.same_demand"))
     return out

@@ -36,8 +36,9 @@ TECHNOLOGIES: list[tuple[str, str, str, bool]] = [
     ("geothermal", "Geothermal", "Hot water from the ground for a heat network or a power plant: wells, pumping, net power.", True),
     ("bhe", "Ground-source heat pump", "Vertical boreholes for heating and cooling: ASHRAE length method, number and depth of boreholes, field layout.", True),
 ]
-# technologies that make energy and can be dragged into the Compare zone
-COMPARABLE: tuple[str, ...] = ("pv", "wind", "biomass", "hydrogen", "hydro", "geothermal")
+# technologies that make electricity, heat or hydrogen and can be dragged into the Compare zone
+COMPARABLE: tuple[str, ...] = ("pv", "wind", "biomass", "hydrogen", "hydro", "geothermal",
+                                "solar", "bhe")
 
 
 class HomePage(StepPage):
@@ -63,7 +64,7 @@ class HomePage(StepPage):
         QTimer.singleShot(0, self._fit_hero)
 
     def __init__(self, on_start: Callable[[str], None],
-                 on_compare: Callable[[list[str]], None]) -> None:
+                 on_compare: Callable[[list[str], str], None]) -> None:
         super().__init__()
         self.setTitle("Home")
         root = QVBoxLayout(self)
@@ -94,7 +95,7 @@ class HomePage(StepPage):
         root.addLayout(top)
         root.addSpacing(26)
 
-        root.addWidget(make_label("What you can size  ·  click to start, drag the generating ones to compare",
+        root.addWidget(make_label("What you can size  ·  click to start, drag the ones that make energy to compare: electricity, heat or both",
                                   "sectionTitle", wrap=False))
         root.addSpacing(10)
         grid = QGridLayout()

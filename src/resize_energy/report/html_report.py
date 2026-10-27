@@ -447,9 +447,53 @@ def _bar_rows(label: str, items: list[tuple[str, float, str]]) -> str:
 
 
 _TECH_COLORS = {"pv": "#0A7452", "wind": "#1F5FBF", "biomass": "#8F5600", "hydrogen": "#7B3FB8",
-                "hydro": "#0E8C9B", "geothermal": "#B3261E"}
+                "hydro": "#0E8C9B", "geothermal": "#B3261E", "solar": "#E36414",
+                "bhe": "#3B4CC0"}
 _TECH_SHORT = {"pv": "PV", "wind": "Wind", "biomass": "Biomass", "hydrogen": "Hydrogen",
-               "hydro": "Hydropower", "geothermal": "Geothermal"}
+               "hydro": "Hydropower", "geothermal": "Geothermal", "solar": "Solar thermal",
+               "bhe": "Heat pump"}
+
+
+def _heat_rows(inp: ComparisonInputs) -> list[str]:
+    """Inputs of a heat comparison: the demand, the prices and one line per plant."""
+    h, c = inp.heat, inp.costs
+    hc = h.costs
+    keys = inp.techs
+    rows = [
+        _row("Annual heat demand / peak / coverage",
+             f"{h.annual_heat_kwh:,.0f} kWh / {h.peak_kw:,.0f} kW / {h.coverage:.0%}"),
+        _row("Discount rate", f"{c.discount_rate:.1%}"),
+        _row("Reference: heat from a gas boiler",
+             f"{hc.gas_heat_eur_per_kwh:.3f} euro/kWh, {hc.gas_kg_co2_per_kwh_fuel:.3f} kg "
+             f"CO2/kWh of gas, boiler efficiency {hc.gas_boiler_efficiency:.0%}"),
+        _row("Electricity price / grid emission factor",
+             f"{c.retail_price_eur_per_kwh:.3f} euro/kWh / {c.grid_kg_co2_per_kwh:.3f} kg CO2/kWh"),
+    ]
+    if "biomass" in keys:
+        rows.append(_row("Biomass boiler",
+                         f"{hc.boiler_capex_eur_per_kw:,.0f} euro/kW, O&M "
+                         f"{hc.boiler_om_fraction:.1%} of the CAPEX, wood {hc.wood_eur_per_t:,.0f} "
+                         f"euro/t, {hc.boiler_life_years:.0f} years; {inp.biomass.fuel.name}"))
+    if "geothermal" in keys:
+        g = h.geothermal
+        rows.append(_row("Geothermal heat",
+                         f"{g.reservoir_temp_c:.0f} degC, {g.flow_per_well_kg_s:.0f} kg/s per "
+                         f"well, return {g.return_temp_c:.0f} degC; wells "
+                         f"{g.drilling_eur_per_m:,.0f} euro/m, {hc.geo_life_years:.0f} years"))
+    if "solar" in keys:
+        s_ = h.solar
+        rows.append(_row("Solar thermal",
+                         f"{s_.collector} collector, delivery at {h.supply_temp_c:.0f} degC, "
+                         f"irradiation {inp.annual_irradiation_kwh_m2:,.0f} kWh/m2, flat "
+                         f"(hot-water type) load, {s_.life_years:.0f} years"))
+    if "bhe" in keys:
+        b = h.bhe
+        rows.append(_row("Ground-source heat pump",
+                         f"ground {b.ground_conductivity:.1f} W/(m K), seasonal COP "
+                         f"{b.cop_seasonal:.1f}, boreholes {b.drilling_eur_per_m:,.0f} euro/m, "
+                         f"heat pump {hc.heat_pump_capex_eur_per_kw:,.0f} euro/kW, "
+                         f"{hc.heat_pump_life_years:.0f} years"))
+    return rows
 
 
 def build_comparison_report(
@@ -465,14 +509,16 @@ def build_comparison_report(
     colors = look["colors"]
     c = inp.costs
     techs = r.techs
-    title = title or "Technology comparison: " + " vs ".join(_TECH_SHORT[t.key] for t in techs)
+    heat_title = " (heat)" if inp.carrier == "heat" else ""
+    title = title or ("Technology comparison" + heat_title + ": "
+                      + " vs ".join(_TECH_SHORT[t.key] for t in techs))
 
     def line(label: str, values: list[str]) -> str:
         cells = "".join(f'<td align="right"><b>{escape(v)}</b></td>' for v in values)
         return f"<tr><td>{escape(label)}</td>{cells}</tr>"
 
     def unit(t) -> str:
-        return "kWh (H2, LHV)" if t.product == "hydrogen" else "kWh"
+        return {"hydrogen": "kWh (H2, LHV)", "heat": "kWh (heat)"}.get(t.product, "kWh")
 
     head = "".join(f'<td align="right"><b>{escape(t.name)}</b></td>' for t in techs)
     table = "".join([
@@ -482,7 +528,8 @@ def build_comparison_report(
         line("Full-load hours", [f"{t.full_load_hours:,.0f} h" for t in techs]),
         line("Investment (CAPEX)", [f"{t.capex_eur:,.0f} euro" for t in techs]),
         line("Running costs per year", [f"{t.om_eur_per_year:,.0f} euro" for t in techs]),
-        line("Cost of energy (LCOE)", [f"{t.lcoe_eur_per_kwh:.3f} euro/kWh" for t in techs]),
+        line("Cost of heat (LCOH)" if inp.carrier == "heat" else "Cost of energy (LCOE)",
+             [f"{t.lcoe_eur_per_kwh:.3f} euro/kWh" for t in techs]),
         line("Savings per year", [f"{t.savings_eur_per_year:,.0f} euro" for t in techs]),
         line("Simple payback", [f"{_years(t.payback_years)} years" for t in techs]),
         line("Discounted payback", [f"{_years(t.discounted_payback_years)} years"
@@ -493,15 +540,20 @@ def build_comparison_report(
         line("CO2 avoided over the lifetime", [f"{t.co2_avoided_lifetime_t:,.0f} t"
                                                for t in techs]),
     ])
-    rows = [
-        _row("Annual energy demand / coverage",
-             f"{inp.annual_demand_kwh:,.0f} kWh / {inp.coverage:.0%}"),
-        _row("Discount rate", f"{c.discount_rate:.1%}"),
-        _row("Retail / export price",
-             f"{c.retail_price_eur_per_kwh:.3f} / {c.export_price_eur_per_kwh:.3f} euro/kWh"),
-        _row("Grid emission factor", f"{c.grid_kg_co2_per_kwh:.3f} kg CO2/kWh"),
-    ]
-    keys = [t.key for t in techs]
+    heat_mode = inp.carrier == "heat" and inp.heat is not None
+    if heat_mode:
+        rows = _heat_rows(inp)
+        keys = []
+    else:
+        rows = [
+            _row("Annual energy demand / coverage",
+                 f"{inp.annual_demand_kwh:,.0f} kWh / {inp.coverage:.0%}"),
+            _row("Discount rate", f"{c.discount_rate:.1%}"),
+            _row("Retail / export price",
+                 f"{c.retail_price_eur_per_kwh:.3f} / {c.export_price_eur_per_kwh:.3f} euro/kWh"),
+            _row("Grid emission factor", f"{c.grid_kg_co2_per_kwh:.3f} kg CO2/kWh"),
+        ]
+        keys = [t.key for t in techs]
     if "pv" in keys or ("hydrogen" in keys and inp.h2_use_pv):
         rows.append(_row("Irradiation / performance ratio",
                          f"{inp.annual_irradiation_kwh_m2:,.0f} kWh/m2 / "
@@ -547,7 +599,9 @@ def build_comparison_report(
                          f" euro/kW + {c.geo_om_eur_per_kw_year:,.0f} euro/kW/year, "
                          f"{c.geo_lifetime_years:.0f} years, {c.geo_lifecycle_g_per_kwh:.0f} g/kWh"))
     inputs_rows = "".join(rows)
-    verdict = (
+    notes_html = ("<ul>" + "".join(f"<li>{escape(n)}</li>" for n in r.notes) + "</ul>"
+                  if r.notes else "")
+    verdict = notes_html + (
         f"<ul><li>Lowest cost of energy (LCOE): <b>{escape(r.lowest_lcoe)}</b></li>"
         f"<li>Fastest simple payback: <b>{escape(r.fastest_payback)}</b></li>"
         f"<li>Highest net present value: <b>{escape(r.highest_npv)}</b></li>"

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field, replace
+from typing import TYPE_CHECKING
 
 from resize_energy.core import economics as eco
 from resize_energy.core import hydrogen as h2
@@ -34,10 +35,29 @@ from resize_energy.core.hydrogen_design import (
 )
 from resize_energy.core.wind_design import WindDesign, WindInputs, size_wind_plant
 
+if TYPE_CHECKING:
+    from resize_energy.core.comparison_heat import HeatInputs
+
 TECHS = ("pv", "wind", "biomass", "hydrogen", "hydro", "geothermal")
 TECH_NAMES = {"pv": "Photovoltaic", "wind": "Wind", "biomass": "Biomass (biogas CHP)",
               "hydrogen": "Green hydrogen", "hydro": "Hydropower (run-of-river)",
-              "geothermal": "Geothermal power"}
+              "geothermal": "Geothermal power", "solar": "Solar thermal",
+              "bhe": "Ground-source heat pump"}
+
+# What each technology can deliver to the comparison (see core/comparison_heat.py for the heat).
+ELECTRICITY_TECHS = TECHS
+HEAT_TECHS = ("biomass", "geothermal", "solar", "bhe")
+ALL_TECHS = TECHS + ("solar", "bhe")
+CARRIERS = ("electricity", "heat", "both")
+
+
+def possible_carriers(techs: tuple[str, ...]) -> tuple[str, ...]:
+    """The comparisons the chosen technologies allow: a carrier needs at least two of them
+    that can deliver it, and "both" needs the two carriers at once."""
+    el = sum(t in ELECTRICITY_TECHS for t in techs) >= 2
+    heat = sum(t in HEAT_TECHS for t in techs) >= 2
+    out = (("electricity",) if el else ()) + (("heat",) if heat else ())
+    return out + (("both",) if el and heat else ())
 
 
 @dataclass(frozen=True)
@@ -95,13 +115,19 @@ class ComparisonInputs:
     geothermal: GeothermalInputs = field(
         default_factory=lambda: GeothermalInputs(
             pathway="power", reservoir_temp_c=140.0, flow_per_well_kg_s=80.0))
+    carrier: str = "electricity"          # "electricity" or "heat" (one comparison at a time)
+    heat: HeatInputs | None = None        # the heat demand and plants, when carrier == "heat"
 
     @property
     def annual_demand_kwh(self) -> float:
+        if self.carrier == "heat" and self.heat is not None:
+            return self.heat.annual_heat_kwh
         return self.wind.annual_demand_kwh
 
     @property
     def coverage(self) -> float:
+        if self.carrier == "heat" and self.heat is not None:
+            return self.heat.coverage
         return self.wind.coverage
 
 
@@ -145,6 +171,9 @@ class ComparisonResult:
     hydro_design: HydroDesign | None = None
     geothermal_design: GeothermalDesign | None = None
     sensitivity: dict[str, dict[str, tuple[float, ...]]] | None = None
+    notes: tuple[str, ...] = ()          # technologies left out, and why
+    bhe_design: object | None = None
+    solar_design: object | None = None
 
     def get(self, key: str) -> TechResult | None:
         return next((t for t in self.techs if t.key == key), None)
@@ -275,6 +304,9 @@ def compare_technologies(inp: ComparisonInputs) -> ComparisonResult:
     uses a whole number of turbines, so it can overshoot; biogas and hydrogen are sized by
     their own modules. Biogas heat is not credited (conservative).
     """
+    if inp.carrier == "heat":
+        from resize_energy.core.comparison_heat import compare_heat
+        return compare_heat(inp)
     _check_inputs(inp)
     c = inp.costs
     demand = inp.annual_demand_kwh
@@ -374,6 +406,9 @@ def comparison_sensitivity(inp: ComparisonInputs):
             hydro_capex_eur_per_kw=c.hydro_capex_eur_per_kw * f_capex,
             geo_capex_eur_per_kw=c.geo_capex_eur_per_kw * f_capex,
             discount_rate=c.discount_rate * f_rate)
+        if inp.carrier == "heat" and inp.heat is not None:
+            from resize_energy.core.comparison_heat import scaled_heat
+            return replace(inp, costs=costs, heat=scaled_heat(inp.heat, f_capex))
         return replace(inp, costs=costs)
 
     out: dict[str, dict[str, tuple[float, ...]]] = {"capex": {}, "rate": {}}
