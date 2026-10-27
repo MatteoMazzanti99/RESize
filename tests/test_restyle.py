@@ -80,3 +80,15 @@ def test_every_technology_has_a_preview_with_default_inputs():
         check = getattr(importlib.import_module(f"resize_energy.tutor.{checker}"), check_name)
         preview = design_preview(design, check(inputs, design))
         assert preview.value and preview.label and preview.notes, core
+
+
+def test_scoreboard_counts_up_round_by_round():
+    from types import SimpleNamespace
+
+    from resize_energy.report.versus import wins_at
+
+    entries = (SimpleNamespace(name="x"), SimpleNamespace(name="y"))
+    rounds = [SimpleNamespace(entries=entries, winner=w) for w in ("x", "y", "x")]
+    assert wins_at(rounds, 0) == {"x": 0, "y": 0}
+    assert wins_at(rounds, 2) == {"x": 1, "y": 1}
+    assert wins_at(rounds, 99) == {"x": 2, "y": 1}

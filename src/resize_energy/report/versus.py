@@ -79,6 +79,11 @@ def versus_rounds(r: ComparisonResult) -> list[Round]:
     return rounds
 
 
+def wins_at(rounds: list[Round], done: int) -> dict[str, int]:
+    """Rounds won after the first ``done`` rounds have finished (for the scoreboard count-up)."""
+    return rounds_won(rounds[:max(0, done)]) if rounds else {}
+
+
 def rounds_won(rounds: list[Round]) -> dict[str, int]:
     """How many rounds each technology won (every technology is listed, ties count for none)."""
     wins = {e.name: 0 for e in rounds[0].entries} if rounds else {}

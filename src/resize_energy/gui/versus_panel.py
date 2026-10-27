@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QWidget
 from resize_energy.gui.icons import paint_icon_tile
 from resize_energy.gui.theme import COLORS
 from resize_energy.report.charts import TECH_COLORS
-from resize_energy.report.versus import Round, rounds_won
+from resize_energy.report.versus import Round, rounds_won, wins_at
 
 ROUND_DELAY = 0.45     # seconds between the start of two rounds
 FILL_SECONDS = 0.75
@@ -75,13 +75,17 @@ class VersusPanel(QWidget):
         value_w = 120.0
         track_right = max(left + 80.0, w - value_w - 24.0)
 
-        wins = rounds_won(self.rounds)
-        best = max(wins.values()) if wins else 0
+        final = rounds_won(self.rounds)
+        best = max(final.values()) if final else 0
+        done = sum(1 for i in range(len(self.rounds))
+                   if elapsed - i * ROUND_DELAY >= FILL_SECONDS)
+        wins = wins_at(self.rounds, done)       # the score climbs as each round ends
+        finished = done >= len(self.rounds)
         painter.setFont(title)
         painter.setPen(QColor(COLORS["text"]))
         painter.drawText(QRectF(14, 6, w - 28, 22), Qt.AlignmentFlag.AlignVCenter,
                          "Round by round" if best else "Round by round: no clear winner")
-        self._paint_scoreboard(painter, wins, best, w, base, bold)
+        self._paint_scoreboard(painter, wins, best if finished else 0, w, base, bold)
         y = float(TOP)
         for r_index, rd in enumerate(self.rounds):
             progress = ease_out((elapsed - r_index * ROUND_DELAY) / FILL_SECONDS)

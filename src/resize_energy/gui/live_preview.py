@@ -7,6 +7,7 @@ from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
 
 from resize_energy.gui import theme
+from resize_energy.gui.kpi_format import format_value
 from resize_energy.gui.preview_data import Preview
 from resize_energy.gui.widgets import make_label
 
@@ -88,6 +89,11 @@ class LivePreview(QFrame):
         self.value.setObjectName("kpiValue")
         self.unit = QLabel("")
         self.unit.setObjectName("kpiUnit")
+        self._value_anim = QVariantAnimation(self)
+        self._value_anim.setDuration(240)
+        self._value_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._value_anim.valueChanged.connect(self._tween)
+        self._shown: tuple[float, int] | None = None   # (number, decimals) on screen now
         self.bars = BarsView()
         self.extra = QLabel("")
         self.extra.setWordWrap(True)
@@ -98,6 +104,26 @@ class LivePreview(QFrame):
             box.addWidget(widget)
         box.addStretch(1)
 
+    def _set_value(self, text: str) -> None:
+        """Glide from the number on screen to the new one (plain text when it is not a number)."""
+        try:
+            target = float(text.replace(",", ""))
+        except ValueError:
+            self._shown = None
+            self.value.setText(text)
+            return
+        decimals = len(text.split(".")[1]) if "." in text else 0
+        start = self._shown[0] if self._shown else target
+        self._shown = (target, decimals)
+        self._value_anim.stop()
+        self._value_anim.setStartValue(start)
+        self._value_anim.setEndValue(target)
+        self._value_anim.start()
+
+    def _tween(self, number: float) -> None:
+        if self._shown is not None:
+            self.value.setText(format_value(float(number), self._shown[1]))
+
     def show_waiting(self, message: str) -> None:
         self.label.setText(message)
         for widget in (self.value, self.unit, self.extra, self.notes):
@@ -107,7 +133,7 @@ class LivePreview(QFrame):
     def show_preview(self, preview: Preview, color: str) -> None:
         c = theme.COLORS
         self.label.setText(preview.label)
-        self.value.setText(preview.value)
+        self._set_value(preview.value)
         self.unit.setText(preview.unit)
         self.bars.setVisible(bool(preview.bars))
         if preview.bars:

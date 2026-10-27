@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtCore import QEvent, QObject, QPointF, QRectF, Qt, QVariantAnimation
 from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPen
 from PySide6.QtWidgets import (
     QFrame,
@@ -27,6 +27,33 @@ def make_label(text: str, name: str = "", wrap: bool = True) -> QLabel:
     return label
 
 
+class HoverLift(QObject):
+    """A card rises a little under the mouse: its shadow grows and drops lower, smoothly."""
+
+    def __init__(self, frame: QFrame, shadow: QGraphicsDropShadowEffect) -> None:
+        super().__init__(frame)
+        self._shadow = shadow
+        self._anim = QVariantAnimation(self)
+        self._anim.setDuration(160)
+        self._anim.valueChanged.connect(self._apply)
+        self._t = 0.0
+        frame.installEventFilter(self)
+
+    def _apply(self, t: float) -> None:
+        self._t = float(t)
+        self._shadow.setBlurRadius(22 + 16 * self._t)
+        self._shadow.setOffset(0, 4 + 5 * self._t)
+
+    def eventFilter(self, obj, event) -> bool:
+        kind = event.type()
+        if kind in (QEvent.Type.Enter, QEvent.Type.Leave):
+            self._anim.stop()
+            self._anim.setStartValue(self._t)
+            self._anim.setEndValue(1.0 if kind == QEvent.Type.Enter else 0.0)
+            self._anim.start()
+        return False
+
+
 def make_card(kind: str = "card", frame: QFrame | None = None) -> tuple[QFrame, QVBoxLayout]:
     """Rounded panel. ``kind``: 'card', 'cardActive' (available) or 'cardDim' (planned).
 
@@ -42,6 +69,8 @@ def make_card(kind: str = "card", frame: QFrame | None = None) -> tuple[QFrame, 
     shadow.setOffset(0, 4)
     shadow.setColor(QColor(15, 27, 45, 28))
     frame.setGraphicsEffect(shadow)
+    if kind == "cardActive":
+        HoverLift(frame, shadow)
     return frame, layout
 
 
