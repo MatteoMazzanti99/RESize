@@ -447,16 +447,13 @@ class BaseResultsPage(StepPage):
         why_layout = QVBoxLayout(why_panel)
         why_layout.setContentsMargins(14, 0, 0, 0)  # air between report and Why? panel
         why_layout.addWidget(make_label("Why? Understand each step", "sectionTitle", wrap=False))
-        self.why_split = QSplitter(Qt.Orientation.Vertical)  # drag the handle to give the list more room
-        self.why_split.addWidget(self.topics)
-        self.why_split.addWidget(self.detail)
-        self.why_split.setStretchFactor(0, 1)
-        self.why_split.setStretchFactor(1, 3)
-        self.why_split.setSizes([170, 420])
-        self.topics.setMinimumHeight(135)
+        self.topics.setFixedHeight(160)      # about four steps; the list scrolls
+        self.detail.setMinimumHeight(240)    # the explanation always has its own room
         for view in (self.topics, self.detail, self.browser):  # never scroll sideways
             view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        why_layout.addWidget(self.why_split, 1)
+        why_layout.setSpacing(10)
+        why_layout.addWidget(self.topics)
+        why_layout.addWidget(self.detail, 1)
         ask_step = QPushButton("Ask the tutor about this step...")
         ask_step.clicked.connect(self._ask_about_step)
         why_layout.addWidget(ask_step)
@@ -466,6 +463,7 @@ class BaseResultsPage(StepPage):
         splitter.addWidget(why_panel)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 2)
+        splitter.setMinimumHeight(520)   # a short window scrolls the page instead of squeezing
 
         export = QPushButton("Save the report as PDF (with charts)...")
         export.setProperty("variant", "primary")

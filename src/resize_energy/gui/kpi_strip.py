@@ -45,7 +45,7 @@ class KpiStrip(QWidget):
             tile = QFrame()
             tile.setObjectName("kpiTile")
             box = QVBoxLayout(tile)
-            box.setContentsMargins(14, 10, 14, 10)
+            box.setContentsMargins(14, 6, 14, 6)
             box.setSpacing(0)
             caption = QLabel(kpi.label)
             caption.setObjectName("kpiLabel")

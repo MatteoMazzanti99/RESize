@@ -144,7 +144,7 @@ QLabel#pillTag { background-color: {surface2}; color: {muted}; border-radius: 10
 QFrame#livePanel { background-color: {surface}; border: 1px solid {border}; border-radius: 14px; }
 QFrame#kpiTile { background-color: {surface}; border: 1px solid {border}; border-radius: 14px; }
 QLabel#kpiLabel { color: {muted}; font-size: 8.5pt; }
-QLabel#kpiValue { color: {text}; font-size: 19pt; font-weight: 700; }
+QLabel#kpiValue { color: {text}; font-size: 16pt; font-weight: 700; }
 QLabel#kpiUnit { color: {accent}; font-size: 8.5pt; font-weight: 600; }
 QPushButton#whyButton { border-radius: 12px; padding: 0px; min-width: 24px; max-width: 24px; min-height: 24px; max-height: 24px; color: {accent}; font-weight: 700; }
 
