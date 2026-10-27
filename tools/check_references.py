@@ -3,7 +3,10 @@
 For every reference with a DOI it fetches the record and compares the title, year and journal.
 References without a DOI are listed so you can check them by hand.
 
-    PYTHONPATH=src python tools/check_references.py
+    python tools/check_references.py
+
+Run it from the project folder, in a terminal (PowerShell, cmd or bash), with the same Python
+where RESize is installed. Double-clicking the file closes the window at once.
 """
 
 from __future__ import annotations
@@ -14,6 +17,9 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))   # no PYTHONPATH needed
 
 from resize_energy.tutor.bibliography import REFS
 
