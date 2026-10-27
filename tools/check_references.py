@@ -86,6 +86,9 @@ def main() -> int:
                       + search(ref))
             continue
         record = fetch(ref.doi) or fetch_datacite(ref.doi)
+        if record is None and ref.kind == "dataset":
+            print(f"?  {key}: data set, open https://doi.org/{ref.doi} and check it by hand")
+            continue
         if record is None:
             print(f"!! {key}: DOI {ref.doi} not found in Crossref or DataCite (or no internet)")
             problems += 1

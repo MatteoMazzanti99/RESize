@@ -6,17 +6,17 @@ Standards and reports are revised: use the current edition when you cite them. W
 
 ## Bibliography
 
-- Armijo, J., Philibert, C. (2020). Flexible production of green hydrogen and ammonia from variable solar and wind energy: case study of Chile and Argentina. *International Journal of Hydrogen Energy* 45(3):1541-1558.
+- Armijo, J., Philibert, C. (2020). Flexible production of green hydrogen and ammonia from variable solar and wind energy: case study of Chile and Argentina. *International Journal of Hydrogen Energy* 45(3):1541-1558. doi:<https://doi.org/10.1016/j.ijhydene.2019.11.028>
 - ASHRAE. *ASHRAE Handbook: HVAC Applications, chapter 'Service Water Heating'*, use the current edition. ASHRAE, Atlanta. <https://www.ashrae.org/>
 - Baldwin, D. (Hexagon Lincoln) (2014). *Development of High Pressure Hydrogen Storage Tank for Storage and Gaseous Truck Delivery*. U.S. DOE Hydrogen and Fuel Cells Program Annual Merit Review, project PD021, 17 June 2014. <https://www.hydrogen.energy.gov/pdfs/review14/pd021_baldwin_2014_o.pdf>
 - Betz, A. (1926). *Wind-Energie und ihre Ausnutzung durch Windmühlen*. Vandenhoeck & Ruprecht, Göttingen.
-- Bliss, R.W. (1959). The derivations of several 'plate-efficiency factors' useful in the design of flat-plate solar heat collectors. *Solar Energy* 3(4):55-64.
-- Brauns, J., Turek, T. (2020). Alkaline water electrolysis powered by renewable energy: a review. *Processes* 8(2):248.
+- Bliss, R.W. (1959). The derivations of several 'plate-efficiency factors' useful in the design of flat-plate solar heat collectors. *Solar Energy* 3(4):55-64. doi:<https://doi.org/10.1016/0038-092x(59)90006-4>
+- Brauns, J., Turek, T. (2020). Alkaline water electrolysis powered by renewable energy: a review. *Processes* 8(2):248. doi:<https://doi.org/10.3390/pr8020248>
 - Burton, T., Jenkins, N., Sharpe, D., Bossanyi, E. (2011). *Wind Energy Handbook*, 2nd ed. Wiley, Chichester.
 - Buttler, A., Spliethoff, H. (2018). Current status of water electrolysis for energy storage, grid balancing and sector coupling via power-to-gas and power-to-liquids: a review. *Renewable and Sustainable Energy Reviews* 82:2440-2454. doi:<https://doi.org/10.1016/j.rser.2017.09.003>
 - Carmo, M., Fritz, D.L., Mergel, J., Stolten, D. (2013). A comprehensive review on PEM water electrolysis. *International Journal of Hydrogen Energy* 38(12):4901-4934. doi:<https://doi.org/10.1016/j.ijhydene.2013.01.151>
 - Cole, W., Karmakar, A. (2023). *Cost Projections for Utility-Scale Battery Storage: 2023 Update*. National Renewable Energy Laboratory, Golden, NREL/TP-6A40-85332. <https://www.nrel.gov/docs/fy23osti/85332.pdf>
-- Davis, N.N., et al. (2023). The Global Wind Atlas: a high-resolution dataset of climatologies and associated web-based application. *Bulletin of the American Meteorological Society* 104(8):E1507-E1525. <https://globalwindatlas.info/>
+- Davis, N.N., et al. (2023). The Global Wind Atlas: a high-resolution dataset of climatologies and associated web-based application. *Bulletin of the American Meteorological Society* 104(8):E1507-E1525. doi:<https://doi.org/10.1175/bams-d-21-0075.1>
 - DiPippo, R. (2016). *Geothermal Power Plants: Principles, Applications, Case Studies and Environmental Impact*, 4th ed. Butterworth-Heinemann, Oxford.
 - European Parliament and Council (2023). *Directive (EU) 2023/2413 amending Directive (EU) 2018/2001 (RED III)*. Official Journal of the European Union.
 - European Parliament and Council (2000). *Water Framework Directive*. Official Journal of the European Communities, L 327.
@@ -29,10 +29,10 @@ Standards and reports are revised: use the current edition when you cite them. W
 - European Wind Energy Association (2009). *Wind Energy: The Facts*. Earthscan, London.
 - Faiman, D. (2008). Assessing the outdoor operating temperature of photovoltaic modules. *Progress in Photovoltaics* 16(4):307-315. doi:<https://doi.org/10.1002/pip.813>
 - Fachagentur Nachwachsende Rohstoffe (FNR) (2010). *Guide to Biogas: From Production to Use*. FNR, Gülzow, 5th ed..
-- Frensch, S.H., Fouda-Onana, F., Serre, G., Thoby, D., Araya, S.S., Kær, S.K. (2019). Influence of the operation mode on PEM water electrolysis degradation. *International Journal of Hydrogen Energy* 44(57):29889-29898.
+- Frensch, S.H., Fouda-Onana, F., Serre, G., Thoby, D., Araya, S.S., Kær, S.K. (2019). Influence of the operation mode on PEM water electrolysis degradation. *International Journal of Hydrogen Energy* 44(57):29889-29898. doi:<https://doi.org/10.1016/j.ijhydene.2019.09.169>
 - Gardiner, M. (2009). *Energy requirements for hydrogen gas compression and liquefaction as related to vehicle storage needs*. U.S. DOE Hydrogen and Fuel Cells Program, Record 9013.
 - Henning, H.-M. (ed.) (2007). *Solar-Assisted Air-Conditioning in Buildings: A Handbook for Planners*, 2nd ed. Springer, Vienna.
-- Hoppmann, J., Volland, J., Schmidt, T.S., Hoffmann, V.H. (2014). The economic viability of battery storage for residential solar photovoltaic systems: a review and a simulation model. *Renewable and Sustainable Energy Reviews* 39:1101-1118.
+- Hoppmann, J., Volland, J., Schmidt, T.S., Hoffmann, V.H. (2014). The economic viability of battery storage for residential solar photovoltaic systems: a review and a simulation model. *Renewable and Sustainable Energy Reviews* 39:1101-1118. doi:<https://doi.org/10.1016/j.rser.2014.07.068>
 - Hottel, H.C., Whillier, A. (1958). *Evaluation of flat-plate collector performance*. Transactions of the Conference on the Use of Solar Energy, Vol. 2, University of Arizona Press, Tucson, pp. 74-104.
 - Huld, T., Müller, R., Gambardella, A. (2012). A new solar radiation database for estimating PV performance in Europe and Africa. *Solar Energy* 86(6):1803-1815. doi:<https://doi.org/10.1016/j.solener.2012.03.006>
 - Hydrogen Council (2020). *Path to Hydrogen Competitiveness: A Cost Perspective*. Hydrogen Council, Brussels.
@@ -55,10 +55,10 @@ Standards and reports are revised: use the current edition when you cite them. W
 - ISPRA (Istituto Superiore per la Protezione e la Ricerca Ambientale). *Fattori di emissione atmosferica di gas a effetto serra nel settore elettrico nazionale e nei principali Paesi europei*. ISPRA, Roma, annual report: use the latest. <https://www.isprambiente.gov.it/>
 - Jensen, N.O. (1983). *A note on wind generator interaction*. Risø National Laboratory, Roskilde, Risø-M-2411.
 - Jordan, D.C., Kurtz, S.R. (2013). Photovoltaic degradation rates: an analytical review. *Progress in Photovoltaics* 21(1):12-29. doi:<https://doi.org/10.1002/pip.1182>
-- Justus, C.G., Hargraves, W.R., Mikhail, A., Graber, D. (1978). Methods for estimating wind speed frequency distributions. *Journal of Applied Meteorology* 17(3):350-353.
+- Justus, C.G., Hargraves, W.R., Mikhail, A., Graber, D. (1978). Methods for estimating wind speed frequency distributions. *Journal of Applied Meteorology* 17(3):350-353. doi:<https://doi.org/10.1175/1520-0450(1978)017&lt;0350:mfewsf&gt;2.0.co;2>
 - Katić, I., Højstrup, J., Jensen, N.O. (1986). *A simple model for cluster efficiency*. Proceedings of the European Wind Energy Association Conference and Exhibition (EWEC'86), Rome, pp. 407-410.
 - Kirkpatrick, S., Gelatt, C.D., Vecchi, M.P. (1983). Optimization by simulated annealing. *Science* 220(4598):671-680. doi:<https://doi.org/10.1126/science.220.4598.671>
-- Klein, S.A., Beckman, W.A. (1979). A general design method for closed-loop solar energy systems. *Solar Energy* 22(3):269-282.
+- Klein, S.A., Beckman, W.A. (1979). A general design method for closed-loop solar energy systems. *Solar Energy* 22(3):269-282. doi:<https://doi.org/10.1016/0038-092x(79)90142-7>
 - Kost, C., Müller, P., Sepúlveda Schweiger, J., Fluri, V., Thomsen, J. (2024). *Levelized Cost of Electricity: Renewable Energy Technologies*. Fraunhofer Institute for Solar Energy Systems ISE, Freiburg, July 2024. <https://www.ise.fraunhofer.de/en/publications/studies/cost-of-electricity.html>
 - KTBL (2013). *Faustzahlen Biogas*. KTBL, Darmstadt, 3rd ed..
 - Lazard (2024). *Lazard's Levelized Cost of Energy+ (LCOE+)*. Lazard, New York, latest edition: check.
@@ -67,9 +67,9 @@ Standards and reports are revised: use the current edition when you cite them. W
 - Luthander, R., Widén, J., Nilsson, D., Palm, J. (2015). Photovoltaic self-consumption in buildings: a review. *Applied Energy* 142:80-94. doi:<https://doi.org/10.1016/j.apenergy.2014.12.028>
 - Manwell, J.F., McGowan, J.G., Rogers, A.L. (2009). *Wind Energy Explained: Theory, Design and Application*, 2nd ed. Wiley, Chichester.
 - Masters, G.M. (2013). *Renewable and Efficient Electric Power Systems*, 2nd ed. Wiley, Hoboken.
-- McKendry, P. (2002). Energy production from biomass (part 1): overview of biomass. *Bioresource Technology* 83(1):37-46.
+- McKendry, P. (2002). Energy production from biomass (part 1): overview of biomass. *Bioresource Technology* 83(1):37-46. doi:<https://doi.org/10.1016/s0960-8524(01)00118-3>
 - Tester, J.W., et al. (2006). *The Future of Geothermal Energy: Impact of Enhanced Geothermal Systems (EGS) on the United States in the 21st Century*. Massachusetts Institute of Technology, chapters 6 (drilling) and 7 (energy conversion). <https://www1.eere.energy.gov/geothermal/pdfs/egs_chapter_7.pdf>
-- Mondol, J.D., Yohanis, Y.G., Norton, B. (2006). Optimal sizing of array and inverter for grid-connected photovoltaic systems. *Solar Energy* 80(12):1517-1539.
+- Mondol, J.D., Yohanis, Y.G., Norton, B. (2006). Optimal sizing of array and inverter for grid-connected photovoltaic systems. *Solar Energy* 80(12):1517-1539. doi:<https://doi.org/10.1016/j.solener.2006.01.006>
 - Mosetti, G., Poloni, C., Diviacco, B. (1994). Optimization of wind turbine positioning in large windfarms by means of a genetic algorithm. *Journal of Wind Engineering and Industrial Aerodynamics* 51(1):105-116. doi:<https://doi.org/10.1016/0167-6105(94)90080-9>
 - Mugnier, D., Saile, S., Philippen, D. (2018). *Review of installation costs. Info Sheet D1, IEA SHC Task 54 Price Reduction of Solar Thermal Systems*. IEA Solar Heating and Cooling Programme, 15 September 2018. <https://mobile.iea-shc.org/Data/Sites/1/publications/D01-Info-Sheet--Review-of-Installation-Costs.pdf>
 - NASA Langley Research Center. *Prediction Of Worldwide Energy Resources (POWER) Project*. <https://power.larc.nasa.gov/>
@@ -80,27 +80,27 @@ Standards and reports are revised: use the current edition when you cite them. W
 - National Renewable Energy Laboratory. *turbine-models: power curves and specifications of wind turbines*. <https://github.com/NREL/turbine-models>
 - Obernberger, I., Thek, G. (2010). *The Pellet Handbook: The Production and Thermal Utilization of Biomass Pellets*. Earthscan, London.
 - Paish, O. (2002). Small hydro power: technology and current status. *Renewable and Sustainable Energy Reviews* 6(6):537-556. doi:<https://doi.org/10.1016/S1364-0321(02)00006-0>
-- Peters, J.F., Baumann, M., Zimmermann, B., Braun, J., Weil, M. (2017). The environmental impact of Li-ion batteries and the role of key parameters: a review. *Renewable and Sustainable Energy Reviews* 67:491-506.
+- Peters, J.F., Baumann, M., Zimmermann, B., Braun, J., Weil, M. (2017). The environmental impact of Li-ion batteries and the role of key parameters: a review. *Renewable and Sustainable Energy Reviews* 67:491-506. doi:<https://doi.org/10.1016/j.rser.2016.08.039>
 - European Commission, Joint Research Centre. *Photovoltaic Geographical Information System (PVGIS)*. <https://re.jrc.ec.europa.eu/pvg_tools/>
-- Quaschning, V., Hanitsch, R. (1996). Numerical simulation of current-voltage characteristics of photovoltaic systems with shaded solar cells. *Solar Energy* 56(6):513-520.
+- Quaschning, V., Hanitsch, R. (1996). Numerical simulation of current-voltage characteristics of photovoltaic systems with shaded solar cells. *Solar Energy* 56(6):513-520. doi:<https://doi.org/10.1016/0038-092x(96)00006-0>
 - Quaschning, V. (2013). *Regenerative Energiesysteme: Technologie, Berechnung, Simulation*, 8th ed. Hanser, Munich.
-- Reich, N.H., Mueller, B., Armbruster, A., van Sark, W.G.J.H.M., Kiefer, K., Reise, C. (2012). Performance ratio revisited: is PR &gt; 90% realistic?. *Progress in Photovoltaics* 20(6):717-726.
+- Reich, N.H., Mueller, B., Armbruster, A., van Sark, W.G.J.H.M., Kiefer, K., Reise, C. (2012). Performance ratio revisited: is PR &gt; 90% realistic?. *Progress in Photovoltaics* 20(6):717-726. doi:<https://doi.org/10.1002/pip.1219>
 - Saltelli, A., Ratto, M., Andres, T., Campolongo, F., Cariboni, J., Gatelli, D., Saisana, M., Tarantola, S. (2008). *Global Sensitivity Analysis: The Primer*. Wiley, Chichester.
-- Schimpe, M., et al. (2018). Comprehensive modeling of temperature-dependent degradation mechanisms in lithium iron phosphate batteries. *Journal of The Electrochemical Society* 165(2):A181-A193.
+- Schimpe, M., et al. (2018). Comprehensive modeling of temperature-dependent degradation mechanisms in lithium iron phosphate batteries. *Journal of The Electrochemical Society* 165(2):A181-A193. doi:<https://doi.org/10.1149/2.1181714jes>
 - Schlömer, S., et al. (2014). *Annex III: Technology-specific cost and performance parameters. In: Climate Change 2014: Mitigation of Climate Change (IPCC AR5, Working Group III)*. Cambridge University Press.
-- Schmidt, O., Gambhir, A., Staffell, I., Hawkes, A., Nelson, J., Few, S. (2017). Future cost and performance of water electrolysis: an expert elicitation study. *International Journal of Hydrogen Energy* 42(52):30470-30492.
+- Schmidt, O., Gambhir, A., Staffell, I., Hawkes, A., Nelson, J., Few, S. (2017). Future cost and performance of water electrolysis: an expert elicitation study. *International Journal of Hydrogen Energy* 42(52):30470-30492. doi:<https://doi.org/10.1016/j.ijhydene.2017.10.045>
 - Schmidt, O., Melchior, S., Hawkes, A., Staffell, I. (2019). Projecting the future levelized cost of electricity storage technologies. *Joule* 3(1):81-100. doi:<https://doi.org/10.1016/j.joule.2018.12.008>
 - Short, W., Packey, D.J., Holt, T. (1995). *A Manual for the Economic Evaluation of Energy Efficiency and Renewable Energy Technologies*. National Renewable Energy Laboratory, Golden, NREL/TP-462-5173.
 - Skoplaki, E., Palyvos, J.A. (2009). On the temperature dependence of photovoltaic module electrical performance: a review of efficiency/power correlations. *Solar Energy* 83(5):614-624. doi:<https://doi.org/10.1016/j.solener.2008.10.008>
-- Swamee, P.K., Jain, A.K. (1976). Explicit equations for pipe-flow problems. *Journal of the Hydraulics Division, ASCE* 102(5):657-664.
-- Tennant, D.L. (1976). Instream flow regimens for fish, wildlife, recreation and related environmental resources. *Fisheries* 1(4):6-10.
+- Swamee, P.K., Jain, A.K. (1976). Explicit equations for pipe-flow problems. *Journal of the Hydraulics Division, ASCE* 102(5):657-664. doi:<https://doi.org/10.1061/jyceaj.0004542>
+- Tennant, D.L. (1976). Instream flow regimens for fish, wildlife, recreation and related environmental resources. *Fisheries* 1(4):6-10. doi:<https://doi.org/10.1577/1548-8446(1976)001&lt;0006:ifrffw&gt;2.0.co;2>
 - Ulleberg, Ø. (2003). Modeling of advanced alkaline electrolyzers: a system simulation approach. *International Journal of Hydrogen Energy* 28(1):21-33. doi:<https://doi.org/10.1016/S0360-3199(02)00033-2>
 - VDEW (1999). *Repräsentative VDEW-Lastprofile*. VDEW-Materialien M-32/99, Frankfurt.
 - Vogel, R.M., Fennessey, N.M. (1994). Flow-duration curves. I: New interpretation and confidence intervals. *Journal of Water Resources Planning and Management* 120(4):485-504. doi:<https://doi.org/10.1061/(ASCE)0733-9496(1994)120:4(485)>
-- Wang, J., et al. (2011). Cycle-life model for graphite-LiFePO4 cells. *Journal of Power Sources* 196(8):3942-3948.
-- Weiland, P. (2010). Biogas production: current state and perspectives. *Applied Microbiology and Biotechnology* 85(4):849-860.
+- Wang, J., et al. (2011). Cycle-life model for graphite-LiFePO4 cells. *Journal of Power Sources* 196(8):3942-3948. doi:<https://doi.org/10.1016/j.jpowsour.2010.11.134>
+- Weiland, P. (2010). Biogas production: current state and perspectives. *Applied Microbiology and Biotechnology* 85(4):849-860. doi:<https://doi.org/10.1007/s00253-009-2246-7>
 - Weiss, W., Spörk-Dür, M. (2024). *Solar Heat Worldwide*. AEE INTEC, for the IEA Solar Heating and Cooling Programme, latest edition: check.
-- Weniger, J., Tjaden, T., Quaschning, V. (2014). Sizing of residential PV battery systems. *Energy Procedia* 46:78-87.
+- Weniger, J., Tjaden, T., Quaschning, V. (2014). Sizing of residential PV battery systems. *Energy Procedia* 46:78-87. doi:<https://doi.org/10.1016/j.egypro.2014.01.160>
 - White, F.M. (2016). *Fluid Mechanics*, 8th ed. McGraw-Hill, New York.
 - Šúri, M., Huld, T.A., Dunlop, E.D., Ossenbrink, H.A. (2007). Potential of solar electricity generation in the European Union member states and candidate countries. *Solar Energy* 81(10):1295-1305. doi:<https://doi.org/10.1016/j.solener.2006.12.007>
 
