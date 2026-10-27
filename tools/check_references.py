@@ -63,5 +63,34 @@ def main() -> int:
     return 1 if problems else 0
 
 
+class _Tee:
+    """Print on the screen and keep a copy for the report file."""
+
+    def __init__(self, stream, lines: list[str]) -> None:
+        self.stream, self.lines = stream, lines
+
+    def write(self, text: str) -> int:
+        self.lines.append(text)
+        return self.stream.write(text)
+
+    def flush(self) -> None:
+        self.stream.flush()
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    captured: list[str] = []
+    real = sys.stdout
+    sys.stdout = _Tee(real, captured)
+    try:
+        code = main()
+    finally:
+        sys.stdout = real
+    report = Path(__file__).resolve().parent.parent / "reference_check.txt"
+    try:
+        report.write_text("".join(captured), encoding="utf-8")
+        print(f"\nThe same list is saved in {report}")
+    except OSError:
+        pass
+    if sys.stdin is not None and sys.stdin.isatty() and "--no-pause" not in sys.argv:
+        input("\nPress Enter to close this window... ")   # a double-click would close it at once
+    sys.exit(code)
