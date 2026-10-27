@@ -33,6 +33,13 @@ from resize_energy.gui.battery_wizard import (
     BatteryResultsPage,
     BatterySitePage,
 )
+from resize_energy.gui.bhe_wizard import (
+    BHE_STEP_NAMES,
+    BheFieldPage,
+    BheGroundPage,
+    BheLoadPage,
+    BheResultsPage,
+)
 from resize_energy.gui.biomass_wizard import (
     BIOMASS_STEP_NAMES,
     BiomassDemandPage,
@@ -47,13 +54,6 @@ from resize_energy.gui.compare_wizard import (
     CompareResultsPage,
     CompareSelection,
     CompareSitePage,
-)
-from resize_energy.gui.bhe_wizard import (
-    BHE_STEP_NAMES,
-    BheFieldPage,
-    BheGroundPage,
-    BheLoadPage,
-    BheResultsPage,
 )
 from resize_energy.gui.geothermal_wizard import (
     GEOTHERMAL_STEP_NAMES,
