@@ -38,22 +38,63 @@ def fetch(doi: str) -> dict | None:
         return None
 
 
+def fetch_datacite(doi: str) -> dict | None:
+    """DOIs of data sets (NIST, Zenodo...) are not in Crossref but in DataCite."""
+    url = "https://api.datacite.org/dois/" + urllib.parse.quote(doi)
+    request = urllib.request.Request(url, headers={"User-Agent": "RESize-reference-check"})
+    try:
+        with urllib.request.urlopen(request, timeout=20) as reply:
+            attrs = json.load(reply)["data"]["attributes"]
+    except (urllib.error.URLError, OSError, KeyError, ValueError):
+        return None
+    return {"title": [t.get("title", "") for t in attrs.get("titles", [])],
+            "issued": {"date-parts": [[attrs.get("publicationYear", "")]]}}
+
+
+def search(ref) -> str:
+    """The best Crossref match of a reference without DOI, to compare by hand."""
+    query = urllib.parse.urlencode({"query.bibliographic": f"{ref.title} {ref.short}", "rows": 1})
+    request = urllib.request.Request("https://api.crossref.org/works?" + query,
+                                     headers={"User-Agent": "RESize-reference-check"})
+    try:
+        with urllib.request.urlopen(request, timeout=20) as reply:
+            item = json.load(reply)["message"]["items"][0]
+    except (urllib.error.URLError, OSError, KeyError, IndexError, ValueError):
+        return ""
+    got = " ".join(item.get("title", [""]))
+    if len(words(ref.title) & words(got)) < 0.7 * len(words(ref.title)):
+        return "   (Crossref has no close match)"
+    return f"   Crossref suggests DOI {item.get('DOI')}: '{got}'"
+
+
+def years(record: dict) -> set[str]:
+    """Every year Crossref knows for the paper: online first, print, issue."""
+    out = set()
+    for field in ("issued", "published-print", "published-online", "published"):
+        parts = (record.get(field, {}).get("date-parts") or [[""]])[0]
+        if parts and parts[0]:
+            out.add(str(parts[0]))
+    return out
+
+
 def main() -> int:
     problems = 0
     for key, ref in REFS.items():
         if not ref.doi:
             if ref.kind == "article":
-                print(f"?  {key}: no DOI, check by hand: {ref.short}, {ref.container} {ref.detail}")
+                print(f"?  {key}: no DOI, check by hand: {ref.short}, {ref.container} {ref.detail}"
+                      + search(ref))
             continue
-        record = fetch(ref.doi)
+        record = fetch(ref.doi) or fetch_datacite(ref.doi)
         if record is None:
-            print(f"!! {key}: DOI {ref.doi} not found or Crossref unreachable")
+            print(f"!! {key}: DOI {ref.doi} not found in Crossref or DataCite (or no internet)")
             problems += 1
             continue
         title = " ".join(record.get("title", [""]))
-        year = str((record.get("issued", {}).get("date-parts") or [[""]])[0][0])
+        known = years(record) or {str((record.get("issued", {}).get("date-parts") or [[""]])[0][0])}
+        year = "/".join(sorted(known))
         ok_title = len(words(ref.title) & words(title)) >= 0.7 * len(words(ref.title))
-        ok_year = not ref.year or year == ref.year
+        ok_year = not ref.year or ref.year in known
         if ok_title and ok_year:
             print(f"ok {key}")
         else:
