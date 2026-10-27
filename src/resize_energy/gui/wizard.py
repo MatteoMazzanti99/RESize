@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPageSize, QPdfWriter, QTextDocument
 from PySide6.QtWidgets import (
     QApplication,
@@ -17,7 +17,6 @@ from PySide6.QtWidgets import (
     QListWidget,
     QMessageBox,
     QPushButton,
-    QScrollArea,
     QSplitter,
     QVBoxLayout,
     QWidget,
@@ -446,18 +445,15 @@ class BaseResultsPage(StepPage):
                             "reasoning, and your own numbers substituted in.</p>")
         why_panel = QWidget()
         why_layout = QVBoxLayout(why_panel)
-        why_layout.setContentsMargins(18, 0, 0, 0)  # air between report and Why? panel
-        why_layout.setSpacing(10)
+        why_layout.setContentsMargins(14, 0, 0, 0)  # air between report and Why? panel
         why_layout.addWidget(make_label("Why? Understand each step", "sectionTitle", wrap=False))
         self.why_split = QSplitter(Qt.Orientation.Vertical)  # drag the handle to give the list more room
         self.why_split.addWidget(self.topics)
         self.why_split.addWidget(self.detail)
         self.why_split.setStretchFactor(0, 1)
         self.why_split.setStretchFactor(1, 3)
-        self.why_split.setSizes([190, 460])
+        self.why_split.setSizes([170, 420])
         self.topics.setMinimumHeight(135)
-        self.detail.setMinimumHeight(260)   # the explanation never collapses to a sliver
-        why_panel.setMinimumHeight(560)
         for view in (self.topics, self.detail, self.browser):  # never scroll sideways
             view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         why_layout.addWidget(self.why_split, 1)
@@ -487,8 +483,9 @@ class BaseResultsPage(StepPage):
         self.explain_button.clicked.connect(self._explain_version)
         self.explain_button.setEnabled(False)
         buttons = QVBoxLayout()
-        buttons.setSpacing(12)  # two rows: one row of five buttons is wider than the window
+        buttons.setSpacing(10)  # two rows: one row of five buttons is wider than the window
         versions = QHBoxLayout()
+        buttons.addLayout(versions)
         versions.addWidget(keep)
         versions.addWidget(self.explain_button)
         self.excel_button = QPushButton("Export to Excel (live formulas)...")
@@ -498,47 +495,17 @@ class BaseResultsPage(StepPage):
         self.excel_button.setVisible(self.has_excel)
         versions.addWidget(self.excel_button)
         versions.addStretch(1)
-        layout = QVBoxLayout(self)
-        layout.setSpacing(14)
-        self.kpis = KpiStrip()         # the key numbers, counting up
-        layout.addWidget(self.kpis)
-        layout.addWidget(self.banner)
-        # Bare at first: key numbers and picture. The report and the Why? panel open on request.
-        self.full_button = QPushButton("Full results and Why?  ▾")
-        self.full_button.setProperty("variant", "primary")
-        self.full_button.setCheckable(True)
-        self.full_button.toggled.connect(self._toggle_full)
-        actions = QHBoxLayout()           # one row: open the details, ask, save
-        actions.addWidget(self.full_button)
+        actions = QHBoxLayout()
+        buttons.addLayout(actions)
         actions.addStretch(1)
         actions.addWidget(ask)
         actions.addWidget(export)
-        layout.addLayout(actions)
-        splitter.setMinimumHeight(640)    # the details get their own room: the page scrolls
+        layout = QVBoxLayout(self)
+        self.kpis = KpiStrip()         # the key numbers, counting up
+        layout.addWidget(self.kpis)
+        layout.addWidget(self.banner)
         layout.addWidget(splitter, 1)  # the report takes all the spare height
-        self.rest_spacer = QWidget()
-        layout.addWidget(self.rest_spacer, 1)  # keeps the collapsed page tidy
-        self.versions_row = QWidget()
-        self.versions_row.setLayout(versions)
-        buttons.insertWidget(0, self.versions_row)
         layout.addLayout(buttons)
-        splitter.setVisible(False)
-
-    def _toggle_full(self, on: bool) -> None:
-        self.splitter.setVisible(on)
-        self.versions_row.setVisible(on)
-        self.rest_spacer.setVisible(not on)
-        if on:
-            QTimer.singleShot(0, self._scroll_to_details)
-        self.full_button.setText("Hide the full results  ▴" if on else "Full results and Why?  ▾")
-
-    def _scroll_to_details(self) -> None:
-        """Bring the start of the details into view (the page scrolls; the picture stays above)."""
-        area = self.parentWidget()
-        while area is not None and not isinstance(area, QScrollArea):
-            area = area.parentWidget()
-        if area is not None:
-            area.ensureWidgetVisible(self.splitter, 0, 40)
 
     # --- hooks for each technology ----------------------------------------------------
     def _compute(self) -> tuple[object, object, list[Finding], str, str]:
@@ -628,9 +595,6 @@ class BaseResultsPage(StepPage):
         self._explained = ("", "")
         self._draw_charts()
         self._compose()
-        # no key numbers (comparison): open the report at once; the toggle also hides the picture
-        self.full_button.setChecked(not self.kpis.isVisible())
-        self._toggle_full(self.full_button.isChecked())
         row = self.topics.currentRow()
         if row >= 0:
             self._show_topic(row)  # refresh the open topic with the new numbers
