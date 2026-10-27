@@ -20,6 +20,10 @@ def compare_worked_example(key: str, inp: ComparisonInputs, r: ComparisonResult)
             if t.key == "wind" and r.wind_design is not None:
                 extra = (f" ({r.wind_design.n_turbines} x "
                          f"{inp.wind.turbine.rated_power_kw:,.0f} kW turbines)")
+            if t.key == "hydro":
+                extra = " (the river decides, not the demand)"
+            if t.key == "geothermal" and r.geothermal_design is not None:
+                extra = f" ({r.geothermal_design.wells_pairs} well pair(s))"
             if t.key == "hydrogen":
                 extra = f" (hydrogen, {t.energy_kwh / 33.33:,.0f} kg at 33.33 kWh/kg)"
             out.append(f"{t.name}: {t.installed_kw:,.0f} kW -> {t.energy_kwh:,.0f} kWh "

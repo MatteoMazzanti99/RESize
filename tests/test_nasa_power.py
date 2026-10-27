@@ -66,3 +66,15 @@ def test_fetch_errors_are_readable():
     assert "did not return JSON" in str(e.value)
     with pytest.raises(ValueError):
         np_.build_url(120, 0)
+
+
+def test_temperature_swing_from_the_monthly_values():
+    months = ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
+    temps = [1.0, 3.0, 8.0, 12.0, 17.0, 21.0, 24.0, 23.0, 18.0, 12.0, 6.0, 2.0]
+    data = sample()
+    data["properties"]["parameter"]["T2M"] = dict(zip(months, temps, strict=True)) | {"ANN": 12.3}
+    assert np_.parse_climatology(data).temperature_swing_c == pytest.approx(11.5)
+    # a missing month (NASA's -999) or an incomplete year gives no swing, not a wrong one
+    data["properties"]["parameter"]["T2M"]["JUL"] = -999
+    assert np_.parse_climatology(data).temperature_swing_c is None
+    assert np_.parse_climatology(sample()).temperature_swing_c is None

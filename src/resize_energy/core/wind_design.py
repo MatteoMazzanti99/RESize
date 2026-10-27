@@ -65,6 +65,9 @@ class WindInputs:
     site_length_m: float = 2500.0
     site_rotation_deg: float = 0.0      # compass bearing of the length of the rectangle
     min_spacing_d: float = 3.0          # closest two turbines may stand, in rotor diameters
+    site_polygon: tuple = ()            # imported boundary, metres east/north of the site centre
+    site_exclusions: tuple = ()         # rings where nothing may stand (houses, roads, ...)
+    setback_m: float = 0.0              # distance kept from the boundary and the exclusions
     satellite: Satellite | None = None  # aerial picture under the layout map (site centre = origin)
     turbine: TurbineSpec = field(default_factory=TurbineSpec)
     economics: EconomicInputs | None = None   # costs and prices; None = no economic step
@@ -153,7 +156,10 @@ def size_wind_plant(inp: WindInputs) -> WindDesign:
         if optimized:
             if inp.min_spacing_d < 1.0:
                 raise ValueError("the minimum spacing must be at least 1 rotor diameter")
-            site = SiteArea(inp.site_width_m, inp.site_length_m, inp.site_rotation_deg)
+            if inp.site_polygon:
+                site = SiteArea.from_polygon(inp.site_polygon, inp.site_exclusions, inp.setback_m)
+            else:
+                site = SiteArea(inp.site_width_m, inp.site_length_m, inp.site_rotation_deg)
 
         def grid(count: int) -> tuple[list[tuple[float, float]], int]:
             row = inp.turbines_per_row or max(1, round(math.sqrt(count)))

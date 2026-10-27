@@ -103,3 +103,20 @@ def test_the_picture_never_shows_in_the_legend_strip(tmp_path):
     legend = svg.index("keeps its energy")
     masks = [m.start() for m in re.finditer(r'fill="white"/>', svg)]
     assert len([m for m in masks if m > last_image]) >= 4 and last_image < legend
+
+
+def test_the_picture_survives_a_project_file(tmp_path):
+    from resize_energy.core import project_file as pf
+
+    s = sat.fetch_satellite(45.07, 7.69, WINDOW, urlopen=lambda r, timeout=0: _Resp(_jpeg()),
+                            cache_dir=tmp_path)
+    again = sat.Satellite.from_dict(s.to_dict())
+    assert again == s and again.covers(45.07, 7.69, WINDOW)
+    assert not again.covers(46.0, 7.69, WINDOW)                       # another site
+    assert not again.covers(45.07, 7.69, (-9000.0, 9000.0, -700.0, 700.0))   # a wider map
+    project = pf.Project("wind", [{"_satellite": {"sat": s.to_dict()}}])
+    back = pf.loads(pf.dumps(project))
+    assert sat.Satellite.from_dict(back.pages[0]["_satellite"]["sat"]) == s
+    import pytest
+    with pytest.raises(ValueError):
+        sat.Satellite.from_dict({"lat": 1, "lon": 2, "tiles": [{"w": 0}]})

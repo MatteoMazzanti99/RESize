@@ -14,7 +14,10 @@ COMPARE_EXPLANATIONS: dict[str, dict[str, str]] = {
             "extra energy is sold at the export price, so it helps the wind balance less than "
             "the energy that replaces purchases. Biogas and hydrogen come from their own "
             "modules; hydrogen is counted as the energy of the molecule (33.33 kWh per kg) and "
-            "compared with hydrogen from natural gas, not with the grid."
+            "compared with hydrogen from natural gas, not with the grid. A run-of-river "
+            "hydropower plant is not sized on the demand at all: it takes the water the river "
+            "offers, so it can cover much less (or more) than the target. A geothermal plant is "
+            "built in whole pairs of wells, so like wind it overshoots when one pair is large."
         ),
         "assumptions": (
             "Annual energy balance only. Wind and sun are not available at the same hours of "

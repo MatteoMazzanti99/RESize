@@ -1,6 +1,6 @@
 """Side-by-side comparison of two to four technologies sized for the same energy target.
 
-Photovoltaic, wind and biogas CHP deliver electricity (compared with the grid); green hydrogen
+Photovoltaic, wind, biogas CHP, run-of-river hydropower and geothermal power deliver electricity (compared with the grid); green hydrogen
 delivers hydrogen (compared with hydrogen from natural gas, on its lower heating value).
 Every plant is sized for the same yearly energy and share to cover.
 """
@@ -20,6 +20,12 @@ from resize_energy.core.biomass_design import (
     default_efficiencies,
     size_biomass_plant,
 )
+from resize_energy.core.geothermal_design import (
+    GeothermalDesign,
+    GeothermalInputs,
+    size_geothermal_plant,
+)
+from resize_energy.core.hydro_design import HydroDesign, HydroInputs, size_hydro_plant
 from resize_energy.core.hydrogen_design import (
     HydrogenDesign,
     HydrogenInputs,
@@ -28,9 +34,10 @@ from resize_energy.core.hydrogen_design import (
 )
 from resize_energy.core.wind_design import WindDesign, WindInputs, size_wind_plant
 
-TECHS = ("pv", "wind", "biomass", "hydrogen")
+TECHS = ("pv", "wind", "biomass", "hydrogen", "hydro", "geothermal")
 TECH_NAMES = {"pv": "Photovoltaic", "wind": "Wind", "biomass": "Biomass (biogas CHP)",
-              "hydrogen": "Green hydrogen"}
+              "hydrogen": "Green hydrogen", "hydro": "Hydropower (run-of-river)",
+              "geothermal": "Geothermal power"}
 
 
 @dataclass(frozen=True)
@@ -59,6 +66,15 @@ class CostAssumptions:
     h2_electrolyser_capex_eur_per_kw: float = 1000.0
     h2_reference_price_eur_per_kg: float = 3.5      # hydrogen from natural gas
     h2_reference_kg_co2_per_kg: float = 9.0
+    # run-of-river hydropower and geothermal power plant (wells included)
+    hydro_capex_eur_per_kw: float = 6600.0
+    hydro_om_eur_per_kw_year: float = 165.0
+    hydro_lifetime_years: float = 40.0
+    hydro_lifecycle_g_per_kwh: float = 24.0
+    geo_capex_eur_per_kw: float = 6300.0
+    geo_om_eur_per_kw_year: float = 190.0
+    geo_lifetime_years: float = 30.0
+    geo_lifecycle_g_per_kwh: float = 38.0
 
 
 @dataclass(frozen=True)
@@ -75,6 +91,10 @@ class ComparisonInputs:
     h2_use_pv: bool = True
     h2_use_wind: bool = False
     hourly_weather: prof.HourlyWeather | None = None   # real hourly year for the hydrogen plant
+    hydro: HydroInputs = field(default_factory=HydroInputs)   # river and penstock; costs below
+    geothermal: GeothermalInputs = field(
+        default_factory=lambda: GeothermalInputs(
+            pathway="power", reservoir_temp_c=140.0, flow_per_well_kg_s=80.0))
 
     @property
     def annual_demand_kwh(self) -> float:
@@ -122,6 +142,8 @@ class ComparisonResult:
     wind_design: WindDesign | None = None
     biomass_design: BiomassDesign | None = None
     hydrogen_design: HydrogenDesign | None = None
+    hydro_design: HydroDesign | None = None
+    geothermal_design: GeothermalDesign | None = None
     sensitivity: dict[str, dict[str, tuple[float, ...]]] | None = None
 
     def get(self, key: str) -> TechResult | None:
@@ -142,6 +164,14 @@ class ComparisonResult:
     @property
     def hydrogen(self) -> TechResult | None:
         return self.get("hydrogen")
+
+    @property
+    def hydro(self) -> TechResult | None:
+        return self.get("hydro")
+
+    @property
+    def geothermal(self) -> TechResult | None:
+        return self.get("geothermal")
 
 
 def _tech(key: str, kw: float, energy: float, demand: float, capex: float, om: float,
@@ -191,6 +221,8 @@ def _check_inputs(inp: ComparisonInputs) -> None:
         "pv": ("PV CAPEX", c.pv_capex_eur_per_kwp), "wind": ("wind CAPEX", c.wind_capex_eur_per_kw),
         "biomass": ("biomass CAPEX", c.bio_capex_eur_per_kwe),
         "hydrogen": ("electrolyser CAPEX", c.h2_electrolyser_capex_eur_per_kw),
+        "hydro": ("hydropower CAPEX", c.hydro_capex_eur_per_kw),
+        "geothermal": ("geothermal CAPEX", c.geo_capex_eur_per_kw),
     }
     for key in inp.techs:
         label, value = needs[key]
@@ -248,7 +280,7 @@ def compare_technologies(inp: ComparisonInputs) -> ComparisonResult:
     demand = inp.annual_demand_kwh
     target = demand * inp.coverage
     results: list[TechResult] = []
-    wd = bd = hd = None
+    wd = bd = hd = hyd = geo = None
 
     if "pv" in inp.techs:
         kwp = pv.required_peak_power_kwp(demand, inp.annual_irradiation_kwh_m2,
@@ -292,6 +324,28 @@ def compare_technologies(inp: ComparisonInputs) -> ComparisonResult:
             lcoe=hd.lcoh / h2.H2_LHV_KWH_PER_KG))
         results[-1] = replace(results[-1], coverage=energy / demand)
 
+    if "hydro" in inp.techs:
+        hyd = size_hydro_plant(replace(
+            inp.hydro, annual_demand_kwh=demand, grid_ef=c.grid_kg_co2_per_kwh,
+            lifecycle_g_per_kwh=c.hydro_lifecycle_g_per_kwh, capex_per_kw=c.hydro_capex_eur_per_kw,
+            om_fraction=c.hydro_om_eur_per_kw_year / c.hydro_capex_eur_per_kw,
+            life_years=c.hydro_lifetime_years, discount_rate=c.discount_rate,
+            retail_price=c.retail_price_eur_per_kwh, export_price=c.export_price_eur_per_kwh))
+        results.append(_tech("hydro", hyd.rated_kw, hyd.energy_kwh, demand, hyd.capex,
+                             hyd.om_per_year, c.hydro_lifetime_years,
+                             c.hydro_lifecycle_g_per_kwh / 1000.0, c))
+    if "geothermal" in inp.techs:
+        geo = size_geothermal_plant(replace(
+            inp.geothermal, pathway="power", annual_electricity_demand_kwh=demand,
+            coverage=inp.coverage, grid_ef=c.grid_kg_co2_per_kwh,
+            lifecycle_g_per_kwh=c.geo_lifecycle_g_per_kwh, capex_per_kw_el=c.geo_capex_eur_per_kw,
+            om_fraction=c.geo_om_eur_per_kw_year / c.geo_capex_eur_per_kw,
+            life_years=c.geo_lifetime_years, discount_rate=c.discount_rate,
+            retail_price=c.retail_price_eur_per_kwh, export_price=c.export_price_eur_per_kwh))
+        results.append(_tech("geothermal", geo.net_kw, geo.electricity_kwh, demand, geo.capex,
+                             geo.om_per_year, c.geo_lifetime_years,
+                             c.geo_lifecycle_g_per_kwh / 1000.0, c))
+
     techs = tuple(results)
     return ComparisonResult(
         techs=techs,
@@ -299,7 +353,8 @@ def compare_technologies(inp: ComparisonInputs) -> ComparisonResult:
         fastest_payback=_best(techs, lambda t: t.payback_years),
         highest_npv=_best(techs, lambda t: t.npv_eur, lowest=False),
         most_co2=_best(techs, lambda t: t.co2_avoided_t_per_year, lowest=False),
-        wind_design=wd, biomass_design=bd, hydrogen_design=hd,
+        wind_design=wd, biomass_design=bd, hydrogen_design=hd, hydro_design=hyd,
+        geothermal_design=geo,
     )
 
 
@@ -316,6 +371,8 @@ def comparison_sensitivity(inp: ComparisonInputs):
             wind_capex_eur_per_kw=c.wind_capex_eur_per_kw * f_capex,
             bio_capex_eur_per_kwe=c.bio_capex_eur_per_kwe * f_capex,
             h2_electrolyser_capex_eur_per_kw=c.h2_electrolyser_capex_eur_per_kw * f_capex,
+            hydro_capex_eur_per_kw=c.hydro_capex_eur_per_kw * f_capex,
+            geo_capex_eur_per_kw=c.geo_capex_eur_per_kw * f_capex,
             discount_rate=c.discount_rate * f_rate)
         return replace(inp, costs=costs)
 

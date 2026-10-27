@@ -153,7 +153,7 @@ def check_wind_design(inp: WindInputs, d: WindDesign) -> list[Finding]:
                     "3 D: turbines that close suffer more turbulence and loads.", "wind.layout"))
             if d.site is not None and d.n_turbines * (inp.min_spacing_d
                                                         * inp.turbine.rotor_diameter_m) ** 2 \
-                    > 0.5 * d.site.width_m * d.site.length_m:
+                    > 0.5 * d.site.usable_area_km2() * 1e6:
                 out.append(Finding(
                     "info", "site_crowded",
                     "The turbines fill a large part of the site at the minimum distance: the "
@@ -161,8 +161,11 @@ def check_wind_design(inp: WindInputs, d: WindDesign) -> list[Finding]:
                     "wind.layout"))
             out.append(Finding(
                 "info", "layout_ground",
-                "The positions ignore terrain, roads, houses, protected areas and cables: check "
-                "them on the ground before using them.", "wind.layout"))
+                ("The positions ignore terrain, roads, houses, protected areas and cables "
+                 "beyond the exclusion zones you gave: check them on the ground before using "
+                 "them." if d.site is not None and d.site.exclusions else
+                 "The positions ignore terrain, roads, houses, protected areas and cables: "
+                 "check them on the ground before using them."), "wind.layout"))
         worst = min(d.wake.sector_efficiency)
         if worst < 0.75:
             out.append(Finding(

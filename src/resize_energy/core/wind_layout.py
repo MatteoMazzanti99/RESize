@@ -18,22 +18,123 @@ import numpy as np
 CT_SURROGATE = 0.75        # thrust coefficient used by the surrogate: a typical value below rated
 
 
+Ring = tuple[tuple[float, float], ...]
+
+
+def _in_ring(points: np.ndarray, ring: Ring) -> np.ndarray:
+    """Even-odd test of every point (m, 2) against a ring, vectorised."""
+    x, y = points[:, 0], points[:, 1]
+    inside = np.zeros(len(points), dtype=bool)
+    n = len(ring)
+    for i in range(n):
+        x1, y1 = ring[i]
+        x2, y2 = ring[(i + 1) % n]
+        if y1 == y2:
+            continue
+        crosses = (y1 > y) != (y2 > y)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            x_at = (x2 - x1) * (y - y1) / (y2 - y1) + x1
+        inside ^= crosses & (x < x_at)
+    return inside
+
+
+def _dist_to_ring(points: np.ndarray, ring: Ring) -> np.ndarray:
+    """Distance of every point to the edges of a ring."""
+    a = np.array(ring, dtype=float)
+    b = np.roll(a, -1, axis=0)
+    ab = b - a
+    ab2 = np.maximum((ab ** 2).sum(axis=1), 1e-12)
+    ap = points[:, None, :] - a[None, :, :]
+    t = np.clip((ap * ab[None]).sum(axis=2) / ab2[None], 0.0, 1.0)
+    nearest = a[None] + t[..., None] * ab[None]
+    return np.sqrt(((points[:, None, :] - nearest) ** 2).sum(axis=2)).min(axis=1)
+
+
 @dataclass(frozen=True)
 class SiteArea:
-    """A rectangle centred on the origin. ``rotation_deg`` is the compass bearing of its length
-    axis (0: the length runs north-south, 90: east-west)."""
+    """The land of the farm: a rectangle centred on the origin, or a polygon.
+
+    Rectangle: ``rotation_deg`` is the compass bearing of its length axis (0: the length runs
+    north-south, 90: east-west). Polygon: ``polygon`` is the boundary in metres east/north, with
+    ``exclusions`` (houses, roads, wetlands...) where nothing may stand; turbines also keep
+    ``setback_m`` from the boundary and from every exclusion. ``width_m`` and ``length_m`` are
+    then the size of its bounding box."""
 
     width_m: float
     length_m: float
     rotation_deg: float = 0.0
+    polygon: Ring = ()
+    exclusions: tuple[Ring, ...] = ()
+    setback_m: float = 0.0
 
     def __post_init__(self) -> None:
         if self.width_m <= 0 or self.length_m <= 0:
             raise ValueError("the site width and length must be > 0")
+        if self.setback_m < 0:
+            raise ValueError("the setback cannot be negative")
+
+    @classmethod
+    def from_polygon(cls, boundary: Ring, exclusions: tuple[Ring, ...] = (),
+                     setback_m: float = 0.0) -> SiteArea:
+        if len(boundary) < 3:
+            raise ValueError("the site boundary needs at least three corners")
+        xs, ys = [p[0] for p in boundary], [p[1] for p in boundary]
+        return cls(max(xs) - min(xs), max(ys) - min(ys), 0.0, tuple(boundary),
+                   tuple(tuple(r) for r in exclusions), setback_m)
+
+    @property
+    def is_polygon(self) -> bool:
+        return bool(self.polygon)
+
+    def bounds(self) -> tuple[float, float, float, float]:
+        """(x_lo, x_hi, y_lo, y_hi) of the local frame that holds the area."""
+        if self.is_polygon:
+            xs, ys = [p[0] for p in self.polygon], [p[1] for p in self.polygon]
+            return min(xs), max(xs), min(ys), max(ys)
+        return -self.width_m / 2.0, self.width_m / 2.0, -self.length_m / 2.0, self.length_m / 2.0
+
+    def allowed(self, points: np.ndarray, setback: float | None = None) -> np.ndarray:
+        """Which of the points (m, 2), in the local frame, may host a turbine."""
+        pts = np.asarray(points, dtype=float).reshape(-1, 2)
+        if not self.is_polygon:
+            x_lo, x_hi, y_lo, y_hi = self.bounds()
+            return ((pts[:, 0] >= x_lo - 1e-9) & (pts[:, 0] <= x_hi + 1e-9)
+                    & (pts[:, 1] >= y_lo - 1e-9) & (pts[:, 1] <= y_hi + 1e-9))
+        gap = self.setback_m if setback is None else setback
+        ok = _in_ring(pts, self.polygon)
+        if gap > 0 and ok.any():
+            ok &= _dist_to_ring(pts, self.polygon) >= gap - 1e-9
+        for ring in self.exclusions:
+            if not ok.any():
+                break
+            bad = _in_ring(pts, ring)
+            if gap > 0:
+                bad |= _dist_to_ring(pts, ring) < gap - 1e-9
+            ok &= ~bad
+        return ok
+
+    def sample_point(self, rng: np.random.Generator) -> np.ndarray:
+        x_lo, x_hi, y_lo, y_hi = self.bounds()
+        return np.array([rng.uniform(x_lo, x_hi), rng.uniform(y_lo, y_hi)])
 
     @property
     def area_km2(self) -> float:
-        return self.width_m * self.length_m / 1e6
+        """Area of the land, exclusion zones taken out (no setback)."""
+        if not self.is_polygon:
+            return self.width_m * self.length_m / 1e6
+        return self.usable_area_km2(0.0)
+
+    def usable_area_km2(self, setback: float | None = None) -> float:
+        """Area where a turbine may stand (setbacks and exclusions taken out)."""
+        if not self.is_polygon:
+            return self.width_m * self.length_m / 1e6
+        x_lo, x_hi, y_lo, y_hi = self.bounds()
+        n = 160
+        gx = x_lo + (np.arange(n) + 0.5) * (x_hi - x_lo) / n
+        gy = y_lo + (np.arange(n) + 0.5) * (y_hi - y_lo) / n
+        grid = np.array([(x, y) for y in gy for x in gx])
+        share = float(self.allowed(grid, setback).mean())
+        return share * (x_hi - x_lo) * (y_hi - y_lo) / 1e6
 
     def to_world(self, x: float, y: float) -> tuple[float, float]:
         """Local (across, along) metres -> (east, north) metres."""
@@ -41,10 +142,15 @@ class SiteArea:
         return x * math.cos(r) + y * math.sin(r), -x * math.sin(r) + y * math.cos(r)
 
     def corners(self) -> list[tuple[float, float]]:
+        if self.is_polygon:
+            return list(self.polygon)
         hw, hl = self.width_m / 2.0, self.length_m / 2.0
         return [self.to_world(x, y) for x, y in ((-hw, -hl), (hw, -hl), (hw, hl), (-hw, hl))]
 
     def contains(self, east: float, north: float, tol: float = 1e-6) -> bool:
+        if self.is_polygon:
+            gap = max(self.setback_m - tol, 0.0)
+            return bool(self.allowed(np.array([[east, north]]), gap)[0])
         r = math.radians(self.rotation_deg)
         x = east * math.cos(r) - north * math.sin(r)
         y = east * math.sin(r) + north * math.cos(r)
@@ -52,23 +158,29 @@ class SiteArea:
 
 
 def _hex_lattice(area: SiteArea, spacing: float) -> np.ndarray:
-    """Points of a hexagonal lattice (local coordinates) that fit in the rectangle."""
-    hw, hl = area.width_m / 2.0, area.length_m / 2.0
+    """Points of a hexagonal lattice (local coordinates) that fit in the area."""
+    x_lo, x_hi, y_lo, y_hi = area.bounds()
     dy = spacing * math.sqrt(3.0) / 2.0
-    rows = int(area.length_m // dy) + 1
+    rows = int((y_hi - y_lo) // dy) + 1
     pts = []
     for r in range(rows):
-        y = -hl + r * dy
-        if y > hl + 1e-9:
+        y = y_lo + r * dy
+        if y > y_hi + 1e-9:
             break
-        x0 = -hw + (spacing / 2.0 if r % 2 else 0.0)
-        cols = int((area.width_m - (spacing / 2.0 if r % 2 else 0.0)) // spacing) + 1
-        pts += [(x0 + c * spacing, y) for c in range(cols) if x0 + c * spacing <= hw + 1e-9]
-    return np.array(pts, dtype=float).reshape(-1, 2)
+        shift = spacing / 2.0 if r % 2 else 0.0
+        x0 = x_lo + shift
+        cols = int((x_hi - x_lo - shift) // spacing) + 1
+        pts += [(x0 + c * spacing, y) for c in range(cols) if x0 + c * spacing <= x_hi + 1e-9]
+    lattice = np.array(pts, dtype=float).reshape(-1, 2)
+    if area.is_polygon and len(lattice):
+        lattice = lattice[area.allowed(lattice)]
+    return lattice
 
 
 def max_turbines(area: SiteArea, min_distance_m: float) -> int:
     """How many turbines fit at the minimum distance (a hexagonal lattice, a good estimate)."""
+    if area.is_polygon:
+        return len(_hex_lattice(area, min_distance_m))
     best = 0
     for flip in (False, True):
         a = SiteArea(area.length_m, area.width_m) if flip else SiteArea(area.width_m, area.length_m)
@@ -187,17 +299,19 @@ def optimise_layout(n: int, area: SiteArea, rotor_d: float, min_spacing_d: float
         ss = sur.sum_squares(pos)
         cost = sur.loss(ss)
         best, best_cost = pos.copy(), cost
-        hw, hl = area.width_m / 2.0, area.length_m / 2.0
+        x_lo, x_hi, y_lo, y_hi = area.bounds()
         t0, t1 = max(cost, 0.01) * 0.15, 1e-5
         for step in range(steps):
             temp = t0 * (t1 / t0) ** (step / steps)
             k = int(rng.integers(n))
             if rng.random() < 0.25:
-                q = np.array([rng.uniform(-hw, hw), rng.uniform(-hl, hl)])
+                q = area.sample_point(rng)
             else:
                 reach = (0.5 + 3.0 * (1.0 - step / steps)) * min_dist
                 q = pos[k] + rng.normal(0.0, reach / 2.0, 2)
-                q = np.array([min(max(q[0], -hw), hw), min(max(q[1], -hl), hl)])
+                q = np.array([min(max(q[0], x_lo), x_hi), min(max(q[1], y_lo), y_hi)])
+            if area.is_polygon and not area.allowed(q[None])[0]:
+                continue
             others = np.delete(pos, k, axis=0)
             if others.size and np.min(np.linalg.norm(others - q, axis=1)) < min_dist - 1e-9:
                 continue

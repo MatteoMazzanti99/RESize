@@ -161,7 +161,7 @@ def test_selection_is_validated():
     with pytest.raises(ValueError):
         many(("pv", "pv"))
     with pytest.raises(ValueError):
-        many(("pv", "geothermal"))
+        many(("pv", "solar"))
     with pytest.raises(ValueError):
         many(("pv", "hydrogen"), h2_use_pv=False, h2_use_wind=False)
 
@@ -223,3 +223,45 @@ def test_hydrogen_uses_the_real_hourly_year_when_given():
     real = compare_technologies(replace(base, hourly_weather=weather))
     assert real.hydrogen_design.profile_source == "NASA POWER"
     assert real.hydrogen.lcoe_eur_per_kwh > 0
+
+
+def test_hydropower_and_geothermal_in_the_comparison():
+    from resize_energy.report.charts import comparison_charts
+
+    inp, r = many(("pv", "wind", "hydro", "geothermal"))
+    assert [t.key for t in r.techs] == ["pv", "wind", "hydro", "geothermal"]
+    for t in r.techs:
+        assert t.energy_kwh > 0 and t.lcoe_eur_per_kwh > 0 and t.capex_eur > 0
+    hy, ge = r.hydro, r.geothermal
+    # the river decides the size of the hydro plant, not the demand
+    assert hy.energy_kwh == pytest.approx(r.hydro_design.energy_kwh)
+    assert hy.coverage != pytest.approx(1.0, abs=0.01)
+    assert hy.capex_eur == pytest.approx(r.hydro_design.rated_kw * inp.costs.hydro_capex_eur_per_kw)
+    # whole well pairs: it covers at least the target
+    assert ge.coverage >= 1.0 - 1e-9
+    assert ge.capex_eur == pytest.approx(r.geothermal_design.net_kw * inp.costs.geo_capex_eur_per_kw)
+    assert ge.lifetime_years == inp.costs.geo_lifetime_years
+    findings = check_comparison(inp, r)
+    assert "hydro_not_sized_on_demand" in {f.code for f in findings}
+    html = build_comparison_report(inp, r, findings)
+    assert "Hydropower" in html and "Geothermal" in html
+    for key in COMPARE_TOPIC_ORDER:
+        assert compare_worked_example(key, inp, r)
+    assert "Geothermal" in build_compare_context(inp, r, findings)
+    assert {"cmp_lcoe", "cmp_cash"} <= set(comparison_charts(inp, r))
+    assert len(versus_rounds(r)) == 4
+
+
+def test_all_six_technologies_and_the_sensitivity():
+    inp, r = many(("pv", "wind", "biomass", "hydrogen", "hydro", "geothermal"))
+    assert len(r.techs) == 6
+    from resize_energy.core.comparison import comparison_sensitivity
+
+    sens = comparison_sensitivity(inp)
+    assert set(sens["capex"]) == {t.key for t in r.techs}
+    # a dearer geothermal plant costs more per kWh
+    cheap = many(("pv", "geothermal"),
+                 costs=CostAssumptions(geo_capex_eur_per_kw=4000.0))[1].geothermal
+    dear = many(("pv", "geothermal"),
+                costs=CostAssumptions(geo_capex_eur_per_kw=8000.0))[1].geothermal
+    assert dear.lcoe_eur_per_kwh > cheap.lcoe_eur_per_kwh

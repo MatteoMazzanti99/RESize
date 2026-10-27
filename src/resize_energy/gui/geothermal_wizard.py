@@ -2,7 +2,19 @@
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QComboBox, QFormLayout, QGroupBox, QMessageBox, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from resize_energy.core.geothermal_design import (
     PATHWAYS,
@@ -10,6 +22,7 @@ from resize_energy.core.geothermal_design import (
     GeothermalInputs,
     size_geothermal_plant,
 )
+from resize_energy.core.nasa_power import NasaPowerError, fetch_wind_climate
 from resize_energy.gui.country import CountryBar
 from resize_energy.gui.widgets import StepPage
 from resize_energy.gui.wizard import BaseResultsPage, NumberField, _hint, first_error
@@ -56,7 +69,13 @@ class GeothermalResourcePage(StepPage):
         self.picker.currentIndexChanged.connect(self._changed)
         self.temp = NumberField(d.reservoir_temp_c, 30, 400, 0, "degC", "geo.wells")
         self.flow = NumberField(d.flow_per_well_kg_s, 1, 500, 0, "kg/s per well", "geo.heat_power")
+        self.lat = NumberField(45.07, -90, 90, 4, "deg N")
+        self.lon = NumberField(7.69, -180, 180, 4, "deg E")
         self.ambient = NumberField(d.ambient_temp_c, -20, 40, 0, "degC", "geo.exergy")
+        self.fetch_status = QLabel("")
+        self.fetch_status.setWordWrap(True)
+        fetch = QPushButton("Get the mean air temperature of the place (NASA POWER)")
+        fetch.clicked.connect(self._fetch_temperature)
         self.gradient = NumberField(d.gradient_k_per_km, 10, 200, 0, "degC per km", "geo.wells")
         self.pressure = NumberField(d.pump_pressure_bar, 0, 100, 0, "bar", "geo.pumping")
         self.pump_eff = NumberField(d.pump_efficiency * 100, 20, 90, 0, "%", "geo.pumping")
@@ -71,6 +90,13 @@ class GeothermalResourcePage(StepPage):
         rf = QFormLayout(res)
         rf.addRow("Temperature of the water at the wellhead", self.temp)
         rf.addRow("Flow of one production well", self.flow)
+        rf.addRow("Latitude (north positive)", self.lat)
+        rf.addRow("Longitude (east positive)", self.lon)
+        fetch_row = QHBoxLayout()
+        fetch_row.addWidget(fetch)
+        fetch_row.addStretch(1)
+        rf.addRow(fetch_row)
+        rf.addRow(self.fetch_status)
         rf.addRow("Mean ambient temperature", self.ambient)
         rf.addRow("Temperature gradient of the ground", self.gradient)
         pump = QGroupBox("Wells and pumps")
@@ -94,6 +120,27 @@ class GeothermalResourcePage(StepPage):
 
     def pathway(self) -> str:
         return PATHWAY_KEYS[max(0, self.picker.currentIndex())]
+
+    def _fetch_temperature(self) -> None:
+        error = first_error([("Latitude", self.lat), ("Longitude", self.lon)])
+        if error:
+            self.fetch_status.setText(error)
+            return
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            climate = fetch_wind_climate(self.lat.value(), self.lon.value())
+        except (NasaPowerError, ValueError) as exc:
+            self.fetch_status.setText(f"Could not get the temperature ({exc}): type it by hand.")
+            return
+        finally:
+            QApplication.restoreOverrideCursor()
+        if climate.mean_temperature_c is None:
+            self.fetch_status.setText("NASA POWER has no temperature for this place.")
+            return
+        self.ambient.set_value(round(climate.mean_temperature_c), "NASA POWER")
+        self.fetch_status.setText(
+            f"NASA POWER: mean air temperature {climate.mean_temperature_c:.1f} degC (it sets "
+            "the depth of the wells and the exergy of the water).")
 
     def _changed(self, _index: int = 0) -> None:
         notes = {

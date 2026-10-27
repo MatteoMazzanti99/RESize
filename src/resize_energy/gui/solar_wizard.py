@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from resize_energy.core.nasa_power import NasaPowerError, fetch_wind_climate
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.core.solar_thermal import CHILLERS, COLLECTORS
 from resize_energy.core.solar_thermal_design import (
@@ -133,7 +134,7 @@ class SolarSitePage(StepPage):
         self.t_amp = NumberField(d.t_season_amp_c, 0, 25, 0, "K", "solar.resource")
         self.status = QLabel("")
         self.status.setWordWrap(True)
-        fetch = QPushButton("Get irradiation from PVGIS")
+        fetch = QPushButton("Get irradiation (PVGIS) and air temperature (NASA POWER)")
         fetch.clicked.connect(self._fetch)
         fetch_row = QHBoxLayout()
         fetch_row.addWidget(fetch)
@@ -171,18 +172,31 @@ class SolarSitePage(StepPage):
         if error:
             self.status.setText(error)
             return
+        lines = []
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            result = fetch_pvcalc(self.lat.value(), self.lon.value(), self.tilt.value(),
-                                  self.azimuth.value(), 14.0)
-        except (PVGISError, ValueError) as exc:
-            self.status.setText(f"Could not get PVGIS data: {exc}\nYou can type the value by hand.")
-            return
+            try:
+                result = fetch_pvcalc(self.lat.value(), self.lon.value(), self.tilt.value(),
+                                      self.azimuth.value(), 14.0)
+                self.irr.set_value(result.annual_irradiation_kwh_m2, "PVGIS")
+                lines.append(f"PVGIS: {result.annual_irradiation_kwh_m2:,.0f} kWh/m2 per year on "
+                             "the collector plane.")
+            except (PVGISError, ValueError) as exc:
+                lines.append(f"Could not get PVGIS data ({exc}): type the irradiation by hand.")
+            try:
+                climate = fetch_wind_climate(self.lat.value(), self.lon.value())
+                if climate.mean_temperature_c is not None:
+                    self.t_mean.set_value(round(climate.mean_temperature_c), "NASA POWER")
+                    text = f"NASA POWER: mean air temperature {climate.mean_temperature_c:.1f} degC"
+                    if climate.temperature_swing_c is not None:
+                        self.t_amp.set_value(round(climate.temperature_swing_c), "NASA POWER")
+                        text += f", summer-winter swing {climate.temperature_swing_c:.1f} K"
+                    lines.append(text + ".")
+            except (NasaPowerError, ValueError) as exc:
+                lines.append(f"Could not get the air temperature ({exc}): type it by hand.")
         finally:
             QApplication.restoreOverrideCursor()
-        self.irr.set_value(result.annual_irradiation_kwh_m2, "PVGIS")
-        self.status.setText(f"PVGIS: {result.annual_irradiation_kwh_m2:,.0f} kWh/m2 per year on "
-                            "the collector plane.")
+        self.status.setText("\n".join(lines))
 
     def validatePage(self) -> bool:
         return _warn(self, self._query_items() + [

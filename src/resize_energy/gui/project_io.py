@@ -11,6 +11,8 @@ from typing import Any
 from PySide6.QtWidgets import QCheckBox, QComboBox
 
 from resize_energy.core import profiles as prof
+from resize_energy.core.satellite import Satellite
+from resize_energy.core.site_files import SiteShape
 from resize_energy.core.wind_rose import WindRose
 from resize_energy.gui.wizard import NumberField
 
@@ -30,6 +32,12 @@ def capture(page: Any) -> dict[str, Any]:
     rose = getattr(page, "_rose", None)
     if isinstance(rose, WindRose):
         state["_rose"] = {"rose": rose.to_dict()}
+    shape = getattr(page, "_shape", None)
+    if isinstance(shape, SiteShape):
+        state["_shape"] = {"shape": shape.to_dict()}
+    sat = getattr(page, "_satellite_saved", None)
+    if isinstance(sat, Satellite) and sat.ok:
+        state["_satellite"] = {"sat": sat.to_dict()}
     implied = getattr(page, "_implied_pr", None)
     if isinstance(implied, float):
         state["_implied_pr"] = {"num": repr(implied)}
@@ -73,6 +81,10 @@ def restore(page: Any, state: dict[str, Any], weather: prof.HourlyWeather | None
                 obj.source = saved.get("src")
             elif name == "_implied_pr" and "num" in saved:
                 page._implied_pr = float(saved["num"])
+            elif name == "_shape" and "shape" in saved and hasattr(page, "restore_shape"):
+                page.restore_shape(SiteShape.from_dict(saved["shape"]))
+            elif name == "_satellite" and "sat" in saved and hasattr(page, "_satellite_saved"):
+                page._satellite_saved = Satellite.from_dict(saved["sat"])
             elif name == "_rose" and "rose" in saved and hasattr(page, "restore_rose"):
                 page.restore_rose(WindRose.from_dict(saved["rose"]))
         except (TypeError, ValueError, KeyError):

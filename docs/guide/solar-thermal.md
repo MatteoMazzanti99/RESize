@@ -24,7 +24,7 @@ the hot-water demand is low.
 1. **What you need.** Litres of hot water per day and its temperature; cooling needed per year
    (0 if none). Either or both.
 2. **Site and sun.** Irradiation on the collector plane (PVGIS or by hand), mean air
-   temperature and summer-winter swing.
+   temperature and summer-winter swing (both from NASA POWER with the same button, or by hand).
 3. **Collectors and tank.** Flat plate, evacuated tube or unglazed, with the efficiency
    coefficients (`eta0`, `a1`, `a2`; take them from the Solar Keymark certificate); the area
    you choose, or the area that reaches a **target solar fraction**; tank litres per m2; and

@@ -175,7 +175,9 @@ def _wake_charts(inp: WindInputs, d: WindDesign) -> dict[str, ChartSpec]:
     n = len(w.positions)
     layout_title = ("Where the program placed the turbines" if optimized
                     else "Where the turbines stand")
-    caption = (f"{n} turbines placed inside the site (dashed line), at least "
+    caption = (f"{n} turbines placed inside the site (dashed line)"
+               + (f", out of the {len(d.site.exclusions)} excluded zone(s) in red"
+                  if d.site is not None and d.site.exclusions else "") + f", at least "
                f"{inp.min_spacing_d:g} rotor diameters apart. The pale cones are the wakes when "
                f"the wind blows from {prevailing:.0f} deg; colour = share of the energy of a "
                "free turbine that each one keeps." if optimized else
@@ -195,7 +197,8 @@ def _wake_charts(inp: WindInputs, d: WindDesign) -> dict[str, ChartSpec]:
     map_spec = ChartSpec(
         "svg", layout_title, caption=caption, width=460, height=390,
         svg=layout_svg(layout_title, w.positions, t.rotor_diameter_m, w.turbine_efficiency,
-                       outline, prevailing, inp.wake_decay, satellite=sat))
+                       outline, prevailing, inp.wake_decay, satellite=sat,
+                       exclusions=d.site.exclusions if d.site else ()))
     rose_title = "Wind rose of the site" + (" (measured)" if rose else " (assumed shape)")
     rose_caption = ("Petals point to where the wind comes from. " + (
         f"Hourly data of {', '.join(str(y) for y in rose.years)} ({rose.source}, 50 m)."

@@ -36,6 +36,21 @@ def check_comparison(inp: ComparisonInputs, r: ComparisonResult) -> list[Finding
             "for this load and the surplus is valued at the export price. Pick a smaller "
             "turbine, or read the LCOE (independent of size) rather than the payback.",
             "econ.same_demand"))
+    hydro = r.hydro
+    if hydro is not None:
+        out.append(Finding(
+            "info", "hydro_not_sized_on_demand",
+            f"The hydropower plant is not sized on your demand: it takes the water of the "
+            f"river you described and covers {hydro.coverage:.0%} of the demand. Compare its "
+            "cost of one kWh with the others; its payback depends on how much of the energy "
+            "you use yourself.", "econ.same_demand"))
+    geo = r.geothermal
+    if geo is not None and geo.coverage > 1.5:
+        out.append(Finding(
+            "warning", "geothermal_oversized",
+            f"The geothermal plant produces {geo.coverage:.0%} of the demand: wells come in "
+            "pairs and one pair is large for this load; the surplus is valued at the export "
+            "price. Read the cost of one kWh rather than the payback.", "econ.same_demand"))
     if c.export_price_eur_per_kwh > c.retail_price_eur_per_kwh:
         out.append(Finding(
             "info", "export_above_retail",

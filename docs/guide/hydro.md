@@ -29,4 +29,4 @@ the design flow. Every step has a "Why?" with formula, assumptions and sources.
 - One typical year; no floods, ice, water hammer or cavitation checks.
 - The cost is proportional to the rated power. The default (6600 euro/kW) is the upper part of
   the NREL ATB range for new run-of-river plants, in USD and not converted: ask for quotes.
-- Hydropower is not in the technology comparison.
+- In the technology comparison the plant is not sized on the demand: it takes the water of the river you describe, so it may cover much less (or more) than the target.

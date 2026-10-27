@@ -36,7 +36,7 @@ TECHNOLOGIES: list[tuple[str, str, str, bool]] = [
     ("geothermal", "Geothermal", "Hot water from the ground for a heat network or a power plant: wells, pumping, net power.", True),
 ]
 # technologies that make energy and can be dragged into the Compare zone
-COMPARABLE: tuple[str, ...] = ("pv", "wind", "biomass", "hydrogen")
+COMPARABLE: tuple[str, ...] = ("pv", "wind", "biomass", "hydrogen", "hydro", "geothermal")
 
 
 class HomePage(StepPage):

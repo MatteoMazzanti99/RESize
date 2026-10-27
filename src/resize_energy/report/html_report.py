@@ -314,11 +314,19 @@ def _wake_model_text(inp: WindInputs) -> str:
 
 def _layout_rows(inp: WindInputs, design: WindDesign) -> list[str]:
     if design.site is not None:
-        rows = [_row("Layout", "turbines placed by the program"),
-                _row("Site (width x length, length towards)",
-                     f"{design.site.width_m:,.0f} m x {design.site.length_m:,.0f} m, "
-                     f"{design.site.rotation_deg:.0f} deg"),
-                _row("Minimum distance between turbines", f"{inp.min_spacing_d:g} D")]
+        site = design.site
+        rows = [_row("Layout", "turbines placed by the program")]
+        if site.is_polygon:
+            rows.append(_row(
+                "Site", f"imported boundary of {len(site.polygon)} corners, {site.area_km2:.2f} km2"
+                f" without the {len(site.exclusions)} exclusion zone(s); "
+                f"{site.usable_area_km2():.2f} km2 usable with a setback of "
+                f"{site.setback_m:,.0f} m"))
+        else:
+            rows.append(_row("Site (width x length, length towards)",
+                             f"{site.width_m:,.0f} m x {site.length_m:,.0f} m, "
+                             f"{site.rotation_deg:.0f} deg"))
+        rows.append(_row("Minimum distance between turbines", f"{inp.min_spacing_d:g} D"))
         return rows
     return [_row("Layout", f"regular grid, {'staggered' if inp.stagger_rows else 'aligned'} rows"),
             _row("Spacing (across x along the wind)",
@@ -438,8 +446,10 @@ def _bar_rows(label: str, items: list[tuple[str, float, str]]) -> str:
     return "".join(out)
 
 
-_TECH_COLORS = {"pv": "#0A7452", "wind": "#1F5FBF", "biomass": "#8F5600", "hydrogen": "#7B3FB8"}
-_TECH_SHORT = {"pv": "PV", "wind": "Wind", "biomass": "Biomass", "hydrogen": "Hydrogen"}
+_TECH_COLORS = {"pv": "#0A7452", "wind": "#1F5FBF", "biomass": "#8F5600", "hydrogen": "#7B3FB8",
+                "hydro": "#0E8C9B", "geothermal": "#B3261E"}
+_TECH_SHORT = {"pv": "PV", "wind": "Wind", "biomass": "Biomass", "hydrogen": "Hydrogen",
+               "hydro": "Hydropower", "geothermal": "Geothermal"}
 
 
 def build_comparison_report(
@@ -522,6 +532,20 @@ def build_comparison_report(
                          f"{src} (invented hourly year); reference: natural gas hydrogen "
                          f"{c.h2_reference_price_eur_per_kg:.2f} euro/kg, "
                          f"{c.h2_reference_kg_co2_per_kg:.1f} kg CO2/kg"))
+    if "hydro" in keys:
+        h = inp.hydro
+        rows.append(_row("Hydropower", f"head {h.gross_head_m:,.0f} m, mean flow "
+                         f"{h.mean_flow_m3s:.2f} m3/s, Q95 {h.q95_m3s:.2f} m3/s, environmental "
+                         f"flow {h.eco_flow_m3s:.2f} m3/s; {c.hydro_capex_eur_per_kw:,.0f} euro/kW"
+                         f" + {c.hydro_om_eur_per_kw_year:,.0f} euro/kW/year, "
+                         f"{c.hydro_lifetime_years:.0f} years, {c.hydro_lifecycle_g_per_kwh:.0f} "
+                         "g/kWh"))
+    if "geothermal" in keys:
+        g = inp.geothermal
+        rows.append(_row("Geothermal power", f"{g.reservoir_temp_c:.0f} degC at the wellhead, "
+                         f"{g.flow_per_well_kg_s:.0f} kg/s per well; {c.geo_capex_eur_per_kw:,.0f}"
+                         f" euro/kW + {c.geo_om_eur_per_kw_year:,.0f} euro/kW/year, "
+                         f"{c.geo_lifetime_years:.0f} years, {c.geo_lifecycle_g_per_kwh:.0f} g/kWh"))
     inputs_rows = "".join(rows)
     verdict = (
         f"<ul><li>Lowest cost of energy (LCOE): <b>{escape(r.lowest_lcoe)}</b></li>"

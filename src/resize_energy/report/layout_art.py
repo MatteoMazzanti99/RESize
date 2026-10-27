@@ -88,7 +88,7 @@ def layout_window(positions: Sequence[tuple[float, float]], rotor_d: float,
 def layout_svg(title: str, positions: Sequence[tuple[float, float]], rotor_d: float,
                efficiencies: Sequence[float], outline: Sequence[tuple[float, float]] | None,
                wind_from_deg: float, decay: float, width: int = 460, height: int = 390,
-               satellite=None) -> str:
+               satellite=None, exclusions: Sequence[Sequence[tuple[float, float]]] = ()) -> str:
     """Top view of the farm: site outline, rotors to scale, wake cones of the prevailing wind,
     each turbine coloured by the share of a free turbine's energy it keeps. North is up.
     ``satellite`` (a core.satellite.Satellite) puts the aerial picture under everything."""
@@ -128,6 +128,11 @@ def layout_svg(title: str, positions: Sequence[tuple[float, float]], rotor_d: fl
         fill = "none" if aerial else "#F3F8F5"
         body.append(f'<polygon points="{poly}" fill="{fill}" stroke="{line}" stroke-width="1.6" '
                     f'stroke-dasharray="6 4"/>')
+    if exclusions:
+        for ring in exclusions:
+            poly = " ".join(f"{px(e, n)[0]:.1f},{px(e, n)[1]:.1f}" for e, n in ring)
+            body.append(f'<polygon points="{poly}" fill="{RED}" fill-opacity="0.30" '
+                        f'stroke="{RED}" stroke-width="1.4"/>')
     # wake cones of the prevailing wind, behind the rotors
     cross = (math.cos(th), -math.sin(th))
     body.append('<g clip-path="url(#mapclip)">')
@@ -177,6 +182,9 @@ def layout_svg(title: str, positions: Sequence[tuple[float, float]], rotor_d: fl
     body.append(f'<path d="M{bx:.1f},{by - 4} v8 M{bx:.1f},{by} h{bar_m * k:.1f} '
                 f'm0,-4 v8" stroke="{INK}" stroke-width="1.6" fill="none"/>'
                 + _text(bx + bar_m * k + 8, by + 4, f"{bar_m:,.0f} m", 10, MUTED))
+    if exclusions:
+        body.append(f'<rect x="200" y="{by - 6}" width="12" height="12" fill="{RED}" '
+                    f'fill-opacity="0.35" stroke="{RED}"/>' + _text(217, by + 4, "excluded", 10, MUTED))
     wx, wy = width - 135, by
     ax, ay = dx * 22, -dy * 22                                  # screen: y points down
     body.append(f'<path d="M{wx - ax / 2:.1f},{wy - ay / 2:.1f} L{wx + ax / 2:.1f},{wy + ay / 2:.1f}" '

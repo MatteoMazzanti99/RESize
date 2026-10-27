@@ -19,7 +19,10 @@ the number of turbines for your demand, the layout with wake losses, and the eco
    tabulated power curves (from the open NREL turbine-models repository) or type the datasheet
    values. Then choose who decides where the turbines stand: a **regular grid** with the spacing
    you set (and an optional wake model), or **the program places the turbines** inside the
-   rectangle of land you give (width, length, direction) at a minimum distance of your choice.
+   rectangle of land you give (width, length, direction) **or inside the real boundary of your land**
+   loaded from a KML, KMZ or GeoJSON file (draw it as a polygon in Google Earth, QGIS or geojson.io),
+   with optional **exclusion zones** (houses, roads, wetlands: more polygons from a file) and a
+   **setback** kept from the boundary and the zones, at a minimum distance of your choice.
    In the second case it searches the layout that loses the least energy to the wakes of your
    wind rose. The layout map is drawn on a **satellite picture** of the place (the latitude and
    longitude you typed are the centre of the map); it needs internet and can be switched off. The

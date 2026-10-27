@@ -134,8 +134,14 @@ def wind_worked_example(key: str, inp: WindInputs, d: WindDesign) -> str | None:
         gain = (f"; the same turbines on a regular {inp.crosswind_spacing_d:g} D x "
                 f"{inp.downwind_spacing_d:g} D grid would lose {d.grid_wake_loss:.1%}"
                 if d.grid_wake_loss is not None else "")
-        return (f"Site {d.site.width_m:,.0f} m x {d.site.length_m:,.0f} m (length towards "
-                f"{d.site.rotation_deg:.0f} deg) = {d.site.area_km2:.2f} km2, "
+        if d.site.is_polygon:
+            where = (f"Imported site: {d.site.area_km2:.2f} km2 without the "
+                     f"{len(d.site.exclusions)} exclusion zone(s), {d.site.usable_area_km2():.2f}"
+                     f" km2 usable with a setback of {d.site.setback_m:,.0f} m")
+        else:
+            where = (f"Site {d.site.width_m:,.0f} m x {d.site.length_m:,.0f} m (length towards "
+                     f"{d.site.rotation_deg:.0f} deg) = {d.site.area_km2:.2f} km2")
+        return (f"{where}, "
                 f"{d.n_turbines} turbines, minimum distance {inp.min_spacing_d:g} D = "
                 f"{inp.min_spacing_d * t.rotor_diameter_m:,.0f} m\n"
                 f"Closest pair {d.min_distance_d:.1f} D; wake loss {d.wake_loss:.1%}{gain}")

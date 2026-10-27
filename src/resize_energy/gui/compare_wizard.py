@@ -31,6 +31,8 @@ from resize_energy.core.comparison import (
     comparison_sensitivity,
 )
 from resize_energy.core.fuel_library import SUBSTRATES
+from resize_energy.core.geothermal_design import GeothermalInputs
+from resize_energy.core.hydro_design import HydroInputs
 from resize_energy.core.nasa_power import NasaPowerError, fetch_wind_climate
 from resize_energy.core.pvgis import PVGISError, fetch_pvcalc
 from resize_energy.core.turbine_library import load_library
@@ -236,7 +238,7 @@ class ComparePlantPage(StepPage):
         self.selection = selection or CompareSelection()
         self.setTitle("2. Plant assumptions")
         self.setSubTitle("Only the technologies you chose are asked here: the PV performance, the turbine, "
-                         "the biogas feed and the electricity source of the hydrogen.")
+                         "the biogas feed, the hydrogen electricity source, the river and the geothermal well.")
         self.library = load_library()
 
         self.pr = NumberField(0.80, 0.5, 0.95, 2, "", "pv.performance_ratio")
@@ -258,6 +260,20 @@ class ComparePlantPage(StepPage):
         self.sub_a.setCurrentIndex(2 if len(names) > 2 else 0)
         self.share_b = NumberField(50, 0, 100, 0, "% of the feed (mass)", "biomass.biogas_yield")
         self.hrt = NumberField(BiomassInputs().hrt_days, 10, 120, 0, "days", "biomass.digester")
+        hd, gd = HydroInputs(), GeothermalInputs()
+        self.hy_head = NumberField(hd.gross_head_m, 1, 2000, 1, "m", "hydro.power")
+        self.hy_flow = NumberField(hd.mean_flow_m3s, 0.001, 5000, 3, "m3/s", "hydro.fdc")
+        self.hy_q95 = NumberField(hd.q95_m3s, 0.0005, 5000, 3, "m3/s", "hydro.fdc")
+        self.hy_eco = NumberField(hd.eco_flow_m3s, 0, 5000, 3, "m3/s", "hydro.eco_flow")
+        self.hy_exceed = NumberField(hd.design_exceedance * 100, 5, 95, 0, "% of the time",
+                                     "hydro.fdc")
+        self.hy_length = NumberField(hd.penstock_length_m, 0, 20000, 0, "m", "hydro.penstock")
+        self.geo_temp = NumberField(140, 30, 400, 0, "degC", "geo.wells")
+        self.geo_flow = NumberField(80, 1, 500, 0, "kg/s per well", "geo.heat_power")
+        self.geo_ambient = NumberField(gd.ambient_temp_c, -20, 40, 0, "degC", "geo.exergy")
+        self.geo_gradient = NumberField(gd.gradient_k_per_km, 10, 200, 0, "degC per km",
+                                        "geo.wells")
+        self.geo_reinject = NumberField(gd.reinjection_temp_c, 20, 200, 0, "degC", "geo.binary")
         self.h2_pv = QCheckBox("Photovoltaic")
         self.h2_pv.setChecked(True)
         self.h2_wind = QCheckBox("Wind")
@@ -283,14 +299,34 @@ class ComparePlantPage(StepPage):
         hl.addWidget(self.h2_wind)
         hl.addStretch(1)
 
+        self.hydro_box = QGroupBox("Hydropower: run-of-river plant (its size comes from the river)")
+        hyf = QFormLayout(self.hydro_box)
+        hyf.addRow("Gross head", self.hy_head)
+        hyf.addRow("Mean flow of the river", self.hy_flow)
+        hyf.addRow("Q95 (flow exceeded 95 % of the time)", self.hy_q95)
+        hyf.addRow("Environmental flow left in the river", self.hy_eco)
+        hyf.addRow("Design flow available for", self.hy_exceed)
+        hyf.addRow("Penstock length", self.hy_length)
+        self.geo_box = QGroupBox("Geothermal power plant (binary or flash, from the temperature)")
+        gf = QFormLayout(self.geo_box)
+        gf.addRow("Water temperature at the wellhead", self.geo_temp)
+        gf.addRow("Flow of one production well", self.geo_flow)
+        gf.addRow("Mean ambient temperature", self.geo_ambient)
+        gf.addRow("Temperature gradient of the ground", self.geo_gradient)
+        gf.addRow("Reinjection temperature (binary)", self.geo_reinject)
+
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
         layout.addWidget(self.pv_box)
         layout.addWidget(self.wind_box)
         layout.addWidget(self.bio_box)
         layout.addWidget(self.h2_box)
+        layout.addWidget(self.hydro_box)
+        layout.addWidget(self.geo_box)
         layout.addWidget(_hint(
-            "The PV array is sized exactly on the target. The wind plant uses a whole number "
+            "A hydropower plant takes what the river gives and a geothermal plant is built in "
+            "whole well pairs: neither matches the demand exactly, so read the share of the "
+            "demand they cover, and the cost of one kWh, together. The PV array is sized exactly on the target. The wind plant uses a whole number "
             "of the chosen turbines, so a large turbine on a small demand overshoots: pick a "
             "turbine of a size comparable with the demand. Full module, inverter and layout "
             "details are in the photovoltaic and wind flows."))
@@ -305,6 +341,22 @@ class ComparePlantPage(StepPage):
         self.wind_box.setVisible(sel.needs_wind())
         self.bio_box.setVisible(sel.has("biomass"))
         self.h2_box.setVisible(sel.has("hydrogen"))
+        self.hydro_box.setVisible(sel.has("hydro"))
+        self.geo_box.setVisible(sel.has("geothermal"))
+
+    def hydro(self) -> HydroInputs:
+        return HydroInputs(
+            gross_head_m=self.hy_head.value(), mean_flow_m3s=self.hy_flow.value(),
+            q95_m3s=self.hy_q95.value(), eco_flow_m3s=self.hy_eco.value(),
+            design_exceedance=self.hy_exceed.value() / 100.0,
+            penstock_length_m=self.hy_length.value())
+
+    def geothermal(self) -> GeothermalInputs:
+        return GeothermalInputs(
+            pathway="power", reservoir_temp_c=self.geo_temp.value(),
+            flow_per_well_kg_s=self.geo_flow.value(), ambient_temp_c=self.geo_ambient.value(),
+            gradient_k_per_km=self.geo_gradient.value(),
+            reinjection_temp_c=self.geo_reinject.value())
 
     def biomass(self) -> BiomassInputs:
         return BiomassInputs(
@@ -329,6 +381,16 @@ class ComparePlantPage(StepPage):
                       ("Other losses", self.losses)]
         if sel.has("biomass"):
             items += [("Share of substrate B", self.share_b), ("Retention time", self.hrt)]
+        if sel.has("hydro"):
+            items += [("Gross head", self.hy_head), ("Mean flow", self.hy_flow),
+                      ("Q95", self.hy_q95), ("Environmental flow", self.hy_eco),
+                      ("Design flow exceedance", self.hy_exceed),
+                      ("Penstock length", self.hy_length)]
+        if sel.has("geothermal"):
+            items += [("Wellhead temperature", self.geo_temp), ("Flow per well", self.geo_flow),
+                      ("Ambient temperature", self.geo_ambient),
+                      ("Temperature gradient", self.geo_gradient),
+                      ("Reinjection temperature", self.geo_reinject)]
         if not _warn(self, items):
             return False
         if sel.has("hydrogen") and not (self.h2_pv.isChecked() or self.h2_wind.isChecked()):
@@ -365,6 +427,14 @@ class CompareCostPage(StepPage):
         self.h_capex = nf(c.h2_electrolyser_capex_eur_per_kw, 100, 10000, 0, "euro/kW")
         self.h_price = nf(c.h2_reference_price_eur_per_kg, 0.1, 30, 2, "euro/kg", "econ.savings")
         self.h_ref_co2 = nf(c.h2_reference_kg_co2_per_kg, 0.5, 30, 1, "kg CO2/kg", "econ.co2")
+        self.hy_capex = nf(c.hydro_capex_eur_per_kw, 1, 50000, 0, "euro/kW")
+        self.hy_om = nf(c.hydro_om_eur_per_kw_year, 0, 3000, 0, "euro/kW per year")
+        self.hy_life = nf(c.hydro_lifetime_years, 1, 100, 0, "years", "econ.crf")
+        self.hy_co2 = nf(c.hydro_lifecycle_g_per_kwh, 0, 1000, 0, "g CO2/kWh", "econ.co2")
+        self.ge_capex = nf(c.geo_capex_eur_per_kw, 1, 50000, 0, "euro/kW net")
+        self.ge_om = nf(c.geo_om_eur_per_kw_year, 0, 3000, 0, "euro/kW per year")
+        self.ge_life = nf(c.geo_lifetime_years, 1, 100, 0, "years", "econ.crf")
+        self.ge_co2 = nf(c.geo_lifecycle_g_per_kwh, 0, 1000, 0, "g CO2/kWh", "econ.co2")
         self.rate = nf(c.discount_rate * 100, 0, 30, 1, "%", "econ.crf")
         self.retail = nf(c.retail_price_eur_per_kwh, 0.001, 5, 3, "euro/kWh", "econ.savings")
         self.export = nf(c.export_price_eur_per_kwh, 0, 5, 3, "euro/kWh", "econ.savings")
@@ -394,6 +464,18 @@ class CompareCostPage(StepPage):
         hf.addRow("Electrolyser CAPEX", self.h_capex)
         hf.addRow("Hydrogen from natural gas: price", self.h_price)
         hf.addRow("Hydrogen from natural gas: emissions", self.h_ref_co2)
+        self.hydro_box = QGroupBox("Hydropower: run-of-river plant")
+        hyf = QFormLayout(self.hydro_box)
+        hyf.addRow("Investment (CAPEX)", self.hy_capex)
+        hyf.addRow("Operation and maintenance", self.hy_om)
+        hyf.addRow("Lifetime", self.hy_life)
+        hyf.addRow("Life-cycle emissions", self.hy_co2)
+        self.geo_box = QGroupBox("Geothermal power plant, wells included")
+        gef = QFormLayout(self.geo_box)
+        gef.addRow("Investment (CAPEX)", self.ge_capex)
+        gef.addRow("Operation and maintenance", self.ge_om)
+        gef.addRow("Lifetime", self.ge_life)
+        gef.addRow("Life-cycle emissions", self.ge_co2)
         common = QGroupBox("Prices and rates")
         cf = QFormLayout(common)
         cf.addRow("Discount rate", self.rate)
@@ -410,7 +492,11 @@ class CompareCostPage(StepPage):
         row2.addWidget(self.bio_box)
         row2.addWidget(self.h2_box)
         layout.addLayout(row1)
+        row3 = QHBoxLayout()
+        row3.addWidget(self.hydro_box)
+        row3.addWidget(self.geo_box)
         layout.addLayout(row2)
+        layout.addLayout(row3)
         layout.addWidget(common)
         self.country_bar = CountryBar({"electricity": self.retail, "export": self.export, "grid_ef": self.grid})
         self.country = self.country_bar.combo
@@ -429,6 +515,8 @@ class CompareCostPage(StepPage):
         self.wind_box.setVisible(sel.needs_wind())
         self.bio_box.setVisible(sel.has("biomass"))
         self.h2_box.setVisible(sel.has("hydrogen"))
+        self.hydro_box.setVisible(sel.has("hydro"))
+        self.geo_box.setVisible(sel.has("geothermal"))
 
     def costs(self) -> CostAssumptions:
         return CostAssumptions(
@@ -452,6 +540,14 @@ class CompareCostPage(StepPage):
             h2_electrolyser_capex_eur_per_kw=self.h_capex.value(),
             h2_reference_price_eur_per_kg=self.h_price.value(),
             h2_reference_kg_co2_per_kg=self.h_ref_co2.value(),
+            hydro_capex_eur_per_kw=self.hy_capex.value(),
+            hydro_om_eur_per_kw_year=self.hy_om.value(),
+            hydro_lifetime_years=self.hy_life.value(),
+            hydro_lifecycle_g_per_kwh=self.hy_co2.value(),
+            geo_capex_eur_per_kw=self.ge_capex.value(),
+            geo_om_eur_per_kw_year=self.ge_om.value(),
+            geo_lifetime_years=self.ge_life.value(),
+            geo_lifecycle_g_per_kwh=self.ge_co2.value(),
         )
 
     def validatePage(self) -> bool:
@@ -471,6 +567,14 @@ class CompareCostPage(StepPage):
         if sel.has("hydrogen"):
             items += [("Electrolyser CAPEX", self.h_capex), ("Reference hydrogen price", self.h_price),
                       ("Reference hydrogen emissions", self.h_ref_co2)]
+        if sel.has("hydro"):
+            items += [("Hydropower CAPEX", self.hy_capex), ("Hydropower O&M", self.hy_om),
+                      ("Hydropower lifetime", self.hy_life),
+                      ("Hydropower life-cycle emissions", self.hy_co2)]
+        if sel.has("geothermal"):
+            items += [("Geothermal CAPEX", self.ge_capex), ("Geothermal O&M", self.ge_om),
+                      ("Geothermal lifetime", self.ge_life),
+                      ("Geothermal life-cycle emissions", self.ge_co2)]
         return _warn(self, items)
 
 
@@ -520,6 +624,8 @@ class CompareResultsPage(BaseResultsPage):
             techs=self.selection.techs,
             latitude_deg=s.lat.value(),
             biomass=p.biomass(),
+            hydro=p.hydro(),
+            geothermal=p.geothermal(),
             h2_use_pv=p.h2_pv.isChecked(),
             h2_use_wind=p.h2_wind.isChecked(),
             hourly_weather=s.weather(),

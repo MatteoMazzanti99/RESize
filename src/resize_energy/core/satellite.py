@@ -8,6 +8,7 @@ readable note: the map is then drawn without the picture.
 
 from __future__ import annotations
 
+import base64
 import math
 import urllib.request
 from collections.abc import Callable
@@ -37,10 +38,39 @@ class Satellite:
     tiles: tuple[Tile, ...] = ()
     attribution: str = ATTRIBUTION
     note: str = ""         # why there are no tiles, when it failed
+    lat: float = 0.0       # the site centre the tiles were fetched for
+    lon: float = 0.0
 
     @property
     def ok(self) -> bool:
         return bool(self.tiles)
+
+    def covers(self, lat: float, lon: float, window: tuple[float, float, float, float]) -> bool:
+        """True when these tiles show the whole window around the same site centre."""
+        if not self.ok or abs(lat - self.lat) > 1e-6 or abs(lon - self.lon) > 1e-6:
+            return False
+        x_lo, x_hi, y_lo, y_hi = window
+        tol = 1.0   # metre
+        return (min(t.west_m for t in self.tiles) <= x_lo + tol
+                and max(t.west_m + t.size_m for t in self.tiles) >= x_hi - tol
+                and max(t.north_m for t in self.tiles) >= y_hi - tol
+                and min(t.north_m - t.size_m for t in self.tiles) <= y_lo + tol)
+
+    def to_dict(self) -> dict:
+        """For the project file: the tiles as base64 text."""
+        return {"lat": self.lat, "lon": self.lon, "attribution": self.attribution,
+                "tiles": [{"w": t.west_m, "n": t.north_m, "s": t.size_m,
+                           "d": base64.b64encode(t.data).decode("ascii")} for t in self.tiles]}
+
+    @classmethod
+    def from_dict(cls, d: dict) -> Satellite:
+        try:
+            tiles = tuple(Tile(float(t["w"]), float(t["n"]), float(t["s"]),
+                               base64.b64decode(t["d"], validate=True)) for t in d["tiles"])
+            return cls(tiles, str(d.get("attribution", ATTRIBUTION)), "", float(d["lat"]),
+                       float(d["lon"]))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"the saved satellite picture is damaged ({exc})") from exc
 
 
 def _world_px(lat: float, lon: float, zoom: int) -> tuple[float, float]:
@@ -122,6 +152,6 @@ def fetch_satellite(lat: float, lon: float, window: tuple[float, float, float, f
                 col += n if col * TILE_PX < cx else -n
             tiles.append(Tile((col * TILE_PX - cx) * mpp, -(y * TILE_PX - cy) * mpp,
                               TILE_PX * mpp, data))
-        return Satellite(tuple(tiles))
+        return Satellite(tuple(tiles), lat=lat, lon=lon)
     except Exception as exc:   # noqa: BLE001 - any network or format problem just drops the picture
         return Satellite(note=f"The satellite picture could not be downloaded ({exc}).")

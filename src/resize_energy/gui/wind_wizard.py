@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
+    QFileDialog,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -21,6 +22,12 @@ from PySide6.QtWidgets import (
 
 from resize_energy.core.nasa_power import NasaPowerError, fetch_wind_climate
 from resize_energy.core.satellite import fetch_satellite
+from resize_energy.core.site_files import (
+    SiteFileError,
+    SiteShape,
+    exclusions_from_file,
+    site_from_file,
+)
 from resize_energy.core.turbine_library import SOURCE, load_library
 from resize_energy.core.wind_design import TurbineSpec, WindInputs, size_wind_plant
 from resize_energy.core.wind_rose import WindRose, fetch_wind_rose
@@ -67,8 +74,8 @@ class WindSitePage(StepPage):
         self.setTitle("1. Site and wind resource")
         self.setSubTitle("Where is it? Press the button to get the wind speed of this place, or type your own measurement: wind speed is the biggest driver of the energy.")
 
-        self.lat = NumberField(45.07, -90, 90, 4, "deg N")
-        self.lon = NumberField(7.69, -180, 180, 4, "deg E")
+        self.lat = NumberField(45.07, -90, 90, 5, "deg N")
+        self.lon = NumberField(7.69, -180, 180, 5, "deg E")
         self.speed = NumberField(6.0, 0.5, 20, 2, "m/s", "wind.resource")
         self.ref_height = NumberField(50, 5, 300, 0, "m")
         self.k = NumberField(2.0, 1.0, 5.0, 2, "", "wind.weibull")
@@ -248,6 +255,7 @@ class WindTurbinePage(StepPage):
         t = TurbineSpec()
         self.library = load_library()
         self._selected = None  # LibraryTurbine in use, or None for the generic curve
+        self._shape: SiteShape | None = None   # boundary and exclusion zones from a file
 
         self.picker = QComboBox()
         self.picker.setMaxVisibleItems(20)
@@ -299,6 +307,26 @@ class WindTurbinePage(StepPage):
         self.site_rotation = NumberField(0, 0, 359, 0, "deg: where the length points (0 = north)",
                                          "wind.layout")
         self.min_spacing = NumberField(3.0, 1.0, 10, 1, "D (closest two turbines)", "wind.layout")
+        self.shape_load = QPushButton("Load the site boundary (KML, KMZ, GeoJSON)...")
+        self.shape_load.clicked.connect(self._load_shape)
+        self.excl_load = QPushButton("Add exclusion zones...")
+        self.excl_load.clicked.connect(self._load_exclusions)
+        self.shape_clear = QPushButton("Use a rectangle instead")
+        self.shape_clear.clicked.connect(self._clear_shape)
+        self.shape_status = QLabel("")
+        self.shape_status.setWordWrap(True)
+        self.shape_status.setObjectName("hint")
+        self.setback = NumberField(0, 0, 2000, 0, "m kept from the boundary and the zones",
+                                   "wind.layout")
+        self.shape_box = QWidget()
+        sb = QVBoxLayout(self.shape_box)
+        sb.setContentsMargins(0, 0, 0, 0)
+        buttons = QHBoxLayout()
+        for b in (self.shape_load, self.excl_load, self.shape_clear):
+            buttons.addWidget(b)
+        buttons.addStretch(1)
+        sb.addLayout(buttons)
+        sb.addWidget(self.shape_status)
         self.satellite = QCheckBox("Show a satellite picture under the layout map (needs internet)")
         self.satellite.setChecked(True)
         self.rose_note = QLabel("")
@@ -309,9 +337,11 @@ class WindTurbinePage(StepPage):
         lf = self.lay_form
         lay.setLayout(lf)
         lf.addRow("Who decides where the turbines stand?", self.layout_mode)
+        lf.addRow(self.shape_box)
         lf.addRow("Site width", self.site_width)
         lf.addRow("Site length", self.site_length)
         lf.addRow("Direction of the length", self.site_rotation)
+        lf.addRow("Setback", self.setback)
         lf.addRow("Minimum distance", self.min_spacing)
         lf.addRow("Spacing across the wind", self.crosswind)
         lf.addRow("Spacing along the wind", self.downwind)
@@ -342,7 +372,7 @@ class WindTurbinePage(StepPage):
             "stand: it moves them to lose the least energy to the wakes of the wind rose."))
         layout.addStretch(1)
         self._picked(0)
-        self._layout_changed()
+        self._shape_changed()
 
     def placed(self) -> bool:
         return self.layout_mode.currentIndex() == 1
@@ -351,8 +381,14 @@ class WindTurbinePage(StepPage):
         placed = self.placed()
         rose = self.site.rose() if self.site is not None else None
         form = self.lay_form
-        for f in (self.site_width, self.site_length, self.site_rotation, self.min_spacing):
+        rectangle = placed and self._shape is None
+        for f in (self.site_width, self.site_length, self.site_rotation):
+            _show_row(form, f, rectangle)
+        for f in (self.shape_box, self.min_spacing):
             _show_row(form, f, placed)
+        _show_row(form, self.setback, placed and self._shape is not None)
+        self.excl_load.setEnabled(self._shape is not None)
+        self.shape_clear.setVisible(self._shape is not None)
         for f in (self.crosswind, self.downwind, self.per_row):
             _show_row(form, f, not placed)
         self.wake.setVisible(not placed)
@@ -369,6 +405,80 @@ class WindTurbinePage(StepPage):
                 f"uses it. The wind energy comes mainly from {rose.prevailing_deg():.0f} deg"
                 + ("." if placed else ", which sets the direction of the rows: change it below "
                    "if you want."))
+
+    # --- the land: boundary and exclusion zones from a file --------------------------------
+    def shape(self) -> SiteShape | None:
+        return self._shape
+
+    def _pick_file(self, title: str) -> tuple[bytes, str] | None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, title, "", "Site files (*.kml *.kmz *.geojson *.json);;All files (*)")
+        if not path:
+            return None
+        try:
+            with open(path, "rb") as handle:
+                return handle.read(), path
+        except OSError as exc:
+            self.shape_status.setText(f"The file cannot be read: {exc.strerror or exc}")
+            return None
+
+    def _load_shape(self) -> None:
+        picked = self._pick_file("Site boundary (a polygon)")
+        if picked is None:
+            return
+        data, path = picked
+        try:
+            shape = site_from_file(data, path)
+        except SiteFileError as exc:
+            self.shape_status.setText(f"Could not use the file: {exc}")
+            return
+        self._shape = shape
+        if self.site is not None:        # the centre of the site is the origin of the map
+            self.site.lat.set_value(round(shape.lat, 5), "site file")
+            self.site.lon.set_value(round(shape.lon, 5), "site file")
+        self._shape_changed()
+
+    def _load_exclusions(self) -> None:
+        if self._shape is None:
+            return
+        picked = self._pick_file("Zones to avoid (polygons)")
+        if picked is None:
+            return
+        data, path = picked
+        try:
+            rings = exclusions_from_file(data, path, self._shape.lat, self._shape.lon)
+        except SiteFileError as exc:
+            self.shape_status.setText(f"Could not use the file: {exc}")
+            return
+        self._shape = SiteShape(self._shape.lat, self._shape.lon, self._shape.boundary,
+                                self._shape.exclusions + rings, self._shape.name)
+        self._shape_changed()
+
+    def _clear_shape(self) -> None:
+        self._shape = None
+        self._shape_changed()
+
+    def restore_shape(self, shape: SiteShape | None) -> None:
+        """Called when a saved project is opened."""
+        self._shape = shape
+        self._shape_changed()
+
+    def _shape_changed(self) -> None:
+        shape = self._shape
+        if shape is None:
+            self.shape_status.setText(
+                "A rectangle is used. Load the real boundary of your land (and the zones to "
+                "avoid: houses, roads, protected areas) from a KML, KMZ or GeoJSON file, for "
+                "instance drawn in Google Earth.")
+        else:
+            from resize_energy.core.site_files import ring_area
+
+            area = ring_area(shape.boundary) / 1e6
+            self.shape_status.setText(
+                f"Boundary of {len(shape.boundary)} corners, {area:.2f} km2, centred on "
+                f"{shape.lat:.5f}, {shape.lon:.5f} (these are now the site coordinates: keep "
+                f"them). {len(shape.exclusions)} exclusion zone(s).")
+        self._layout_changed()
 
     def initializePage(self) -> None:
         rose = self.site.rose() if self.site is not None else None
@@ -418,9 +528,10 @@ class WindTurbinePage(StepPage):
     def validatePage(self) -> bool:
         items = list(self._items)
         if self.placed():
-            items += [("Site width", self.site_width), ("Site length", self.site_length),
-                      ("Direction of the length", self.site_rotation),
-                      ("Minimum distance", self.min_spacing)]
+            items += [("Minimum distance", self.min_spacing)]
+            items += ([("Setback", self.setback)] if self._shape is not None else
+                      [("Site width", self.site_width), ("Site length", self.site_length),
+                       ("Direction of the length", self.site_rotation)])
         else:
             items += [("Spacing across", self.crosswind), ("Spacing along", self.downwind),
                       ("Turbines per row", self.per_row)]
@@ -443,6 +554,7 @@ class WindResultsPage(BaseResultsPage):
     def __init__(self, site: WindSitePage, load: WindLoadPage, turbine: WindTurbinePage,
                  costs) -> None:
         self.site, self.load, self.turbine, self.costs = site, load, turbine, costs
+        self._satellite_saved = None      # the aerial tiles of the last map, kept in the project
         super().__init__()
         self.setTitle("5. Results and design checks")
 
@@ -467,6 +579,9 @@ class WindResultsPage(BaseResultsPage):
             site_length_m=self.turbine.site_length.value(),
             site_rotation_deg=self.turbine.site_rotation.value(),
             min_spacing_d=self.turbine.min_spacing.value(),
+            site_polygon=self.turbine.shape().boundary if self.turbine.shape() else (),
+            site_exclusions=self.turbine.shape().exclusions if self.turbine.shape() else (),
+            setback_m=self.turbine.setback.value() if self.turbine.shape() else 0.0,
             turbines_per_row=int(self.turbine.per_row.value()),
             stagger_rows=self.turbine.stagger.isChecked(), wake_decay=self.turbine.decay.value(),
             prevailing_direction_deg=self.turbine.prevailing.value(),
@@ -488,7 +603,14 @@ class WindResultsPage(BaseResultsPage):
         prevailing = inputs.rose.prevailing_deg() if inputs.rose else inputs.prevailing_direction_deg
         outline = design.site.corners() if design.site else None
         window = layout_window(w.positions, inputs.turbine.rotor_diameter_m, outline, prevailing)
-        return fetch_satellite(self.site.lat.value(), self.site.lon.value(), window)
+        lat, lon = self.site.lat.value(), self.site.lon.value()
+        saved = self._satellite_saved       # a reopened project shows the same picture, offline
+        if saved is not None and saved.covers(lat, lon, window):
+            return saved
+        fresh = fetch_satellite(lat, lon, window)
+        if fresh.ok:
+            self._satellite_saved = fresh
+        return fresh
 
     def _flow(self):
         from resize_energy.report.flow_pictures import wind_picture

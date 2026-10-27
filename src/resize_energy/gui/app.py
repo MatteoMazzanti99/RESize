@@ -28,7 +28,8 @@ def _walk_through(window, app) -> int:
         if tech in ("pv", "wind") and "Net present value" not in results.html:
             print(f"self-test: the {tech} results lack the economics", flush=True)
             return 1
-        if tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar"):
+        if tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "hydro",
+                    "geothermal"):
             try:
                 wb = results._workbook()
             except ImportError:
@@ -47,24 +48,167 @@ def _walk_through(window, app) -> int:
             print(f"self-test: the {tech} formulas were not drawn", flush=True)
             return 1
         window._restart()
-    # the comparison of all four technologies, as started from the Compare zone
-    window._start_compare(["pv", "wind", "biomass", "hydrogen"])
+    # the comparison of all six technologies, as started from the Compare zone
+    window._start_compare(["pv", "wind", "biomass", "hydrogen", "hydro", "geothermal"])
     for _ in range(len(window.pages) - 2):
         window._next()
         app.processEvents()
-    if window.index != len(window.pages) - 1 or "Biomass" not in window.pages[-1].html:
-        print("self-test: the four-technology comparison did not reach its results", flush=True)
+    if window.index != len(window.pages) - 1 or (
+            "Hydropower" not in window.pages[-1].html or "Geothermal" not in window.pages[-1].html):
+        print("self-test: the six-technology comparison did not reach its results", flush=True)
         return 1
     if len(window.pages[-1].chart_images) < 4:
         print("self-test: the comparison charts were not drawn", flush=True)
         return 1
     window._restart()
     for check in (_versions_check, _solar_cooling_check, _country_check, _step_art_check,
-                  _wind_layout_check):
+                  _wind_layout_check, _variants_check, _compare_pairs_check, _navigation_check,
+                  _all_projects_roundtrip):
         code = check(window, app)
         if code:
             return code
     return _project_roundtrip(window, app)
+
+
+class _NoDialogs:
+    """Replace the modal message boxes by a recorder: a test must never wait for a click."""
+
+    def __enter__(self):
+        from PySide6.QtWidgets import QMessageBox
+
+        self.box, self.old, self.seen = QMessageBox, QMessageBox.warning, []
+        seen = self.seen
+        QMessageBox.warning = staticmethod(lambda *a, **k: seen.append(a[2] if len(a) > 2 else ""))
+        return self
+
+    def __exit__(self, *exc):
+        self.box.warning = self.old
+        return False
+
+
+def _to_results(window, app) -> bool:
+    """Press Next up to the results page; False when a step refused to go on."""
+    for _ in range(len(window.pages) - 2):
+        window._next()
+        app.processEvents()
+    return window.index == len(window.pages) - 1
+
+
+def _variants_check(window, app) -> int:
+    """Every choice of every drop-down of every flow (pathways, modes, turbines, plants...) must
+    still reach a results page without an exception; a design that cannot be computed with
+    the defaults of that choice is only reported."""
+    from PySide6.QtWidgets import QComboBox
+
+    from resize_energy.gui.country import CUSTOM
+
+    runs = notes = 0
+    with _NoDialogs() as dialogs:
+        for tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "hydro",
+                     "geothermal"):
+            window._start(tech)
+            flow = window.pages[1:-1]
+            combos = [(page, name, box) for page in flow for name, box in vars(page).items()
+                      if isinstance(box, QComboBox) and 2 <= box.count() <= 12
+                      and box.itemText(0) != CUSTOM and name not in ("country", "picker_library")]
+            window._restart()
+            for _page, name, box in combos:
+                if name == "picker" and box.count() > 12:
+                    continue
+                first = box.currentIndex()
+                for index in range(box.count()):
+                    if index == first:
+                        continue
+                    window._start(tech)
+                    box.setCurrentIndex(index)
+                    try:
+                        reached = _to_results(window, app)
+                    except Exception as exc:  # noqa: BLE001 - report which choice broke
+                        print(f"self-test: {tech} / {name} = {box.itemText(index)!r} raised "
+                              f"{exc!r}", flush=True)
+                        return 1
+                    runs += 1
+                    html = window.pages[-1].html if reached else ""
+                    if not reached or not html:
+                        notes += 1
+                        print(f"self-test note: {tech} / {name} = {box.itemText(index)!r} did "
+                              f"not reach its results ({dialogs.seen[-1:] or 'no message'})",
+                              flush=True)
+                    elif "Cannot compute" in html:
+                        notes += 1
+                        print(f"self-test note: {tech} / {name} = {box.itemText(index)!r}: the "
+                              "design cannot be computed with the other defaults", flush=True)
+                    window._restart()
+                box.setCurrentIndex(first)
+    print(f"self-test: {runs} drop-down variants walked, {notes} note(s)", flush=True)
+    return 0 if runs else 1
+
+
+def _compare_pairs_check(window, app) -> int:
+    """Every pair of comparable technologies reaches the comparison."""
+    from itertools import combinations
+
+    from resize_energy.gui.home import COMPARABLE
+
+    with _NoDialogs():
+        for pair in combinations(COMPARABLE, 2):
+            window._start_compare(list(pair))
+            try:
+                reached = _to_results(window, app)
+            except Exception as exc:  # noqa: BLE001
+                print(f"self-test: the comparison of {pair} raised {exc!r}", flush=True)
+                return 1
+            if not reached or "Which is better" not in window.pages[-1].html:
+                print(f"self-test: the comparison of {pair} did not reach its results", flush=True)
+                return 1
+            window._restart()
+    return 0
+
+
+def _navigation_check(window, app) -> int:
+    """Back to the first step and forward again, for every flow: nothing breaks, same results."""
+    with _NoDialogs():
+        for tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "hydro",
+                     "geothermal", "compare"):
+            window._start(tech)
+            if not _to_results(window, app):
+                print(f"self-test: the {tech} flow did not reach its results", flush=True)
+                return 1
+            before = window.pages[-1].html
+            while window.index > 1:
+                window._back()
+                app.processEvents()
+            if _to_results(window, app) is False or window.pages[-1].html != before:
+                print(f"self-test: the {tech} results changed after going back and forward",
+                      flush=True)
+                return 1
+            window._restart()
+    return 0
+
+
+def _all_projects_roundtrip(window, app) -> int:
+    """Save every flow's project, reopen the file in a fresh flow, and land on the results."""
+    import tempfile
+    from pathlib import Path
+
+    with _NoDialogs(), tempfile.TemporaryDirectory() as folder:
+        for tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "hydro",
+                     "geothermal", "compare"):
+            window._start(tech)
+            if not _to_results(window, app):
+                print(f"self-test: the {tech} flow did not reach its results", flush=True)
+                return 1
+            path = Path(folder) / f"{tech}.resize"
+            window.save_to(path)
+            window._restart()
+            problems = window.open_from(path)
+            app.processEvents()
+            if problems or window.index != len(window.pages) - 1 or not window.pages[-1].html:
+                print(f"self-test: reopening the saved {tech} project failed ({problems})",
+                      flush=True)
+                return 1
+            window._restart()
+    return 0
 
 
 def _demo_rose():
@@ -96,11 +240,41 @@ def _wind_layout_check(window, app) -> int:
         if image is None or image.isNull():
             print(f"self-test: the wind chart {name} was not drawn", flush=True)
             return 1
+    from resize_energy.core.site_files import SiteShape
+
+    half = 1250.0
+    ring = ((-half, -half), (half, -half), (half, half), (-half, half))
+    pond = ((-200.0, -200.0), (200.0, -200.0), (200.0, 200.0), (-200.0, 200.0))
+    turbine_page = window.wind_turbine
+    turbine_page.restore_shape(SiteShape(45.07, 7.69, ring, (pond,)))
+    turbine_page.setback.set_value(50)
+    results.initializePage()
+    if "imported boundary" not in results.html:
+        print("self-test: the imported site boundary was not used", flush=True)
+        return 1
+    saved_shape = project_io.capture(turbine_page)
+    turbine_page.restore_shape(None)
+    project_io.restore(turbine_page, saved_shape)
+    if turbine_page.shape() is None:
+        print("self-test: the site boundary was not restored from the project", flush=True)
+        return 1
+    turbine_page.restore_shape(None)
+    results.initializePage()
     state = project_io.capture(window.wind_site)
     window.wind_site._rose = None
     project_io.restore(window.wind_site, state)
     if window.wind_site.rose() is None:
         print("self-test: the wind rose was not restored from the project", flush=True)
+        return 1
+    from resize_energy.core.satellite import Satellite, Tile
+
+    results._satellite_saved = Satellite((Tile(-100.0, 100.0, 200.0, b"\xff\xd8jpeg"),),
+                                         lat=45.07, lon=7.69)
+    saved = project_io.capture(results)
+    results._satellite_saved = None
+    project_io.restore(results, saved)
+    if results._satellite_saved is None or not results._satellite_saved.ok:
+        print("self-test: the satellite picture was not restored from the project", flush=True)
         return 1
     if _satellite_render_failed():
         return 1

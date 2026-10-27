@@ -9,7 +9,8 @@ A first sizing of a geothermal plant on hot water from wells, with two pathways.
 
 ## What you give
 
-1. **Pathway and resource.** Temperature and flow of a well, ambient temperature, ground
+1. **Pathway and resource.** Temperature and flow of a well, ambient temperature (from NASA POWER
+   with the latitude and longitude, or by hand), ground
    gradient, pump pressure and efficiency, availability.
 2. **Plant and demand.** Heat demand, peak load and coverage, return temperature (heat) or
    electricity demand, reinjection temperature and plant type (power).
@@ -32,4 +33,4 @@ with charts of the load and the energy (heat) or of the power and the temperatur
   range it is an extrapolation.
 - The drilling cost (1500 euro/m) comes from a 2004 dollar value; the surface cost per kW of
   heat and the O&M share are RESize's typical values without a source.
-- Geothermal is not in the technology comparison.
+- In the technology comparison only the power pathway is used (a heat plant makes heat, not electricity), sized in whole pairs of wells for the same demand as the others.

@@ -29,6 +29,7 @@ class WindClimate:
     mean_speed_50m_ms: float
     mean_temperature_c: float | None
     elevation_m: float | None
+    temperature_swing_c: float | None = None   # half the difference of the hottest and coldest month
 
 
 def build_url(lat: float, lon: float) -> str:
@@ -54,9 +55,18 @@ def parse_climatology(data: dict[str, Any]) -> WindClimate:
     if speed < 0:  # NASA uses -999 for missing data
         raise NasaPowerError("NASA POWER has no wind data for this location.")
     temperature: float | None = None
+    swing: float | None = None
     try:
         t = float(params["T2M"]["ANN"])
         temperature = t if t > -90 else None
+    except (KeyError, TypeError, ValueError):
+        pass
+    try:
+        months = [float(params["T2M"][m]) for m in
+                  ("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV",
+                   "DEC")]
+        if all(v > -90 for v in months):
+            swing = (max(months) - min(months)) / 2.0
     except (KeyError, TypeError, ValueError):
         pass
     elevation: float | None = None
@@ -64,7 +74,7 @@ def parse_climatology(data: dict[str, Any]) -> WindClimate:
         elevation = float(data["geometry"]["coordinates"][2])
     except (KeyError, TypeError, ValueError, IndexError):
         pass
-    return WindClimate(speed, temperature, elevation)
+    return WindClimate(speed, temperature, elevation, swing)
 
 
 def fetch_wind_climate(

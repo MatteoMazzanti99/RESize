@@ -229,7 +229,9 @@ WIND_EXPLANATIONS: dict[str, dict[str, str]] = {
                    "(1 - sqrt(sum of deficits^2))^3);    distance between turbines >= m * D",
         "why": (
             "Instead of a regular grid you can give the program the area you have (width, "
-            "length and direction of the rectangle) and the closest two turbines may stand "
+            "length and direction of a rectangle, or the real boundary of the land from a KML "
+            "or GeoJSON file, with zones to avoid and a setback) and the closest two turbines "
+            "may stand "
             "(typically 3 rotor diameters, D). The program then decides where each turbine "
             "goes. It starts from an even pattern and moves one turbine at a time to a new "
             "spot: a move is kept when the wake loss falls, and sometimes also when it rises "
@@ -242,8 +244,9 @@ WIND_EXPLANATIONS: dict[str, dict[str, str]] = {
             "turbine stands and how much of its energy it keeps."
         ),
         "assumptions": (
-            "A rectangular site without roads, houses, protected areas or terrain: you must "
-            "check the positions on the ground. The search uses a simple estimate of the wake "
+            "Only the boundary and the exclusion zones you give are respected (a plain "
+            "rectangle has none): roads, houses, protected areas and terrain not drawn there "
+            "must be checked on the ground. The search uses a simple estimate of the wake "
             "loss (fixed thrust coefficient), so the best layout of the full model could be "
             "slightly different; the search is repeatable but it does not prove that no better "
             "layout exists. The number of turbines comes from your demand, not from the area. "

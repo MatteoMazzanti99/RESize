@@ -35,6 +35,13 @@ def build_compare_context(inp: ComparisonInputs, r: ComparisonResult,
         f"- Hydrogen: electrolyser {c.h2_electrolyser_capex_eur_per_kw:,.0f} euro/kW; reference "
         f"{c.h2_reference_price_eur_per_kg:.2f} euro/kg and "
         f"{c.h2_reference_kg_co2_per_kg:.1f} kg CO2/kg",
+        f"- Hydropower: {c.hydro_capex_eur_per_kw:,.0f} euro/kW, O&M "
+        f"{c.hydro_om_eur_per_kw_year:,.0f} euro/kW/y, life {c.hydro_lifetime_years:.0f} y; "
+        f"head {inp.hydro.gross_head_m:,.0f} m, mean flow {inp.hydro.mean_flow_m3s:.2f} m3/s",
+        f"- Geothermal power: {c.geo_capex_eur_per_kw:,.0f} euro/kW net, O&M "
+        f"{c.geo_om_eur_per_kw_year:,.0f} euro/kW/y, life {c.geo_lifetime_years:.0f} y; "
+        f"{inp.geothermal.reservoir_temp_c:.0f} degC, {inp.geothermal.flow_per_well_kg_s:.0f} kg/s "
+        "per well",
         f"- Discount rate {c.discount_rate:.1%}; retail {c.retail_price_eur_per_kwh:.3f}, export "
         f"{c.export_price_eur_per_kwh:.3f} euro/kWh; grid {c.grid_kg_co2_per_kwh:.3f} kg CO2/kWh",
         "(only the technologies listed in RESULTS were compared)",
