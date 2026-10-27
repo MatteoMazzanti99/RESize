@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QImage, QPageSize, QPdfWriter, QTextDocument
 from PySide6.QtWidgets import (
     QApplication,
@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSplitter,
     QVBoxLayout,
     QWidget,
@@ -495,11 +496,6 @@ class BaseResultsPage(StepPage):
         self.excel_button.setVisible(self.has_excel)
         versions.addWidget(self.excel_button)
         versions.addStretch(1)
-        actions = QHBoxLayout()
-        buttons.addLayout(actions)
-        actions.addStretch(1)
-        actions.addWidget(ask)
-        actions.addWidget(export)
         layout = QVBoxLayout(self)
         layout.setSpacing(14)
         self.kpis = KpiStrip()         # the key numbers, counting up
@@ -510,7 +506,13 @@ class BaseResultsPage(StepPage):
         self.full_button.setProperty("variant", "primary")
         self.full_button.setCheckable(True)
         self.full_button.toggled.connect(self._toggle_full)
-        layout.addWidget(self.full_button, 0, Qt.AlignmentFlag.AlignHCenter)
+        actions = QHBoxLayout()           # one row: open the details, ask, save
+        actions.addWidget(self.full_button)
+        actions.addStretch(1)
+        actions.addWidget(ask)
+        actions.addWidget(export)
+        layout.addLayout(actions)
+        splitter.setMinimumHeight(640)    # the details get their own room: the page scrolls
         layout.addWidget(splitter, 1)  # the report takes all the spare height
         self.rest_spacer = QWidget()
         layout.addWidget(self.rest_spacer, 1)  # keeps the collapsed page tidy
@@ -524,9 +526,17 @@ class BaseResultsPage(StepPage):
         self.splitter.setVisible(on)
         self.versions_row.setVisible(on)
         self.rest_spacer.setVisible(not on)
-        # open: the report and the Why? panel get all the height, so the picture steps aside
-        self.banner.setVisible(not on and self.banner.picture is not None)
+        if on:
+            QTimer.singleShot(0, self._scroll_to_details)
         self.full_button.setText("Hide the full results  ▴" if on else "Full results and Why?  ▾")
+
+    def _scroll_to_details(self) -> None:
+        """Bring the start of the details into view (the page scrolls; the picture stays above)."""
+        area = self.parentWidget()
+        while area is not None and not isinstance(area, QScrollArea):
+            area = area.parentWidget()
+        if area is not None:
+            area.ensureWidgetVisible(self.splitter, 0, 40)
 
     # --- hooks for each technology ----------------------------------------------------
     def _compute(self) -> tuple[object, object, list[Finding], str, str]:
