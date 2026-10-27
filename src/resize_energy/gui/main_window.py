@@ -7,13 +7,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
 from PySide6.QtGui import QAction, QActionGroup, QKeySequence
 from PySide6.QtWidgets import (
+    QComboBox,
     QFileDialog,
     QFrame,
     QGraphicsOpacityEffect,
     QHBoxLayout,
+    QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -25,6 +27,7 @@ from PySide6.QtWidgets import (
 
 from resize_energy.core import project_file as pf
 from resize_energy.core.comparison import possible_carriers
+from resize_energy.core.pv_design import PVInputs, size_pv_system
 from resize_energy.gui import country, project_io
 from resize_energy.gui import theme as theme_mod
 from resize_energy.gui.battery_wizard import (
@@ -80,7 +83,10 @@ from resize_energy.gui.hydrogen_wizard import (
     HydrogenResultsPage,
     HydrogenSitePage,
 )
+from resize_energy.gui.icons import tech_color
+from resize_energy.gui.live_preview import LivePreview
 from resize_energy.gui.plant_cost_page import PlantCostPage
+from resize_energy.gui.preview_data import Preview, pv_preview
 from resize_energy.gui.solar_wizard import (
     SOLAR_STEP_NAMES,
     SolarCollectorPage,
@@ -105,6 +111,7 @@ from resize_energy.gui.wizard import (
     ResultsPage,
     SitePage,
 )
+from resize_energy.tutor.checker import check_pv_design
 
 TECH_LABELS = {"pv": "PHOTOVOLTAIC", "wind": "WIND", "biomass": "BIOMASS",
                "hydrogen": "GREEN HYDROGEN", "battery": "BATTERY STORAGE",
@@ -281,7 +288,19 @@ class MainWindow(QMainWindow):
         header.addWidget(self.header_art, 0, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
         column.addLayout(header)
         column.addSpacing(16)
-        column.addWidget(self.stack, 1)
+        self.preview_panel = LivePreview()      # the result so far, while the user types
+        self.preview_panel.setVisible(False)
+        self._preview_timer = QTimer(self)
+        self._preview_timer.setSingleShot(True)
+        self._preview_timer.setInterval(250)
+        self._preview_timer.timeout.connect(self._refresh_preview)
+        for page in self.flows["pv"][1][:-1]:       # PV first; other technologies follow
+            self._watch_inputs(page)
+        body = QHBoxLayout()
+        body.setSpacing(18)
+        body.addWidget(self.stack, 1)
+        body.addWidget(self.preview_panel, 0, Qt.AlignmentFlag.AlignTop)
+        column.addLayout(body, 1)
         column.addSpacing(12)
         column.addLayout(footer)
 
@@ -293,6 +312,39 @@ class MainWindow(QMainWindow):
         row.addWidget(right, 1)
         self.setCentralWidget(central)
         self._show(0)
+
+    # --- live preview ---------------------------------------------------------------
+    def _watch_inputs(self, page: QWidget) -> None:
+        """Refresh the preview a moment after any field of ``page`` changes."""
+        for edit in page.findChildren(QLineEdit):
+            edit.textChanged.connect(lambda *_: self._preview_timer.start())
+        for combo in page.findChildren(QComboBox):
+            combo.currentIndexChanged.connect(lambda *_: self._preview_timer.start())
+
+    def _pv_preview(self) -> Preview:
+        module, inverter, t_min, t_max = self.comp.specs()
+        inputs = PVInputs(
+            annual_demand_kwh=self.load.demand.value(),
+            annual_irradiation_kwh_m2=self.site.irr.value(),
+            coverage=self.load.coverage.value() / 100.0,
+            performance_ratio=self.load.pr.value(), t_min_c=t_min, t_cell_max_c=t_max,
+            module=module, inverter=inverter, latitude_deg=self.site.lat.value(),
+            shading_loss=self.load.shading(), economics=self.pv_costs.inputs(),
+        )
+        design = size_pv_system(inputs)
+        return pv_preview(inputs, design, check_pv_design(inputs, design))
+
+    def _refresh_preview(self) -> None:
+        last = self.index == len(self.pages) - 1
+        maker = {"pv": self._pv_preview}.get(self.tech)
+        show = maker is not None and self.index > 0 and not last
+        self.preview_panel.setVisible(show)
+        if not show:
+            return
+        try:
+            self.preview_panel.show_preview(maker(), tech_color(self.tech))
+        except ValueError as exc:
+            self.preview_panel.show_waiting(f"Waiting for valid numbers: {exc}")
 
     # --- navigation ---------------------------------------------------------------
     def _start(self, tech: str = "pv") -> None:
@@ -373,6 +425,7 @@ class MainWindow(QMainWindow):
         self.save_button.setVisible(not home)
         self.save_action.setEnabled(not home)
         self.save_as_action.setEnabled(not home)
+        self._refresh_preview()
         self._update_title()
         self.next_button.setText("See the results  →" if index == len(self.pages) - 2
                                  else "Next  →")

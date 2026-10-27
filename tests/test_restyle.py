@@ -37,3 +37,23 @@ def test_both_themes_are_readable():
             assert _contrast(c["accent_text"], c["accent"]) >= 4.5
     finally:
         theme.use_theme("light")
+
+
+def test_pv_preview_has_headline_months_and_checks():
+    from resize_energy.core.pv_design import InverterSpec, ModuleSpec, PVInputs, size_pv_system
+    from resize_energy.gui.preview_data import pv_preview
+    from resize_energy.tutor.checker import check_pv_design
+
+    module = ModuleSpec(name="m", p_stc_w=550, voc_v=49.5, vmp_v=41.5, isc_a=14.0, imp_a=13.2,
+                        temp_coeff_voc_pct_per_c=-0.27, temp_coeff_vmp_pct_per_c=-0.34,
+                        area_m2=2.6)
+    inverter = InverterSpec(name="i", p_ac_kw=50, vdc_max_v=1000, mppt_vmin_v=200,
+                            mppt_vmax_v=800, imax_per_mppt_a=30, n_mppt=2)
+    inputs = PVInputs(annual_demand_kwh=60000, annual_irradiation_kwh_m2=1500, coverage=1.0,
+                      performance_ratio=0.8, t_min_c=-10, t_cell_max_c=70, module=module,
+                      inverter=inverter, latitude_deg=45.0)
+    design = size_pv_system(inputs)
+    preview = pv_preview(inputs, design, check_pv_design(inputs, design))
+    assert preview.unit in ("kWh", "MWh", "GWh") and preview.value
+    assert preview.notes and all(kind in ("ok", "warning", "error") for kind, _ in preview.notes)
+    assert len(preview.bars) in (0, 12)

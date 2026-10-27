@@ -141,6 +141,7 @@ QPushButton[variant="segment"]:disabled { color: {border}; background-color: tra
 QLabel#pillElec { background-color: {surface2}; color: {info}; border-radius: 10px; padding: 2px 10px; font-size: 8.5pt; font-weight: 700; }
 QLabel#pillHeat { background-color: {heat_bg}; color: {heat}; border-radius: 10px; padding: 2px 10px; font-size: 8.5pt; font-weight: 700; }
 QLabel#pillTag { background-color: {surface2}; color: {muted}; border-radius: 10px; padding: 2px 10px; font-size: 8.5pt; font-weight: 700; }
+QFrame#livePanel { background-color: {surface}; border: 1px solid {border}; border-radius: 14px; }
 QFrame#kpiTile { background-color: {surface}; border: 1px solid {border}; border-radius: 14px; }
 QLabel#kpiLabel { color: {muted}; font-size: 8.5pt; }
 QLabel#kpiValue { color: {text}; font-size: 19pt; font-weight: 700; }
