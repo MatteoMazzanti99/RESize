@@ -29,7 +29,7 @@ def ease_out(x: float) -> float:
 
 
 def panel_height(n_rounds: int, n_entries: int) -> int:
-    return TOP + n_rounds * (HEAD + n_entries * ROW + GAP) + 10
+    return TOP + n_rounds * (HEAD + n_entries * ROW + GAP) + 80   # room to scroll past the buttons
 
 
 class VersusPanel(QWidget):
