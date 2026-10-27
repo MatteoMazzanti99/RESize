@@ -505,6 +505,26 @@ class BaseResultsPage(StepPage):
         layout.addWidget(splitter, 1)  # the report takes all the spare height
         layout.addLayout(buttons)
 
+    def _fit_height(self) -> None:
+        """Give the page the height its parts need. The window scrolls when it is shorter, so
+        the report, the buttons and the picture never end up on top of each other."""
+        layout = self.layout()
+        shown = []
+        for i in range(layout.count()):
+            item = layout.itemAt(i)
+            widget = item.widget()
+            if widget is not None and widget.isHidden():
+                continue
+            if widget is self.splitter:
+                shown.append(self.splitter.minimumHeight())
+            elif widget is not None:
+                shown.append(max(widget.sizeHint().height(), widget.minimumHeight()))
+            else:
+                shown.append(item.sizeHint().height())
+        margins = layout.contentsMargins()
+        total = sum(shown) + max(layout.spacing(), 0) * max(0, len(shown) - 1)
+        self.setMinimumHeight(total + margins.top() + margins.bottom() + 24)
+
     # --- hooks for each technology ----------------------------------------------------
     def _pv_inputs(self):
         """The PV inputs read from the pages (also used by the live preview)."""
@@ -607,6 +627,7 @@ class BaseResultsPage(StepPage):
         self._explained = ("", "")
         self._draw_charts()
         self._compose()
+        self._fit_height()
         row = self.topics.currentRow()
         if row >= 0:
             self._show_topic(row)  # refresh the open topic with the new numbers
