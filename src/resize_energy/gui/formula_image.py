@@ -12,13 +12,19 @@ from PySide6.QtGui import QColor, QImage, QPainter
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QTextBrowser
 
-from resize_energy.report.formula_art import REGISTRY
+from resize_energy.gui.theme import COLORS
+from resize_energy.report.formula_art import INK, MUTED, REGISTRY
 
 SCALE = 3.0        # pixels per logical pixel in the PDF; on screen the device ratio is used
-_cache: dict[tuple[str, float], QImage] = {}
+_cache: dict[tuple[str, float, bool], QImage] = {}
 
 
-def formula_image(url: str, scale: float = SCALE) -> QImage | None:
+def _dark_screen() -> bool:
+    """True when the window uses the dark palette (the formulas must then be light)."""
+    return QColor(COLORS["bg"]).lightnessF() < 0.5
+
+
+def formula_image(url: str, scale: float = SCALE, on_screen: bool = False) -> QImage | None:
     """The image for ``chart:fx_...`` drawn at ``scale`` pixels per logical pixel.
 
     On screen ``scale`` is the widget's device pixel ratio, so the picture is shown 1:1 on the
@@ -26,7 +32,8 @@ def formula_image(url: str, scale: float = SCALE) -> QImage | None:
     name = url.removeprefix("chart:")
     if not name.startswith("fx_"):
         return None
-    key = (name, round(scale, 3))
+    light_ink = on_screen and _dark_screen()     # the PDF always keeps dark ink on white
+    key = (name, round(scale, 3), light_ink)
     if key in _cache:
         return _cache[key]
     formula = REGISTRY.get(name)
@@ -37,7 +44,10 @@ def formula_image(url: str, scale: float = SCALE) -> QImage | None:
     painter = QPainter(image)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
     painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-    QSvgRenderer(QByteArray(formula.svg.encode("utf-8"))).render(painter)
+    svg = formula.svg
+    if light_ink:
+        svg = svg.replace(INK, COLORS["text"]).replace(MUTED, COLORS["muted"])
+    QSvgRenderer(QByteArray(svg.encode("utf-8"))).render(painter)
     painter.end()
     image.setDevicePixelRatio(scale)
     _cache[key] = image
@@ -48,5 +58,5 @@ class FormulaBrowser(QTextBrowser):
     """A text browser that can show the formula pictures."""
 
     def loadResource(self, rtype, url):
-        image = formula_image(url.toString(), max(1.0, self.devicePixelRatioF()))
+        image = formula_image(url.toString(), max(1.0, self.devicePixelRatioF()), on_screen=True)
         return image if image is not None else super().loadResource(rtype, url)
