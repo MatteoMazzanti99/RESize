@@ -83,6 +83,14 @@ KPI_SPECS: dict[str, tuple[KpiSpec, ...]] = {
         KpiSpec("lcoe", "Cost of energy", "euro/kWh", 3),
         KpiSpec("npv", "Net present value", "euro"),
     ),
+    "BheDesign": (
+        KpiSpec("total_length_m", "Borehole length", "m"),
+        KpiSpec("boreholes", "Boreholes", ""),
+        KpiSpec("depth_m", "Depth of each", "m"),
+        KpiSpec("area_needed_m2", "Land needed", "m2"),
+        KpiSpec("penalty_c", "Temperature penalty", "K", 2),
+        KpiSpec("capex", "Drilling cost", "euro"),
+    ),
     "BiomassDesign": (
         KpiSpec("thermal_power_kw", "Heat power", "kW"),
         KpiSpec("electric_power_kw", "Electric power", "kW"),

@@ -6,7 +6,7 @@ RESize guides MSc students (and engineers doing a first-pass design) through the
 renewable energy plants. At every step it shows the formula, the assumptions and the
 reasoning, so you learn *why* a choice is made, not just the number that comes out.
 
-> **Status:** early release. Photovoltaic, wind, biomass, green hydrogen, battery storage, solar thermal (with adsorption cooling), run-of-river hydropower and geothermal are available, plus a technology comparison. Interfaces and results may change.
+> **Status:** early release. Photovoltaic, wind, biomass, green hydrogen, battery storage, solar thermal (with adsorption cooling), run-of-river hydropower, geothermal and ground-source heat pump (borehole field) are available, plus a technology comparison. Interfaces and results may change.
 
 **User guide:** <https://matteomazzanti99.github.io/RESize/> (one page per technology, with screenshots).
 

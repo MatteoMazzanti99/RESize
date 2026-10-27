@@ -198,3 +198,8 @@ from resize_energy.tutor.explanations_hydro import HYDRO_EXPLANATIONS  # noqa: E
 
 EXPLANATIONS.update(HYDRO_EXPLANATIONS)
 EXPLANATIONS.update(GEOTHERMAL_EXPLANATIONS)
+
+# And the ground-source (borehole) module.
+from resize_energy.tutor.explanations_bhe import BHE_EXPLANATIONS  # noqa: E402
+
+EXPLANATIONS.update(BHE_EXPLANATIONS)

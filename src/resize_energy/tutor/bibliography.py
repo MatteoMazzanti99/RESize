@@ -357,6 +357,16 @@ REFS: dict[str, Ref] = {
                       "Solar Thermal Systems", "IEA Solar Heating and Cooling Programme", "15 September 2018",
                       url="https://mobile.iea-shc.org/Data/Sites/1/publications/D01-Info-Sheet--Review-of-Installation-Costs.pdf",
                       kind="report"),
+    # --- ground-source heat pumps and borehole heat exchangers ---------------------------------
+    "kavanaugh1997": _r("Kavanaugh & Rafferty (1997)", "Kavanaugh, S.P., Rafferty, K.", "1997",
+                        "Ground-Source Heat Pumps: Design of Geothermal Systems for Commercial and "
+                        "Institutional Buildings", "ASHRAE, Atlanta", kind="book"),
+    "ingersoll1954": _r("Ingersoll et al. (1954)", "Ingersoll, L.R., Zobel, O.J., Ingersoll, A.C.",
+                        "1954", "Heat Conduction with Engineering, Geological, and Other Applications",
+                        "University of Wisconsin Press, Madison", "revised ed.", kind="book"),
+    "incropera2011": _r("Incropera et al. (2011)", "Incropera, F.P., DeWitt, D.P., Bergman, T.L., "
+                        "Lavine, A.S.", "2011", "Fundamentals of Heat and Mass Transfer",
+                        "Wiley, Hoboken", "7th ed.", kind="book"),
 }
 
 

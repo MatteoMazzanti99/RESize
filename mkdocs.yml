@@ -38,8 +38,10 @@ nav:
       - Solar thermal and cooling: guide/solar-thermal.md
       - Hydropower: guide/hydro.md
       - Geothermal: guide/geothermal.md
+      - Ground-source heat pump: guide/ground-source.md
       - Technology comparison: guide/compare.md
   - Validation:
       - Overview: validation/README.md
       - PV sizing: validation/pv.md
       - Wind sizing: validation/wind.md
+      - Borehole field: validation/bhe.md

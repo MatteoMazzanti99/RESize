@@ -133,6 +133,14 @@ _RAW: dict[str, tuple[str, str, str]] = {
     "geo.net_power": ("dipippo2016; mit2006|ch. 7", "", "Identical wells, no decline of the reservoir; operating hours of RESize."),
     "geo.economics": ("short1995; iea_projected|methodology", "nrel_atb2024_geo|cost of hydrothermal plants; mit2006|ch. 6", "Surface cost of the heat, drilling cost and O&M are placeholders of RESize."),
     "geo.co2": ("ipcc_ar5_annex3|life-cycle emissions of electricity supply", "ipcc_ar5_annex3|geothermal, median value; ispra|national grid factor", ""),
+    # --- ground-source heat pump (borehole heat exchangers) -----------------------------------
+    "bhe.loads": ("kavanaugh1997|ch. 2 and 4", "", "The heat pump is a black box with fixed COP and EER."),
+    "bhe.length": ("kavanaugh1997|ch. 3", "", "Fluid temperatures are inputs, not iterated against the heat pump."),
+    "bhe.ground": ("kavanaugh1997; ingersoll1954|line and cylindrical source", "", "The fit of the G function is a simple line fit; it is extrapolated for Fo below about 1."),
+    "bhe.borehole": ("kavanaugh1997; incropera2011|internal flow correlations", "kavanaugh1997|typical borehole resistances", "Single U-tube, zero casing resistance."),
+    "bhe.penalty": ("kavanaugh1997; ingersoll1954|line source", "", "Sum of line sources and the damping of the iteration are RESize's own; the 'storage' option is a formula used in teaching."),
+    "bhe.field": ("kavanaugh1997|ch. 3", "", "Rectangular grid filled row by row; the depth limit is yours."),
+    "bhe.economics": ("short1995", "", "One price per metre of borehole: a placeholder of RESize, replace it with a quote."),
 }
 
 

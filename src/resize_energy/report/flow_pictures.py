@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from resize_energy.core.battery_design import BatteryDesign, BatteryInputs
+from resize_energy.core.bhe_design import BheDesign, BheInputs
 from resize_energy.core.biomass_design import BiomassDesign, BiomassInputs
 from resize_energy.core.geothermal_design import GeothermalDesign, GeothermalInputs
 from resize_energy.core.hydro_design import HydroDesign, HydroInputs
@@ -191,3 +192,16 @@ def geothermal_picture(inp: GeothermalInputs, d: GeothermalDesign) -> Picture:
     flows = [Flow(0, 1, 1.0, "red")]
     tail, tail_flows = _tail(d.electricity_kwh, inp.annual_electricity_demand_kwh, 1)
     return nodes + tail, flows + tail_flows
+
+
+def bhe_picture(inp: BheInputs, d: BheDesign) -> Picture:
+    heat = d.ground_extracted_kwh
+    cold = d.ground_injected_kwh
+    nodes = [Node("wells", "Boreholes", f"{d.total_length_m:,.0f} m",
+                  f"{d.boreholes} x {d.depth_m:,.0f} m", "red"),
+             Node("hot_tank", "Heat pump", power(max(inp.heating_peak_kw, inp.cooling_peak_kw)),
+                  f"COP {inp.cop_design} / EER {inp.eer_design}", "orange"),
+             Node("house", "Building", energy(inp.heating_kwh_per_year + inp.cooling_kwh_per_year),
+                  "heating and cooling", "orange")]
+    total = max(heat + cold, 1.0)
+    return nodes, [Flow(0, 1, max(heat / total, 0.2), "red"), Flow(1, 2, 1.0, "orange")]

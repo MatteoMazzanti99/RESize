@@ -9,6 +9,9 @@ Benchmarks of RESize results, one file per module, with inputs, reference output
 - [Wind sizing](wind.md): formulas by hand, yearly energy against an independent integration,
   NASA POWER sanity check. Regenerate with `python validation/validate_wind.py`.
 
+- [Borehole field](bhe.md): ASHRAE length method, resistances and the penalty iteration of a
+  university report.
+
 - Cross-checks of all technologies: `python validation/validate_cross.py` (runs on GitHub in the
   *PV validation* workflow, with pvlib and PyWake installed; the report is attached to the run
   as `cross-report.md`). Last results:

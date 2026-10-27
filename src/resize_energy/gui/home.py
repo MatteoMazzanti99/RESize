@@ -34,6 +34,7 @@ TECHNOLOGIES: list[tuple[str, str, str, bool]] = [
     ("solar", "Solar thermal", "Collectors and tank for hot water, with optional adsorption cooling: solar fraction, area, payback.", True),
     ("hydro", "Hydropower", "Run-of-river plant: flow-duration curve, penstock, turbine type, yearly energy and cost.", True),
     ("geothermal", "Geothermal", "Hot water from the ground for a heat network or a power plant: wells, pumping, net power.", True),
+    ("bhe", "Ground-source heat pump", "Vertical boreholes for heating and cooling: ASHRAE length method, number and depth of boreholes, field layout.", True),
 ]
 # technologies that make energy and can be dragged into the Compare zone
 COMPARABLE: tuple[str, ...] = ("pv", "wind", "biomass", "hydrogen", "hydro", "geothermal")

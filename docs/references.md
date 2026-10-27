@@ -45,6 +45,8 @@ Standards and reports are revised: use the current edition when you cite them. W
 - International Electrotechnical Commission. *IEC 61400-12-1: Wind energy generation systems, power performance measurements of electricity producing wind turbines*. IEC, Geneva, use the current edition.
 - International Electrotechnical Commission (2021). *IEC 61724-1: Photovoltaic system performance, Part 1: Monitoring*. IEC, Geneva.
 - International Electrotechnical Commission. *IEC 62548 series: Photovoltaic (PV) arrays, design requirements*. IEC, Geneva, use the current edition.
+- Incropera, F.P., DeWitt, D.P., Bergman, T.L., Lavine, A.S. (2011). *Fundamentals of Heat and Mass Transfer*, 7th ed. Wiley, Hoboken.
+- Ingersoll, L.R., Zobel, O.J., Ingersoll, A.C. (1954). *Heat Conduction with Engineering, Geological, and Other Applications*, revised ed. University of Wisconsin Press, Madison.
 - IPCC (2006). *2006 IPCC Guidelines for National Greenhouse Gas Inventories, Volume 2: Energy*. IGES, Hayama.
 - International Renewable Energy Agency (2017). *Electricity Storage and Renewables: Costs and Markets to 2030*. IRENA, Abu Dhabi.
 - International Renewable Energy Agency (2020). *Green Hydrogen Cost Reduction: Scaling up Electrolysers to Meet the 1.5 °C Climate Goal*. IRENA, Abu Dhabi.
@@ -57,6 +59,7 @@ Standards and reports are revised: use the current edition when you cite them. W
 - Jordan, D.C., Kurtz, S.R. (2013). Photovoltaic degradation rates: an analytical review. *Progress in Photovoltaics* 21(1):12-29. doi:<https://doi.org/10.1002/pip.1182>
 - Justus, C.G., Hargraves, W.R., Mikhail, A., Graber, D. (1978). Methods for estimating wind speed frequency distributions. *Journal of Applied Meteorology* 17(3):350-353. doi:<https://doi.org/10.1175/1520-0450(1978)017&lt;0350:mfewsf&gt;2.0.co;2>
 - Katić, I., Højstrup, J., Jensen, N.O. (1986). *A simple model for cluster efficiency*. Proceedings of the European Wind Energy Association Conference and Exhibition (EWEC'86), Rome, pp. 407-410.
+- Kavanaugh, S.P., Rafferty, K. (1997). *Ground-Source Heat Pumps: Design of Geothermal Systems for Commercial and Institutional Buildings*. ASHRAE, Atlanta.
 - Kirkpatrick, S., Gelatt, C.D., Vecchi, M.P. (1983). Optimization by simulated annealing. *Science* 220(4598):671-680. doi:<https://doi.org/10.1126/science.220.4598.671>
 - Klein, S.A., Beckman, W.A. (1979). A general design method for closed-loop solar energy systems. *Solar Energy* 22(3):269-282. doi:<https://doi.org/10.1016/0038-092x(79)90142-7>
 - Kost, C., Müller, P., Sepúlveda Schweiger, J., Fluri, V., Thomsen, J. (2024). *Levelized Cost of Electricity: Renewable Energy Technologies*. Fraunhofer Institute for Solar Energy Systems ISE, Freiburg, July 2024. <https://www.ise.fraunhofer.de/en/publications/studies/cost-of-electricity.html>
@@ -712,3 +715,39 @@ Orders of magnitude from the literature, not quotes: prices change every year an
 
 - **Formula:** Schlömer et al. (2014), life-cycle emissions of electricity supply
 - **Values and assumptions:** Schlömer et al. (2014), geothermal, median value; ISPRA, national grid factor
+
+### Heat taken from and given to the ground
+
+- **Formula:** Kavanaugh & Rafferty (1997), ch. 2 and 4
+- **RESize's own choice:** The heat pump is a black box with fixed COP and EER.
+
+### Length of the boreholes (ASHRAE method)
+
+- **Formula:** Kavanaugh & Rafferty (1997), ch. 3
+- **RESize's own choice:** Fluid temperatures are inputs, not iterated against the heat pump.
+
+### Resistance of the ground to the three pulses
+
+- **Formula:** Kavanaugh & Rafferty (1997); Ingersoll et al. (1954), line and cylindrical source
+- **RESize's own choice:** The fit of the G function is a simple line fit; it is extrapolated for Fo below about 1.
+
+### Resistance of the borehole and the flow in the pipes
+
+- **Formula:** Kavanaugh & Rafferty (1997); Incropera et al. (2011), internal flow correlations
+- **Values and assumptions:** Kavanaugh & Rafferty (1997), typical borehole resistances
+- **RESize's own choice:** Single U-tube, zero casing resistance.
+
+### Temperature penalty of the neighbouring boreholes
+
+- **Formula:** Kavanaugh & Rafferty (1997); Ingersoll et al. (1954), line source
+- **RESize's own choice:** Sum of line sources and the damping of the iteration are RESize's own; the 'storage' option is a formula used in teaching.
+
+### Number and depth of the boreholes
+
+- **Formula:** Kavanaugh & Rafferty (1997), ch. 3
+- **RESize's own choice:** Rectangular grid filled row by row; the depth limit is yours.
+
+### Cost of the field
+
+- **Formula:** Short et al. (1995)
+- **RESize's own choice:** One price per metre of borehole: a placeholder of RESize, replace it with a quote.

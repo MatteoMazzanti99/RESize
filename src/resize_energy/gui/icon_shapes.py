@@ -150,6 +150,17 @@ def _geothermal() -> list[Shape]:
     ]
 
 
+def _borehole() -> list[Shape]:
+    u1 = [(7.0, 6.0), (7.0, 19.0), (10.0, 19.0), (10.0, 6.0)]
+    u2 = [(14.0, 6.0), (14.0, 19.0), (17.0, 19.0), (17.0, 6.0)]
+    return [
+        ([(3.0, 6.0), (21.0, 6.0)], False, False),
+        (u1, False, False),
+        (u2, False, False),
+        ([(3.0, 22.0), (21.0, 22.0)], False, False),
+    ]
+
+
 ICONS: dict[str, list[Shape]] = {
     "pv": _photovoltaic(),
     "wind": _wind(),
@@ -159,4 +170,5 @@ ICONS: dict[str, list[Shape]] = {
     "solar": _solar_thermal(),
     "hydro": _hydropower(),
     "geothermal": _geothermal(),
+    "bhe": _borehole(),
 }

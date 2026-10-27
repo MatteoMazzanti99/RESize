@@ -48,6 +48,13 @@ from resize_energy.gui.compare_wizard import (
     CompareSelection,
     CompareSitePage,
 )
+from resize_energy.gui.bhe_wizard import (
+    BHE_STEP_NAMES,
+    BheFieldPage,
+    BheGroundPage,
+    BheLoadPage,
+    BheResultsPage,
+)
 from resize_energy.gui.geothermal_wizard import (
     GEOTHERMAL_STEP_NAMES,
     GeothermalCostPage,
@@ -100,7 +107,8 @@ from resize_energy.gui.wizard import (
 TECH_LABELS = {"pv": "PHOTOVOLTAIC", "wind": "WIND", "biomass": "BIOMASS",
                "hydrogen": "GREEN HYDROGEN", "battery": "BATTERY STORAGE",
                "solar": "SOLAR THERMAL", "hydro": "HYDROPOWER",
-               "geothermal": "GEOTHERMAL", "compare": "COMPARISON"}
+               "geothermal": "GEOTHERMAL", "bhe": "GROUND-SOURCE",
+               "compare": "COMPARISON"}
 
 
 class MainWindow(QMainWindow):
@@ -154,6 +162,10 @@ class MainWindow(QMainWindow):
         self.geo_costs = GeothermalCostPage(self.geo_resource)
         self.geo_results = GeothermalResultsPage(self.geo_resource, self.geo_plant,
                                                  self.geo_costs)
+        self.bhe_load = BheLoadPage()
+        self.bhe_ground = BheGroundPage()
+        self.bhe_field = BheFieldPage()
+        self.bhe_results = BheResultsPage(self.bhe_load, self.bhe_ground, self.bhe_field)
         self.cmp_selection = CompareSelection()
         self.cmp_site = CompareSitePage(self.cmp_selection)
         self.cmp_plant = ComparePlantPage(self.cmp_site, self.cmp_selection)
@@ -184,6 +196,8 @@ class MainWindow(QMainWindow):
                                          self.hyd_results]),
             "geothermal": (GEOTHERMAL_STEP_NAMES, [self.geo_resource, self.geo_plant,
                                                    self.geo_costs, self.geo_results]),
+            "bhe": (BHE_STEP_NAMES, [self.bhe_load, self.bhe_ground, self.bhe_field,
+                                     self.bhe_results]),
             "compare": (COMPARE_STEP_NAMES, [self.cmp_site, self.cmp_plant, self.cmp_costs,
                                              self.cmp_results]),
         }
@@ -193,13 +207,14 @@ class MainWindow(QMainWindow):
                 "load_profile": [self.load, self.wind_load, self.bat_goal, self.bio_demand],
                 "modules": [self.comp],
                 "coins": [self.pv_costs, self.wind_costs, self.h2_costs, self.bat_costs,
-                          self.sol_costs, self.hyd_costs, self.geo_costs],
+                          self.sol_costs, self.hyd_costs, self.geo_costs, self.bhe_field],
                 "turbine_curve": [self.wind_turbine], "flame": [self.bio_fuel],
                 "leaf": [self.bio_plant], "target": [self.h2_goal],
                 "electrolyser": [self.h2_plant], "battery": [self.bat_battery],
                 "tap": [self.sol_load], "collector": [self.sol_coll],
                 "river": [self.hyd_site], "runner": [self.hyd_plant],
-                "well": [self.geo_resource], "heat_plant": [self.geo_plant]}.items():
+                "well": [self.geo_resource, self.bhe_ground],
+                "heat_plant": [self.geo_plant, self.bhe_load]}.items():
             for each in page:
                 each.art_key = key
         self.tech = "pv"
@@ -279,7 +294,7 @@ class MainWindow(QMainWindow):
 
     # --- navigation ---------------------------------------------------------------
     def _start(self, tech: str = "pv") -> None:
-        """Open the first step of the ``tech`` flow ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "hydro", "geothermal" or "compare")."""
+        """Open the first step of the ``tech`` flow ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "hydro", "geothermal", "bhe" or "compare")."""
         if tech not in self.flows:
             tech = "pv"
         self.tech = tech

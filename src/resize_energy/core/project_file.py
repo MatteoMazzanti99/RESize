@@ -17,7 +17,7 @@ from resize_energy.core import profiles as prof
 FORMAT = "resize-project"
 FORMAT_VERSION = 1
 EXTENSION = ".resize"
-TECHS = ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "hydro", "geothermal", "compare")
+TECHS = ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "hydro", "geothermal", "bhe", "compare")
 
 
 class ProjectError(ValueError):

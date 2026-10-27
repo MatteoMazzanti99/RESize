@@ -21,6 +21,7 @@ comes out.
 | [Solar thermal](guide/solar-thermal.md) | hot water and/or cooling demand | collectors, tank, adsorption chiller, solar fraction |
 | [Hydropower](guide/hydro.md) | head, river flows, penstock | flow-duration curve, turbine, yearly energy, cost |
 | [Geothermal](guide/geothermal.md) | well temperature and flow, heat or electricity demand | wells, net power or heat, pumping, cost |
+| [Ground-source heat pump](guide/ground-source.md) | heating and cooling loads, heat pump, ground | length, number and depth of boreholes, land, drilling cost |
 | [Comparison](guide/compare.md) | the same yearly energy | cost of energy, payback, NPV and CO2 side by side |
 
 ## Start here

@@ -12,7 +12,7 @@ def _walk_through(window, app) -> int:
     if len(load_library()) < 10:
         print("self-test: the turbine library is missing from the build", flush=True)
         return 1
-    markers = {"pv": "Design checks", "wind": "Design checks", "biomass": "Design checks", "hydrogen": "Design checks", "battery": "Design checks", "solar": "Design checks", "hydro": "Design checks", "geothermal": "Design checks", "compare": "Which is better"}
+    markers = {"pv": "Design checks", "wind": "Design checks", "biomass": "Design checks", "hydrogen": "Design checks", "battery": "Design checks", "solar": "Design checks", "hydro": "Design checks", "geothermal": "Design checks", "bhe": "Design checks", "compare": "Which is better"}
     for tech, marker in markers.items():
         window._start(tech)
         for _ in range(len(window.pages) - 2):
@@ -105,7 +105,7 @@ def _variants_check(window, app) -> int:
     runs = notes = 0
     with _NoDialogs() as dialogs:
         for tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "hydro",
-                     "geothermal"):
+                     "geothermal", "bhe"):
             window._start(tech)
             flow = window.pages[1:-1]
             combos = [(page, name, box) for page in flow for name, box in vars(page).items()
@@ -169,7 +169,7 @@ def _navigation_check(window, app) -> int:
     """Back to the first step and forward again, for every flow: nothing breaks, same results."""
     with _NoDialogs():
         for tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "hydro",
-                     "geothermal", "compare"):
+                     "geothermal", "bhe", "compare"):
             window._start(tech)
             if not _to_results(window, app):
                 print(f"self-test: the {tech} flow did not reach its results", flush=True)
@@ -193,7 +193,7 @@ def _all_projects_roundtrip(window, app) -> int:
 
     with _NoDialogs(), tempfile.TemporaryDirectory() as folder:
         for tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "hydro",
-                     "geothermal", "compare"):
+                     "geothermal", "bhe", "compare"):
             window._start(tech)
             if not _to_results(window, app):
                 print(f"self-test: the {tech} flow did not reach its results", flush=True)
@@ -502,7 +502,7 @@ def _screenshots(window, app, folder: str) -> None:
     _settle(app, 0.5)  # let the icons drift for a moment
     window.grab().save(str(out / "home_compare.png"))
     zone.clear()
-    for tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "hydro", "geothermal", "compare"):
+    for tech in ("pv", "wind", "biomass", "hydrogen", "battery", "solar", "hydro", "geothermal", "bhe", "compare"):
         window._start(tech)
         _settle(app)
         window.grab().save(str(out / f"{tech}_start.png"))
